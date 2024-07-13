@@ -1,0 +1,6 @@
+addi x1 x0 1
+addi x2 x0 5
+beq x1 x2 12
+addi x1 x1 1
+jal x0 -8
+addi x0 x0 0
