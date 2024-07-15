@@ -24,11 +24,11 @@ INSTRUCTION_SET = {
     'xori': ('0010011', '100', None, 'I'),
     'ori':  ('0010011', '110', None, 'I'),
     'andi': ('0010011', '111', None, 'I'),
-    'lb':   ('0000011', '000', None, 'I'),
-    'lh':   ('0000011', '001', None, 'I'),
-    'lw':   ('0000011', '010', None, 'I'),
-    'lbu':  ('0000011', '100', None, 'I'),
-    'lhu':  ('0000011', '101', None, 'I'),
+    'lb':   ('0000011', '000', None, 'LI'),
+    'lh':   ('0000011', '001', None, 'LI'),
+    'lw':   ('0000011', '010', None, 'LI'),
+    'lbu':  ('0000011', '100', None, 'LI'),
+    'lhu':  ('0000011', '101', None, 'LI'),
     'sb':   ('0100011', '000', None, 'S'),
     'sh':   ('0100011', '001', None, 'S'),
     'sw':   ('0100011', '010', None, 'S'),
@@ -67,7 +67,9 @@ def imm_to_bin(imm, length):
 def parse_instruction(instruction):
     """Parse the instruction into its binary components"""
     parts = re.split(r'\s|,', instruction.strip())
+    print(parts)
     inst_name = parts[0]
+    print(inst_name)
     opcode, funct3, funct7, inst_type = INSTRUCTION_SET[inst_name]
     
     if inst_type == 'R':
@@ -84,6 +86,7 @@ def parse_instruction(instruction):
         # return '{imm:012}{rs1:05}{funct3:03}{rd:05}{opcode:07}'.format(imm=imm, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
         print (FORMATS['I'].format(imm=imm, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode))
         return FORMATS['I'].format(imm=imm, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
+    
     
     elif inst_type == 'S':
         rs1 = register_to_bin(parts[1])
@@ -126,6 +129,7 @@ def parse_instruction(instruction):
     
     elif inst_type == 'J':
         rd = register_to_bin(parts[1])
+        print("rd : " ,rd)
         print("imm no bin " ,parts[2])
         imm = imm_to_bin(parts[2], 21)
         # imm = ''.join(reversed(str(imm)))
@@ -133,11 +137,17 @@ def parse_instruction(instruction):
         imm_10_1 = imm[10:20]
         print("imm 10_1 :",imm_10_1)
         imm_11 = imm[11]
-        imm_19_12 = imm[12:20]
+        imm_19_12 = imm[2:9]
         print("bin imm " ,imm)
         
         print("imm broken : ",imm_20,imm_10_1,imm_11,imm_19_12,rd,opcode, end=" ")
         return FORMATS['J'].format(imm_20=imm_20, imm_10_1=imm_10_1, imm_11=imm_11, imm_19_12=imm_19_12, rd=rd, opcode=opcode)
+    elif inst_type == 'LI':
+        rd = register_to_bin(parts[1])
+        rs1 = register_to_bin(parts[3])
+        imm = imm_to_bin(parts[2],12)
+        return FORMATS['I'].format(imm=imm, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
+        
 
 def convert_to_hex(bin_str):
     """Convert binary string to hexadecimal"""
@@ -156,6 +166,6 @@ def main(input_file, output_file):
             file.write(hex_str + '\n')
 
 if __name__ == '__main__':
-    input_file = 'oxygen\instructions.txt'
+    input_file = 'instructions.txt'
     output_file = 'instructions_hex.txt'
     main(input_file, output_file)
