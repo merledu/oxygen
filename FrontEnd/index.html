@@ -3,194 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tabbed Interface</title>
-    <link rel="stylesheet" href="/home/saad/Desktop/Oxygen_sim/p_oxegon/oxygen/FrontEnd/style.css">
+    <title>Oxygen Simulator</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="tab-container">
-        <div class="tabs">
-            <button class="tab-link" onclick="openTab(event, 'Editor')">Editor</button>
-            <button class="tab-link" onclick="openTab(event, 'DataPath')">DataPath</button>
-            <button class="tab-link" onclick="openTab(event, 'Simulator')">Simulator</button>
-        </div>
+    <header>
+        <h1>Oxygen Simulator</h1>
+        <nav>
+            <ul>
+                <li><a href="index.html">Editor</a></li>
+                <li><a href="data_path.html">Data Path</a></li>
+                <li><a href="decoder.html">Decoder</a></li>
+            </ul>
+        </nav>
+    </header>
 
-        <div id="Editor" class="tab-content">
+    <main>
+        <section id="editor">
             <h2>Editor</h2>
-            <div class="editor-content">
-                <textarea id="instruction-input" placeholder="Enter your instructions here..."></textarea>
-                <div class="side-boxes">
-                    <div class="configuration">
+            <div class="editor-container">
+                <textarea id="codeEditor" placeholder="Write your RISC V Assembly code here..."></textarea>
+                <div class="side-box">
+                    <div class="config-box">
                         <h3>Configuration</h3>
-                        <div class="switch-container">
-                            <label for="pipeline">Pipeline:</label>
-                            <div class="switch">
-                                <span class="switch-label-left">OFF</span>
-                                <input type="checkbox" id="pipeline" class="switch-input" onchange="toggleSwitchLabel(this)">
-                                <span class="switch-label-right">ON</span>
-                            </div>
-                        </div>
-                        <div class="switch-container">
-                            <label for="data-forwarding">Data Forwarding:</label>
-                            <div class="switch">
-                                <span class="switch-label-left">OFF</span>
-                                <input type="checkbox" id="data-forwarding" class="switch-input" onchange="toggleSwitchLabel(this)">
-                                <span class="switch-label-right">ON</span>
-                            </div>
-                        </div>
-                        <div class="switch-container">
-                            <label for="variant">Variant:</label>
-                            <div class="switch">
-                                <span class="switch-label-left">RV32</span>
-                                <input type="checkbox" id="variant" class="switch-input" onchange="toggleVariantLabel(this)">
-                                <span class="switch-label-right">RV64</span>
-                            </div>
-                        </div>
+                        <label>Pipeline:</label>
+                        <label class="switch">
+                            <input type="checkbox" id="pipelineSwitch" onchange="updateConfig('pipeline', this.checked)">
+                            <span class="slider"></span>
+                        </label>
+
+                        <label>Data Forwarding:</label>
+                        <label class="switch">
+                            <input type="checkbox" id="dataForwardingSwitch" onchange="updateConfig('dataForwarding', this.checked)">
+                            <span class="slider"></span>
+                        </label>
+
+                        <label>Variant:</label>
+                        <label class="switch">
+                            <input type="checkbox" id="variantSwitch" onchange="updateConfig('variant', this.checked)">
+                            <span class="slider"></span>
+                        </label>
                     </div>
-                    <div class="hex-dump">
+                    <div class="hex-dump-box">
                         <h3>Hex Dump</h3>
-                        <div class="hex-content" id="hex-dump-content">
-                            <p>Hex dump goes here.</p>
-                        </div>
-                        <div class="hex-options">
+                        <textarea id="hexDump" readonly placeholder="Hex dump will appear here..." style="height: 100px;"></textarea>
+                        <div class="hex-dump-buttons">
                             <button onclick="dumpHex()">Dump</button>
-                            <button onclick="downloadHexDump()">Download</button>
-                            <button onclick="copyHexDump()">Copy</button>
-                            <button onclick="clearHexDump()">Clear</button>
+                            <button onclick="copyHex()">Copy</button>
+                            <button onclick="downloadHex()">Download</button>
+                            <button onclick="clearHex()">Clear</button>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+            <div class="assemble-container">
+                <button class="assemble-button" onclick="assembleCode()">Assemble</button>
+            </div>
+        </section>
+    </main>
 
-        <div id="DataPath" class="tab-content">
-            <h2>DataPath</h2>
-            <div class="datapath-content">
-                <div class="timeline">
-                    <h3>Time Line</h3>
-                    <div class="timeline-content" id="timeline-content">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Cycle</th>
-                                    <th>Fetch</th>
-                                    <th>Decode</th>
-                                    <th>Execute</th>
-                                    <th>Memory</th>
-                                    <th>Writeback</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Timeline data rows will be dynamically added here -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="stats-table">
-                    <h3>Stats</h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Stat Name</th>
-                                <th>Value</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Total Cycles</td>
-                                <td>0</td>
-                            </tr>
-                            <tr>
-                                <td>Total Instructions</td>
-                                <td>0</td>
-                            </tr>
-                            <tr>
-                                <td>CPI</td>
-                                <td>0</td>
-                            </tr>
-                            <tr>
-                                <td>Data-transfer Instruction</td>
-                                <td>0</td>
-                            </tr>
-                            <tr>
-                                <td>ALU Instructions</td>
-                                <td>0</td>
-                            </tr>
-                            <tr>
-                                <td>Control Instructions</td>
-                                <td>0</td>
-                            </tr>
-                            <tr>
-                                <td>Data Hazards</td>
-                                <td>0</td>
-                            </tr>
-                            <tr>
-                                <td>Control Hazards</td>
-                                <td>0</td>
-                            </tr>
-                            <tr>
-                                <td>Branch Mispredictions</td>
-                                <td>0</td>
-                            </tr>
-                            <tr>
-                                <td>Total Stalls</td>
-                                <td>0</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div id="Simulator" class="tab-content">
-            <h2>Simulator</h2>
-            <div class="simulator-content">
-                <div class="simulator-box">
-                    <div class="simulator-header">
-                        <h3>Simulator Data</h3>
-                    </div>
-                    <div class="simulator-table">
-                        <div class="simulator-row header">
-                            <div class="simulator-column">PC</div>
-                            <div class="simulator-column">Machine Code</div>
-                            <div class="simulator-column">Basic Code</div>
-                            <div class="simulator-column">Original Code</div>
-                        </div>
-                        <!-- Example row, you can add more dynamically -->
-                        <div class="simulator-row">
-                            <div class="simulator-column">0x00000000</div>
-                            <div class="simulator-column">0x12345678</div>
-                            <div class="simulator-column">ADD R1, R2, R3</div>
-                            <div class="simulator-column">ADD A, B, C</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="simulator-box extended">
-                    <div class="simulator-header">
-                        <div class="tab-header">
-                            <button class="tab-link" onclick="openTab(event, 'RegisterTab')">Register</button>
-                            <button class="tab-link" onclick="openTab(event, 'MemoryTab')">Memory</button>
-                        </div>
-                    </div>
-                    <div class="simulator-content">
-                        <div id="RegisterTab" class="tab-content">
-                            <h3>Register Content</h3>
-                            <div class="register-content">
-                                <!-- Content for Register tab -->
-                                <p>Register data goes here.</p>
-                            </div>
-                        </div>
-                        <div id="MemoryTab" class="tab-content">
-                            <h3>Memory Content</h3>
-                            <div class="memory-content">
-                                <!-- Content for Memory tab -->
-                                <p>Memory data goes here.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <script src="/home/saad/Desktop/Oxygen_sim/p_oxegon/oxygen/FrontEnd/script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>

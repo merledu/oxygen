@@ -1,57 +1,76 @@
-function openTab(event, tabName) {
-    // Hide all tab content
-    const tabContents = document.querySelectorAll(".tab-content");
-    tabContents.forEach(content => content.style.display = "none");
+let pipelineEnabled = false;
+let dataForwardingEnabled = false;
+let variantEnabled = false;
 
-    // Remove active class from all tab links
-    const tabLinks = document.querySelectorAll(".tab-link");
-    tabLinks.forEach(link => link.classList.remove("active"));
-
-    // Show the current tab content and add active class to the clicked tab link
-    document.getElementById(tabName).style.display = "block";
-    event.currentTarget.classList.add("active");
+function updateConfig(type, isChecked) {
+    switch (type) {
+        case 'pipeline':
+            pipelineEnabled = isChecked;
+            break;
+        case 'dataForwarding':
+            dataForwardingEnabled = isChecked;
+            break;
+        case 'variant':
+            variantEnabled = isChecked;
+            break;
+    }
 }
 
-// Show the first tab by default
-document.addEventListener("DOMContentLoaded", function() {
-    document.querySelector(".tab-link").click();
-});
-
-function downloadHexDump() {
-    const hexDumpContent = document.getElementById('hex-dump-content').innerText;
-    const blob = new Blob([hexDumpContent], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.style.display = 'none';
-    a.href = url;
-    a.download = 'hex_dump.txt';
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-}
-
-function copyHexDump() {
-    const hexDumpContent = document.getElementById('hex-dump-content').innerText;
-    navigator.clipboard.writeText(hexDumpContent).then(() => {
-        alert('Hex dump copied to clipboard!');
-    });
-}
-
-function clearHexDump() {
-    document.getElementById('hex-dump-content').innerText = '';
+function assembleCode() {
+    const code = document.getElementById('codeEditor').value;
+    // Perform the assembly operation and generate hex dump
+    const hexDump = "Generated Hex Dump";
+    document.getElementById('hexDump').value = hexDump;
+    // Populate the decoder table
+    populateDecoderTable(code);
 }
 
 function dumpHex() {
-    const instructionInput = document.getElementById('instruction-input').value;
-    const hexDump = generateHexDump(instructionInput);
-    document.getElementById('hex-dump-content').innerText = hexDump;
+    // Logic to dump hex code
 }
 
-function generateHexDump(instructions) {
-    // Placeholder function, replace with actual instruction to hex conversion logic
-    return instructions.split('\n').map(instruction => {
-        // Assuming each instruction is already in hex form or can be converted
-        // Replace the following line with actual conversion logic
-        return instruction.trim() ? `0x${parseInt(instruction, 16).toString(16).padStart(8, '0')}` : '';
-    }).join('\n');
+function copyHex() {
+    const hexDump = document.getElementById('hexDump').value;
+    navigator.clipboard.writeText(hexDump).then(() => {
+        alert("Hex dump copied to clipboard!");
+    });
+}
+
+function downloadHex() {
+    const hexDump = document.getElementById('hexDump').value;
+    const blob = new Blob([hexDump], { type: 'text/plain' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'hex_dump.txt';
+    link.click();
+}
+
+function clearHex() {
+    document.getElementById('hexDump').value = '';
+}
+
+function populateDecoderTable(code) {
+    const instructions = code.split('\n').filter(line => line.trim() !== '');
+    const tableBody = document.getElementById('decoderTableBody');
+    tableBody.innerHTML = '';
+
+    instructions.forEach((instruction, index) => {
+        const pc = `0x${(index * 4).toString(16)}`;
+        const machineCode = `0x${(index * 4 + 0x10000000).toString(16)}`; // Dummy machine code
+        const basicCode = instruction; // Assuming basic code is the same as the original for now
+        const originalCode = instruction; // Placeholder
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${pc}</td>
+            <td>${machineCode}</td>
+            <td>${basicCode}</td>
+            <td>${originalCode}</td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
+
+function stepInstruction() {
+    // Logic to step through instructions
 }
