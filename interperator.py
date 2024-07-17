@@ -46,6 +46,25 @@ INSTRUCTION_SET = {
     'ebreak':('1110011', '000', '0000001', 'I'),
 }
 
+PSEUDO_INSTRUCTION_SET = {
+    'nop': 'addi x0,x0,0',
+    'li': 'addi {rd},x0,{imm}',
+    'mv': 'addi {rd},{rs},0',
+    # 'seqz': 'sltiu {rd}, {rs}, 1',
+    # 'snez': 'sltu {rd}, x0, {rs}',
+    # 'slz': 'slt {rd}, {rs}, x0',
+    # 'sgtz': 'slt {rd}, x0, {rs}',
+    'beqz': 'beq {rs},x0,{offset}',
+    'bnez': 'bne {rs},x0, {offset}',
+    'blez': 'bge {rs},x0,{offset}',
+    'bgez': 'blt {rs},x0,{offset}',
+    'bltz': 'blt {rs},x0,{offset}',
+    'bgtz': 'blt x0,{rs},{offset}',
+    'j': 'jal x0,{a}',
+    'jr': 'jalr x0,{a},0',
+    'ret': 'jalr x0,x1,0'
+}
+
 def register_to_bin(register):
     """Convert register name to binary representation"""
     if register.startswith('x'):
@@ -67,9 +86,27 @@ def imm_to_bin(imm, length):
 def parse_instruction(instruction):
     """Parse the instruction into its binary components"""
     parts = re.split(r'\s|,', instruction.strip())
-    print(parts)
     inst_name = parts[0]
-    print(inst_name)
+    # print (inst_name)
+    if inst_name in PSEUDO_INSTRUCTION_SET:
+        base_inst = PSEUDO_INSTRUCTION_SET[inst_name]
+        # print(base_inst)
+        # print(inst_name[0])
+        
+        if (inst_name == 'nop'):
+            return parse_instruction(base_inst)
+        elif(inst_name[0] == 'b'):
+            return parse_instruction(base_inst.format(rs=parts[1], offset=parts[2]))
+        elif(inst_name[0] == 'j'):
+            return parse_instruction(base_inst.format(a=parts[1]))
+        elif(inst_name == 'ret'):
+            return parse_instruction(base_inst)
+        elif (inst_name == 'li'):
+            return parse_instruction(base_inst.format(rd=parts[1], imm=parts[2]))
+        elif (inst_name == 'mv'):
+            return parse_instruction(base_inst.format(rd=parts[1], rs=parts[2]))
+    
+    # print(inst_name)
     opcode, funct3, funct7, inst_type = INSTRUCTION_SET[inst_name]
     
     if inst_type == 'R':
@@ -79,12 +116,13 @@ def parse_instruction(instruction):
         return FORMATS['R'].format(funct7, s2=rs2, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
     
     elif inst_type == 'I':
-        print(parts)
+        # print(parts)
         rd = register_to_bin(parts[1])
+        # print(parts[2])
         rs1 = register_to_bin(parts[2])
         imm = imm_to_bin(parts[3], 12)
         # return '{imm:012}{rs1:05}{funct3:03}{rd:05}{opcode:07}'.format(imm=imm, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
-        print (FORMATS['I'].format(imm=imm, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode))
+        # print (FORMATS['I'].format(imm=imm, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode))
         return FORMATS['I'].format(imm=imm, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
     
     
@@ -109,17 +147,19 @@ def parse_instruction(instruction):
         # binary_str = f"{imm12}{imm10_5}{rs2_bin}{rs1_bin}{funct3}{imm4_1}{imm11}{opcode}"
         
         
-        imm_bin = imm_to_bin(parts[3], 13)
+        imm = imm_to_bin(parts[3], 13)
         
-        imm_bin2 = ''.join(reversed(str(imm_bin)))
-        imm_12 = imm_bin2[12]
-        imm_10_5 = imm_bin2[5:11]
-        imm_4_1 = imm_bin2[1:5]
-        imm_11 = imm_bin2[11]
-        # imm_12 = imm[0]
-        # imm_10_5 = imm[1:7]
-        # imm_4_1 = imm[7:11]
-        # imm_11 = imm[11]
+        
+        # imm_bin2 = ''.join(reversed(str(imm_bin)))
+        # imm_12 = imm_bin2[12]
+        # imm_10_5 = imm_bin2[5:11]
+        # imm_4_1 = imm_bin2[1:5]
+        # imm_11 = imm_bin2[11]
+        imm_12 = imm[0]
+        imm_10_5 = imm[2:8]
+        imm_4_1 = imm[8:12]
+        imm_11 = imm[1]
+        print (FORMATS['B'].format(imm_12=imm_12, imm_10_5=imm_10_5, rs2=rs2, rs1=rs1, funct3=funct3, imm_4_1=imm_4_1, imm_11=imm_11, opcode=opcode))
         return FORMATS['B'].format(imm_12=imm_12, imm_10_5=imm_10_5, rs2=rs2, rs1=rs1, funct3=funct3, imm_4_1=imm_4_1, imm_11=imm_11, opcode=opcode)
     
     elif inst_type == 'U':
@@ -129,18 +169,19 @@ def parse_instruction(instruction):
     
     elif inst_type == 'J':
         rd = register_to_bin(parts[1])
-        print("rd : " ,rd)
-        print("imm no bin " ,parts[2])
+        # print("rd : " ,rd)
+        # print("imm no bin " ,parts[2])
         imm = imm_to_bin(parts[2], 21)
+        print(imm)
         # imm = ''.join(reversed(str(imm)))
-        imm_20 = imm[1]
+        imm_20 = imm[0]
         imm_10_1 = imm[10:20]
-        print("imm 10_1 :",imm_10_1)
-        imm_11 = imm[11]
-        imm_19_12 = imm[2:9]
-        print("bin imm " ,imm)
+        # print("imm 10_1 :",imm_10_1)
+        imm_11 = imm[9]
+        imm_19_12 = imm[1:9]
+        # print("bin imm " ,imm)
         
-        print("imm broken : ",imm_20,imm_10_1,imm_11,imm_19_12,rd,opcode, end=" ")
+        # print("imm broken : ",imm_20,imm_10_1,imm_11,imm_19_12,rd,opcode, end=" ")
         return FORMATS['J'].format(imm_20=imm_20, imm_10_1=imm_10_1, imm_11=imm_11, imm_19_12=imm_19_12, rd=rd, opcode=opcode)
     elif inst_type == 'LI':
         rd = register_to_bin(parts[1])
@@ -151,7 +192,7 @@ def parse_instruction(instruction):
 
 def convert_to_hex(bin_str):
     """Convert binary string to hexadecimal"""
-    print(bin_str)
+    # print(bin_str)
     hex_str = hex(int(bin_str, 2))[2:].zfill(8)
     return hex_str
 
