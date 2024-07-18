@@ -10,41 +10,73 @@ FORMATS = {
     'J': '{imm_20}{imm_10_1:010}{imm_11}{imm_19_12:08}{rd:05}{opcode:07}',
 }
 
-# Define the opcode, funct3, and funct7 for each instruction
 INSTRUCTION_SET = {
-    'add':  ('0110011', '000', '0000000', 'R'),
-    'sub':  ('0110011', '000', '0100000', 'R'),
-    'xor':  ('0110011', '100', '0000000', 'R'),
-    'or':   ('0110011', '110', '0000000', 'R'),
-    'and':  ('0110011', '111', '0000000', 'R'),
-    'sll':  ('0110011', '001', '0000000', 'R'),
-    'srl':  ('0110011', '101', '0000000', 'R'),
-    'sra':  ('0110011', '101', '0100000', 'R'),
-    'addi': ('0010011', '000', None, 'I'),
-    'xori': ('0010011', '100', None, 'I'),
-    'ori':  ('0010011', '110', None, 'I'),
-    'andi': ('0010011', '111', None, 'I'),
-    'lb':   ('0000011', '000', None, 'LI'),
-    'lh':   ('0000011', '001', None, 'LI'),
-    'lw':   ('0000011', '010', None, 'LI'),
-    'lbu':  ('0000011', '100', None, 'LI'),
-    'lhu':  ('0000011', '101', None, 'LI'),
-    'sb':   ('0100011', '000', None, 'S'),
-    'sh':   ('0100011', '001', None, 'S'),
-    'sw':   ('0100011', '010', None, 'S'),
-    'beq':  ('1100011', '000', None, 'B'),
-    'bne':  ('1100011', '001', None, 'B'),
-    'blt':  ('1100011', '100', None, 'B'),
-    'bge':  ('1100011', '101', None, 'B'),
-    'bltu': ('1100011', '110', None, 'B'),
-    'bgeu': ('1100011', '111', None, 'B'),
-    'jal':  ('1101111', None, None, 'J'),
-    'jalr': ('1100111', '000', None, 'I'),
-    'lui':  ('0110111', None, None, 'U'),
-    'auipc':('0010111', None, None, 'U'),
-    'ecall':('1110011', '000', '0000000', 'I'),
-    'ebreak':('1110011', '000', '0000001', 'I'),
+    'add':     ('0110011', '000', '0000000', 'R'),
+    'sub':     ('0110011', '000', '0100000', 'R'),
+    'xor':     ('0110011', '100', '0000000', 'R'),
+    'or':      ('0110011', '110', '0000000', 'R'),
+    'and':     ('0110011', '111', '0000000', 'R'),
+    'sll':     ('0110011', '001', '0000000', 'R'),
+    'srl':     ('0110011', '101', '0000000', 'R'),
+    'sra':     ('0110011', '101', '0100000', 'R'),
+    'addi':    ('0010011', '000', None, 'I'),
+    'xori':    ('0010011', '100', None, 'I'),
+    'ori':     ('0010011', '110', None, 'I'),
+    'andi':    ('0010011', '111', None, 'I'),
+    'lb':      ('0000011', '000', None, 'LI'),
+    'lh':      ('0000011', '001', None, 'LI'),
+    'lw':      ('0000011', '010', None, 'LI'),
+    'lbu':     ('0000011', '100', None, 'LI'),
+    'lhu':     ('0000011', '101', None, 'LI'),
+    'sb':      ('0100011', '000', None, 'S'),
+    'sh':      ('0100011', '001', None, 'S'),
+    'sw':      ('0100011', '010', None, 'S'),
+    'beq':     ('1100011', '000', None, 'B'),
+    'bne':     ('1100011', '001', None, 'B'),
+    'blt':     ('1100011', '100', None, 'B'),
+    'bge':     ('1100011', '101', None, 'B'),
+    'bltu':    ('1100011', '110', None, 'B'),
+    'bgeu':    ('1100011', '111', None, 'B'),
+    'jal':     ('1101111', None, None, 'J'),
+    'jalr':    ('1100111', '000', None, 'I'),
+    'lui':     ('0110111', None, None, 'U'),
+    'auipc':   ('0010111', None, None, 'U'),
+    'ecall':   ('1110011', '000', '0000000', 'I'),
+    'ebreak':  ('1110011', '000', '0000001', 'I'),
+    # M extension instructions
+    'mul':     ('0110011', '000', '0000001', 'R'),
+    'mulh':    ('0110011', '001', '0000001', 'R'),
+    'mulhsu':  ('0110011', '010', '0000001', 'R'),
+    'mulhu':   ('0110011', '011', '0000001', 'R'),
+    'div':     ('0110011', '100', '0000001', 'R'),
+    'divu':    ('0110011', '101', '0000001', 'R'),
+    'rem':     ('0110011', '110', '0000001', 'R'),
+    'remu':    ('0110011', '111', '0000001', 'R'),
+    # F extension instructions
+    'flw':     ('0000111', '010', None, 'LI'),
+    'fsw':     ('0100111', '010', None, 'S'),
+    'fadd.s':  ('1010011', '000', '0000000', 'R'),
+    'fsub.s':  ('1010011', '000', '0000100', 'R'),
+    'fmul.s':  ('1010011', '000', '0001000', 'R'),
+    'fdiv.s':  ('1010011', '000', '0001100', 'R'),
+    'fsqrt.s': ('1010011', '000', '0101100', 'R'),
+    'fsgnj.s': ('1010011', '000', '0010000', 'R'),
+    'fsgnjn.s':('1010011', '000', '0010001', 'R'),
+    'fsgnjx.s':('1010011', '000', '0010010', 'R'),
+    'fmin.s':  ('1010011', '000', '0010100', 'R'),
+    'fmax.s':  ('1010011', '000', '0010101', 'R'),
+    'fcvt.w.s':('1010011', '000', '1100000', 'R'),
+    'fcvt.wu.s':('1010011', '000', '1100001', 'R'),
+    'fmv.x.w': ('1010011', '000', '1110000', 'R'),
+    'feq.s':   ('1010011', '000', '1010000', 'R'),
+    'flt.s':   ('1010011', '000', '1010001', 'R'),
+    'fle.s':   ('1010011', '000', '1010010', 'R'),
+    'fclass.s':('1010011', '000', '1110001', 'R'),
+    'fcvt.s.w':('1010011', '000', '1101000', 'R'),
+    'fcvt.s.wu':('1010011', '000', '1101001', 'R'),
+    'fmv.w.x': ('1010011', '000', '1111000', 'R'),
 }
+
 
 PSEUDO_INSTRUCTION_SET = {
     'nop': 'addi x0,x0,0',
@@ -73,6 +105,7 @@ def register_to_bin(register):
         
         return x
         # return int(register[1:])
+        
     raise ValueError(f"Unknown register: {register}")
 
 def imm_to_bin(imm, length):
@@ -87,6 +120,7 @@ def parse_instruction(instruction):
     """Parse the instruction into its binary components"""
     parts = re.split(r'\s|,', instruction.strip())
     inst_name = parts[0]
+    print(parts)
     # print (inst_name)
     if inst_name in PSEUDO_INSTRUCTION_SET:
         base_inst = PSEUDO_INSTRUCTION_SET[inst_name]
@@ -113,7 +147,7 @@ def parse_instruction(instruction):
         rd = register_to_bin(parts[1])
         rs1 = register_to_bin(parts[2])
         rs2 = register_to_bin(parts[3])
-        return FORMATS['R'].format(funct7, s2=rs2, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
+        return FORMATS['R'].format(funct7=funct7, rs2=rs2, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
     
     elif inst_type == 'I':
         # print(parts)
