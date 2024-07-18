@@ -44,6 +44,15 @@ INSTRUCTION_SET = {
     'auipc':('0010111', None, None, 'U'),
     'ecall':('1110011', '000', '0000000', 'I'),
     'ebreak':('1110011', '000', '0000001', 'I'),
+    # M extension instructions
+    'mul':    ('0110011', '000', '0000001', 'R'),
+    'mulh':   ('0110011', '001', '0000001', 'R'),
+    'mulhsu': ('0110011', '010', '0000001', 'R'),
+    'mulhu':  ('0110011', '011', '0000001', 'R'),
+    'div':    ('0110011', '100', '0000001', 'R'),
+    'divu':   ('0110011', '101', '0000001', 'R'),
+    'rem':    ('0110011', '110', '0000001', 'R'),
+    'remu':   ('0110011', '111', '0000001', 'R'),
 }
 
 PSEUDO_INSTRUCTION_SET = {
@@ -113,7 +122,7 @@ def parse_instruction(instruction):
         rd = register_to_bin(parts[1])
         rs1 = register_to_bin(parts[2])
         rs2 = register_to_bin(parts[3])
-        return FORMATS['R'].format(funct7, s2=rs2, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
+        return FORMATS['R'].format(funct7=funct7, rs2=rs2, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
     
     elif inst_type == 'I':
         # print(parts)
