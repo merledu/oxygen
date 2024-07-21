@@ -2,6 +2,16 @@ let pipelineEnabled = false;
 let dataForwardingEnabled = false;
 let variantEnabled = false;
 
+const getRequest = async () => {
+    const response = await axios.get('/request', {
+    params: {
+    'test' : "test"
+    }
+    })
+    console.log(response.data)
+    }
+    getRequest();
+
 function updateConfig(type, isChecked) {
     switch (type) {
         case 'pipeline':
@@ -17,16 +27,24 @@ function updateConfig(type, isChecked) {
 }
 
 function assembleCode() {
-    const code = document.getElementById('codeEditor').value;
-    // Perform the assembly operation and generate hex dump
+    // const code = document.getElementById('editor-container').value;
+    code = document.getElementsByClassName('codeEditor')[0].value
+    axios.post('/assemble-code/', { code: code })
+            .then(response => {
+                const hex = response.data.hex;
+                document.getElementById('hexDump').value = hex;
+            })
+            .catch(error => {
+                console.error('There was an error!', error);
+            });
+    console.log(code)
+    
     const hexDump = "Generated Hex Dump";
     document.getElementById('hexDump').value = hexDump;
-    // Populate the decoder table
     populateDecoderTable(code);
 }
 
 function dumpHex() {
-    // Logic to dump hex code
 }
 
 function copyHex() {
@@ -74,3 +92,4 @@ function populateDecoderTable(code) {
 function stepInstruction() {
     // Logic to step through instructions
 }
+
