@@ -86,6 +86,7 @@ def imm_to_bin(imm, length):
 def parse_instruction(instruction):
     """Parse the instruction into its binary components"""
     parts = re.split(r'\s|,', instruction.strip())
+    print(parts)
     inst_name = parts[0]
     # print (inst_name)
     if inst_name in PSEUDO_INSTRUCTION_SET:
@@ -108,12 +109,12 @@ def parse_instruction(instruction):
     
     # print(inst_name)
     opcode, funct3, funct7, inst_type = INSTRUCTION_SET[inst_name]
-    
     if inst_type == 'R':
         rd = register_to_bin(parts[1])
         rs1 = register_to_bin(parts[2])
         rs2 = register_to_bin(parts[3])
-        return FORMATS['R'].format(funct7, s2=rs2, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
+        
+        return FORMATS['R'].format(funct7=funct7, rs2=rs2, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
     
     elif inst_type == 'I':
         # print(parts)

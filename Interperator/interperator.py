@@ -84,10 +84,12 @@ def imm_to_bin(imm, length):
 
 
 def parse_instruction(instruction):
+    
     """Parse the instruction into its binary components"""
     parts = re.split(r'\s|,', instruction.strip())
     inst_name = parts[0]
-    # print (inst_name)
+    print(parts)
+    print (inst_name)
     if inst_name in PSEUDO_INSTRUCTION_SET:
         base_inst = PSEUDO_INSTRUCTION_SET[inst_name]
         # print(base_inst)
@@ -106,14 +108,14 @@ def parse_instruction(instruction):
         elif (inst_name == 'mv'):
             return parse_instruction(base_inst.format(rd=parts[1], rs=parts[2]))
     
-    # print(inst_name)
+    print(inst_name)
     opcode, funct3, funct7, inst_type = INSTRUCTION_SET[inst_name]
-    
+    print(funct7)
     if inst_type == 'R':
         rd = register_to_bin(parts[1])
         rs1 = register_to_bin(parts[2])
         rs2 = register_to_bin(parts[3])
-        return FORMATS['R'].format(funct7, s2=rs2, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
+        return FORMATS['R'].format(funct7=funct7, rs2=rs2, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
     
     elif inst_type == 'I':
         # print(parts)
@@ -224,11 +226,7 @@ def main(instructions_str):
 
 if __name__ == '__main__':
     # Example input string
-    instructions_str = """
-    instruction1
-    instruction2
-    instruction3
-    """
+    instructions_str = "add x1,x2,x3"
     hex_output = main(instructions_str)
     print(hex_output)
 
