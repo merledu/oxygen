@@ -219,8 +219,38 @@ def parse_instruction(instruction):
         return FORMATS['J'].format(imm_20=imm_20, imm_10_1=imm_10_1, imm_11=imm_11, imm_19_12=imm_19_12, rd=rd, opcode=opcode)
     elif inst_type == 'LI':
         rd = register_to_bin(parts[1])
-        rs1 = register_to_bin(parts[3])
-        imm = imm_to_bin(parts[2],12)
+        # rs1 = register_to_bin(parts[3])
+        
+        if (len(parts) == 3):
+            offset_base_str = parts[2]
+            print(offset_base_str)
+            match_brackets = re.match(r'^([^(]+)\(([^)]+)\)$', offset_base_str)
+            if match_brackets:
+                imm = imm_to_bin(int(match_brackets.group(1),16),12)
+                rs1 = register_to_bin(match_brackets.group(2))
+            else:
+                imm = imm_to_bin(str(imm_value),12)
+                rs1 = register_to_bin(offset_base_str)
+        else:
+            rs1 = register_to_bin(parts[3])
+            immediate = parts[2]
+            if immediate.startswith('0x') or immediate.startswith('-0x'):
+                imm_value = int(immediate, 16)
+                imm = imm_to_bin(str(imm_value),12)
+            else:
+                imm_value = int(immediate)
+                imm = imm_to_bin(str(imm_value),12)
+        # offset_base_str = parts[3]
+        # print(offset_base_str)
+        # match_brackets = re.match(r'^([^(]+)\(([^)]+)\)$', offset_base_str)
+        # if match_brackets:
+        #     imm = imm_to_bin(match_brackets.group(1))
+        #     rs1 = match_brackets.group(2)
+        # else:
+        #     # If no brackets, assume offset is the immediate and base register is the next part
+        #     imm = imm_to_bin(str(imm_value),12)
+        #     rs1 = register_to_bin(offset_base_str)
+        
         return FORMATS['I'].format(imm=imm, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
         
 
