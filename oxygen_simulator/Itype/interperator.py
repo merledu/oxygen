@@ -77,6 +77,50 @@ INSTRUCTION_SET = {
     'fmv.w.x': ('1010011', '000', '1111000', 'R'),
 }
 
+C_INST_SET  = {
+    # RV32C (Compressed) extension instructions
+    'c.add':    ('10', '000', '1000', 'CR'),
+    'c.addi':   ('01', '000', '000', 'CI'),
+    'c.addi4spn':('00', '000', '000', 'CIW'),
+    'c.addi16sp':('01', '011', '000', 'CI'),
+    'c.addw':   ('10', '000', '1001', 'CR'),
+    'c.and':    ('10', '011', '1000', 'CR'),
+    'c.andi':   ('01', '100', '000', 'CI'),
+    'c.beqz':   ('01', '110', '000', 'CB'),
+    'c.bnez':   ('01', '111', '000', 'CB'),
+    'c.ebreak': ('10', '000', '0001', 'CR'),
+    'c.fld':    ('00', '001', '000', 'CL'),
+    'c.fldsp':  ('10', '001', '000', 'CL'),
+    'c.flw':    ('00', '010', '000', 'CL'),
+    'c.flwsp':  ('10', '010', '000', 'CL'),
+    'c.fsd':    ('00', '101', '000', 'CS'),
+    'c.fsdsp':  ('10', '101', '000', 'CS'),
+    'c.fsw':    ('00', '110', '000', 'CS'),
+    'c.fswsp':  ('10', '110', '000', 'CS'),
+    'c.j':      ('01', '101', '000', 'CJ'),
+    'c.jal':    ('01', '001', '000', 'CJ'),
+    'c.jalr':   ('10', '000', '1001', 'CR'),
+    'c.jr':     ('10', '000', '1000', 'CR'),
+    'c.ld':     ('00', '011', '000', 'CL'),
+    'c.ldsp':   ('10', '011', '000', 'CL'),
+    'c.li':     ('01', '010', '000', 'CI'),
+    'c.lui':    ('01', '011', '000', 'CI'),
+    'c.lw':     ('00', '010', '000', 'CL'),
+    'c.lwsp':   ('10', '010', '000', 'CL'),
+    'c.mv':     ('10', '000', '1000', 'CR'),
+    'c.nop':    ('01', '000', '000', 'CI'),
+    'c.or':     ('10', '100', '1000', 'CR'),
+    'c.slli':   ('00', '000', '000', 'CI'),
+    'c.srai':   ('10', '100', '1000', 'CR'),
+    'c.srli':   ('10', '100', '1000', 'CR'),
+    'c.sub':    ('10', '100', '1000', 'CR'),
+    'c.subw':   ('10', '100', '1001', 'CR'),
+    'c.sw':     ('00', '110', '000', 'CS'),
+    'c.swsp':   ('10', '110', '000', 'CSS'),
+    'c.xor':    ('10', '100', '1000', 'CR'),
+    
+}
+
 
 PSEUDO_INSTRUCTION_SET = {
     'nop': 'addi x0,x0,0',
@@ -139,6 +183,26 @@ def parse_instruction(instruction):
             return parse_instruction(base_inst.format(rd=parts[1], imm=parts[2]))
         elif (inst_name == 'mv'):
             return parse_instruction(base_inst.format(rd=parts[1], rs=parts[2]))
+    elif inst_name in C_INST_SET:
+        opcode, funct3, funct4, inst_type = C_INST_SET[inst_name]
+        if inst_type == 'CSS':
+            rs2 = register_to_bin(parts[1])
+            imm2=int(parts[2])*4
+            imm = imm_to_bin(str(imm2),6)
+            return FORMATS['CSS'].format(funct3=funct3, imm=imm, rs2=rs2, opcode=opcode)
+        elif inst_type == 'CIW':
+            rd=register_to_bin(parts[1])
+            imm2=int(parts[3])*4
+            imm = imm_to_bin(str(imm2),8)
+            return FORMATS['CIW'].format(funct3=funct3, imm=imm, rd=rd, opcode=opcode)
+        elif inst_type == 'CL':
+            rd = register_to_bin(parts[1])
+            
+            
+        elif inst_type == 'CJ':
+            imm2 = int(parts[2]) * 2
+            imm=imm_to_bin(str(imm2),11)
+            return FORMATS['CJ'].format(funct3=funct3, imm=imm, opcode=opcode)
     
     # print(inst_name)
     opcode, funct3, funct7, inst_type = INSTRUCTION_SET[inst_name]
