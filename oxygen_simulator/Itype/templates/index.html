@@ -31,23 +31,11 @@
                 <div class="side-box">
                     <div class="config-box">
                         <h3>Configuration</h3>
-                        <label>Pipeline:</label>
-                        <label class="switch">
-                            <input type="checkbox" id="pipelineSwitch" onchange="updateConfig('pipeline', this.checked)">
-                            <span class="slider"></span>
-                        </label>
-
-                        <label>Data Forwarding:</label>
-                        <label class="switch">
-                            <input type="checkbox" id="dataForwardingSwitch" onchange="updateConfig('dataForwarding', this.checked)">
-                            <span class="slider"></span>
-                        </label>
-
-                        <label>Variant:</label>
-                        <label class="switch">
-                            <input type="checkbox" id="variantSwitch" onchange="updateConfig('variant', this.checked)">
-                            <span class="slider"></span>
-                        </label>
+                        <label for="variantSelect">Variant:</label>
+                        <select id="variantSelect" onchange="updateConfig('variant', this.value)">
+                                <option value="RV32">RV32</option>
+                                <option value="RV64">RV64</option>
+                        </select>
                     </div>
                     <div class="hex-dump-box">
                         <h3>Hex Dump</h3>

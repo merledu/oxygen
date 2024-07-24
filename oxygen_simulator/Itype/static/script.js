@@ -93,3 +93,9 @@ function stepInstruction() {
     // Logic to step through instructions
 }
 
+<script>
+    function updateConfig(key, value) {
+        console.log(`Config updated: ${key} = ${value}`)
+        // Add your update logic here
+    }
+</script>
