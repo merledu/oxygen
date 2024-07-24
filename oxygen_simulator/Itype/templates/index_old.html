@@ -1,0 +1,132 @@
+{% comment %} <!DOCTYPE html>
+
+<html lang="en">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oxygen Simulator</title>
+    <link rel="stylesheet" href="{% static 'style.css' %} ">
+
+
+    {% comment %} <link rel="stylesheet" href="oxygen_simulator\Itype\static\style.css"> {% endcomment %}
+{% comment %} </head>
+<body>
+    <header>
+        <h1>Oxygen Simulator</h1>
+        <nav>
+            <ul>
+                <li><a href="/editor">Editor</a></li>
+                <li><a href="/datapath">Data Path</a></li>
+                <li><a href="/decoder">Decoder</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section id="editor">
+            <h2>Editor</h2>
+            <div class="editor-container">
+                <textarea class="codeEditor" placeholder="Write your RISC V Assembly code here..."></textarea>
+                <div class="side-box">
+                    <div id="configBox" class="config-box">
+                        <h3>Configuration</h3>
+                        <label for="variantSelect">Variant:</label>
+                        <select id="variantSelect" onchange="updateConfig('variant', this.value)">
+                            <option value="RV32">RV32</option>
+                            <option value="RV64">RV64</option>
+                        </select>
+                    </div> {% endcomment %}
+                    {% comment %} <div class="config-box">
+                        <h3>Configuration</h3>
+                        <label for="variantSelect">Variant:</label>
+                        <select id="variantSelect" onchange="updateConfig('variant', this.value)">
+                                <option value="RV32">RV32</option>
+                                <option value="RV64">RV64</option>
+                        </select>
+                    </div> {% endcomment %}
+                    {% comment %} <div class="hex-dump-box">
+                        <h3>Hex Dump</h3>
+                        <textarea id="hexDump" readonly placeholder="Hex dump will appear here..." ></textarea>
+                        <div class="hex-dump-buttons">
+                            <button onclick="dumpHex()">Dump</button>
+                            <button onclick="copyHex()">Copy</button>
+                            <button onclick="downloadHex()">Download</button>
+                            <button onclick="clearHex()">Clear</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="assemble-container">
+                <button class="assemble-button" onclick="assembleCode()">Assemble</button>
+            </div>
+        </section>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+    <script src="{% static 'script.js' %} "> </script>
+</body>
+</html> {% endcomment %} 
+
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oxygen Simulator</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{% static 'style.css' %} ">
+
+    {% comment %} <link rel="stylesheet" href="oxygen_simulator\Itype\static\style.css"> {% endcomment %}
+</head>
+<body>
+    <header class="bg-primary text-white text-center py-4">
+        <h1>Oxygen Simulator</h1>
+        <nav>
+            <ul class="nav justify-content-center">
+                <li class="nav-item"><a class="nav-link text-white" href="/editor">Editor</a></li>
+                <li class="nav-item"><a class="nav-link text-white" href="/datapath">Data Path</a></li>
+                <li class="nav-item"><a class="nav-link text-white" href="/decoder">Decoder</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container my-5">
+        <section id="editor" class="mb-5">
+            <h2>Editor</h2>
+            <div class="editor-container row">
+                <textarea class="codeEditor col-md-7 form-control" placeholder="Write your RISC V Assembly code here..."></textarea>
+                <div class="side-box col-md-5">
+                    <div id="configBox" class="config-box p-3 mb-3 bg-white">
+                        <h3>Configuration</h3>
+                        <label for="variantSelect">Variant:</label>
+                        <select id="variantSelect" class="form-control" onchange="updateConfig('variant', this.value)">
+                            <option value="RV32">RV32</option>
+                            <option value="RV64">RV64</option>
+                        </select>
+                    </div>
+                    <div class="hex-dump-box p-3 bg-white">
+                        <h3>Hex Dump</h3>
+                        <textarea id="hexDump" class="form-control mb-3" readonly placeholder="Hex dump will appear here..."></textarea>
+                        <div class="hex-dump-buttons">
+                            <button class="btn btn-primary mr-2" onclick="dumpHex()">Dump</button>
+                            <button class="btn btn-secondary mr-2" onclick="copyHex()">Copy</button>
+                            <button class="btn btn-success mr-2" onclick="downloadHex()">Download</button>
+                            <button class="btn btn-danger" onclick="clearHex()">Clear</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="assemble-container_text-center_mt-4">
+                <button class="assemble-button btn btn-primary" onclick="assembleCode()">Assemble</button>
+            </div>
+        </section>
+    </main>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="{% static 'script.js' %}"></script>
+</body>
+</html>

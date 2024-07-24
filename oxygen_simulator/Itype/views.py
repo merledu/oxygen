@@ -1,4 +1,6 @@
 import json
+import os
+from pathlib import Path
 from django.http import JsonResponse
 from django.shortcuts import render
 from .interperator import main
@@ -7,6 +9,8 @@ from django.views.decorators.csrf import csrf_exempt
 # Create your views here.
 def editor(request):
     print("xx")
+    BASE_DIR = Path(__file__).resolve().parent.parent
+    print(os.path.join(BASE_DIR/"static"))
     return render(request,'index.html')
 
 def datapath(request):
