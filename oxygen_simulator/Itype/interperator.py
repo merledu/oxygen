@@ -10,6 +10,41 @@ FORMATS = {
     'J': '{imm_20}{imm_10_1:010}{imm_11}{imm_19_12:08}{rd:05}{opcode:07}',
 }
 
+Registers_ABI = {
+        'zero': 'x0',
+        'ra': 'x1',
+        'sp': 'x2',
+        'gp': 'x3',
+        'tp': 'x4',
+        't0': 'x5',
+        't1': 'x6',
+        't2': 'x7',
+        's0': 'x8',
+        's1': 'x9',
+        'a0': 'x10',
+        'a1': 'x11',
+        'a2': 'x12',
+        'a3': 'x13',
+        'a4': 'x14',
+        'a5': 'x15',
+        'a6': 'x16',
+        'a7': 'x17',
+        's2': 'x18',
+        's3': 'x19',
+        's4': 'x20',
+        's5': 'x21',
+        's6': 'x22',
+        's7': 'x23',
+        's8': 'x24',
+        's9': 'x25',
+        's10': 'x26',
+        's11': 'x27',
+        't3': 'x28',
+        't4': 'x29',
+        't5': 'x30',
+        't6': 'x31'
+    }
+
 INSTRUCTION_SET = {
     'add':     ('0110011', '000', '0000000', 'R'),
     'sub':     ('0110011', '000', '0100000', 'R'),
@@ -143,18 +178,27 @@ PSEUDO_INSTRUCTION_SET = {
 
 def register_to_bin(register):
     """Convert register name to binary representation"""
-    if register.startswith('x'):
+    if register in Registers_ABI:
+        x = Registers_ABI[register]
+        
+        x = int(x[1:])
+        print(x)
+        x = '{0:05b}'.format(x)
+        return x
+    
+    elif register.startswith('x'):
         x = int(register[1:])
         x = '{0:05b}'.format(x)
         
         return x
         # return int(register[1:])
-        
+    
     raise ValueError(f"Unknown register: {register}")
 
 def imm_to_bin(imm, length):
     """Convert immediate value to binary representation of given length"""
-    value = int(imm)
+    x = eval(imm)
+    value = int(x)
     if value < 0:
         value = (1 << length) + value
     return format(value, f'0{length}b')
@@ -163,6 +207,9 @@ def imm_to_bin(imm, length):
 def parse_instruction(instruction):
     """Parse the instruction into its binary components"""
     parts = re.split(r'\s|,', instruction.strip())
+    while('' in parts):
+        parts.remove('')
+    print("after remove : " ,parts)
     inst_name = parts[0]
     print(parts)
     # print (inst_name)
