@@ -372,8 +372,21 @@ def convert_to_hex(bin_str):
     return hex_str
 
 def main(instructions_str):
+    if ('(' or ')' in instructions_str):
+        print("FF")
+        print(instructions_str)
+        instructions_str=instructions_str.replace('(', ' ')
+        instructions_str=instructions_str.replace(')', ' ')
+        print(instructions_str)
+
     # Split the input string into individual instructions
     instructions = instructions_str.splitlines()
+    while '' in instructions:
+        instructions.remove('')
+    # if ('(' or ')' in instructions):
+    #     print(instructions)
+    #     instructions.replace('(', ' ')
+    #     instructions.replace(')', ' ')
     
     # Process each instruction and convert it to hex
     hex_lines = []
