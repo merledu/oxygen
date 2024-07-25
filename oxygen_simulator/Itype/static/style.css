@@ -1,243 +1,3 @@
-/* 
-body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-    background-color: #f4f4f4;
-    color: #333;
-}
-
-header {
-    background-color: #007BFF; 
-    color: white;
-    padding: 1rem 0;
-    text-align: center;
-}
-
-nav ul {
-    list-style-type: none;
-    padding: 0;
-}
-
-nav ul li {
-    display: inline;
-    margin: 0 1rem;
-}
-
-nav ul li a {
-    color: white;
-    text-decoration: none;
-    font-weight: bold;
-}
-
-main {
-    padding: 2rem;
-}
-
-section {
-    margin-bottom: 2rem;
-}
-
-.editor-container {
-    display: flex;
-    justify-content: space-between;
-}
-
-.codeEditor {
-    width: 65%;
-    height: 500px;
-    resize: none;
-    overflow: auto;
-}
-
-textarea {
-    /* width: 100%;
-    height: 100%; */
-    /* padding: 1rem;
-    font-family: monospace;
-    font-size: 1rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    resize: none;
-}
-
-.side-box {
-    width: 30%;
-    display: flex;
-    flex-direction: column;
-}
-
-#hexDump {
-    margin: 10px;
-    width: 300px;
-    height: 100px;
-    resize: none;
-    overflow: auto;
-}
-
-.hex-dump-box, .timeline-box, .stats-box, .decoder-container {
-    margin-top: 1rem;
-    padding: 1rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    background-color: #fff;
-}
-.config-box{
-    padding: 1rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    background-color: #fff;
-}
-.assemble-button{
-
-
-}
-
-
-.config-box h3, .hex-dump-box h3, .timeline-box h3, .stats-box h3, .decoder-container h3 {
-    margin-top: 0;
-}
-
-.config-box label, .hex-dump-box label, .timeline-box label, .stats-box label, .decoder-container label {
-    display: block;
-    margin: 0.5rem 0 0.2rem;
-}
-
-button {
-    padding: 0.5rem 1rem;
-    background-color: #007BFF; 
-    /* color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 1rem;
-}
-
-button:hover {
-    background-color: #0056b3; 
-}
-
-.hex-dump-buttons button {
-    margin-right: 0.22rem;
-}
-
-.hex-dump-buttons button:last-child {
-    margin-right: 0.5rem;
-}
-
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 1rem;
-}
-
-table, th, td {
-    border: 1px solid #ccc;
-}
-
-th, td {
-    padding: 0.5rem;
-    text-align: left;
-}
-
-.step-container {
-    margin-top: 1rem;
-    text-align: center;
-}
-
-.step-button {
-    padding: 0.5rem 2rem;
-    font-size: 1rem;
-}
-
-.switch {
-    position: relative;
-    display: inline-block;
-    width: 34px;
-    height: 20px;
-}
-
-.switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #ccc;
-    transition: .4s;
-    border-radius: 34px;
-}
-
-.slider:before {
-    position: absolute;
-    content: "";
-    height: 12px;
-    width: 12px;
-    left: 4px;
-    bottom: 4px;
-    background-color: white;
-    transition: .4s;
-    border-radius: 50%;
-}
-
-input:checked + .slider {
-    background-color: #007BFF;
-}
-
-input:checked + .slider:before {
-    transform: translateX(14px);
-}
-
-
-#configBox {
-    width: 200px;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease-in-out;
-}
-
-
-
-#variantSelect {
-    width: 100%;
-    padding: 5px;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-    transition: all 0.3s ease-in-out;
-    font-size: 16px;
-}
-
-#variantSelect:focus {
-    border-color: #007bff;
-    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
-    transform: scale(1.02);
-}
-
-@keyframes dropdown {
-    0% {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    100% {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-#variantSelect {
-    animation: dropdown 0.5s ease-in-out;
-} */
-
 body {
     font-family: Arial, sans-serif;
     margin: 0;
@@ -247,6 +7,11 @@ body {
     animation: fadeIn 1s ease-in-out;
 }
 
+.container_my-5 {
+    max-width: 100%;
+    padding: 2rem;
+}
+
 header {
     background-color: #007BFF;
     color: white;
@@ -283,8 +48,12 @@ section {
     justify-content: space-between;
 }
 
+#editor {
+    height: 700px; /* Keep this value as needed */
+}
+
 .codeEditor {
-    height: 500px;
+    height: 650px; /* Adjust this to match the height of the editor */
     resize: none;
     overflow: auto;
 }
@@ -301,25 +70,24 @@ textarea {
 .side-box {
     display: flex;
     flex-direction: column;
+    width: 50%;
 }
 
 #hexDump {
     margin: 10px;
-    width: 400px;
-    height: 100px;
+    width: 100%;
+    height: 200px; /* Increase the height */
     resize: none;
     overflow: auto;
-    position: relative;
-    top: auto;
-    right: 5px;
-}
-.assemble-container_text-center_mt-4{
-    margin-inline-start: 24%;
-
 }
 
-.hex-dump-buttons{
-    margin-inline-start: 40px;
+.assemble-container_text-center_mt-4 {
+    text-align: center;
+}
+
+.hex-dump-buttons {
+    margin-inline-start: 0;
+    text-align: center;
 }
 
 .hex-dump-box, .timeline-box, .stats-box, .decoder-container {
@@ -328,6 +96,7 @@ textarea {
     border: 1px solid #ccc;
     border-radius: 4px;
     background-color: #fff;
+    width: 100%;
 }
 
 .config-box {
@@ -335,6 +104,7 @@ textarea {
     border: 1px solid #ccc;
     border-radius: 4px;
     background-color: #fff;
+    width: 100%;
 }
 
 .config-box h3, .hex-dump-box h3, .timeline-box h3, .stats-box h3, .decoder-container h3 {
@@ -381,6 +151,7 @@ table, th, td {
 th, td {
     padding: 0.5rem;
     text-align: left;
+    font-family: monospace;
 }
 
 .step-container {
@@ -464,4 +235,93 @@ input:checked + .slider:before {
 
 #variantSelect {
     animation: dropdown 0.5s ease-in-out;
+}
+
+#decoder {
+    width: 100%;
+}
+
+.decoder-container {
+    display: flex;
+    justify-content: space-between;
+}
+.decoder-table {
+    width: 60%;
+}
+.tabs-container {
+    width: 40%;
+    display: flex;
+    flex-direction: column;
+}
+
+.registers-table, .f-registers-table, .memory-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.registers-table th, .registers-table td, .f-registers-table th, .f-registers-table td, .memory-table th, .memory-table td {
+    border: 1px solid #ccc;
+    padding: 0.5rem;
+    text-align: left;
+    font-family: monospace;
+}
+
+.nav-tabs {
+    margin-bottom: 1rem;
+}
+
+.nav-tabs .nav-link {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-right: 0.5rem;
+}
+
+.nav-tabs .nav-link.active {
+    background-color: #007BFF;
+    color: white;
+}
+
+.tab-content .tab-pane {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 1rem;
+    background-color: #fff;
+}
+.nav-tabs {
+    margin-top: 1rem;
+}
+
+.nav-tabs .nav-item .nav-link {
+    color: #007BFF;
+}
+
+.nav-tabs .nav-item .nav-link.active {
+    color: #495057;
+    background-color: #fff;
+    border-color: #dee2e6 #dee2e6 #fff;
+}
+
+.tab-content {
+    margin-top: 1rem;
+}
+
+.tab-content .tab-pane {
+    padding: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #fff;
+}
+
+.registers-table, .ftype-registers-table, .memory-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.registers-table th, .ftype-registers-table th, .memory-table th,
+.registers-table td, .ftype-registers-table td, .memory-table td {
+    border: 1px solid #ccc;
+    padding: 0.5rem;
+    text-align: left;
+    font-family: monospace;
 }

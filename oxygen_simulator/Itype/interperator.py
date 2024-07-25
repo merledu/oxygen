@@ -223,6 +223,7 @@ def parse_instruction(instruction):
     print(parts)
     # print (inst_name)
     if inst_name in PSEUDO_INSTRUCTION_SET:
+        
         base_inst = PSEUDO_INSTRUCTION_SET[inst_name]
         # print(base_inst)
         # print(inst_name[0])
@@ -384,14 +385,12 @@ def convert_to_hex(bin_str):
 
 def main(instructions_str):
     if ('(' or ')' in instructions_str):
-        print("FF")
-        print(instructions_str)
+       
         instructions_str=instructions_str.replace('(', ' ')
         instructions_str=instructions_str.replace(')', ' ')
-        print(instructions_str)
 
-    # Split the input string into individual instructions
-    instructions = instructions_str.splitlines()
+
+    instructions = instructions_str.lower().splitlines()
     while '' in instructions:
         instructions.remove('')
     # if ('(' or ')' in instructions):
@@ -399,7 +398,6 @@ def main(instructions_str):
     #     instructions.replace('(', ' ')
     #     instructions.replace(')', ' ')
     
-    # Process each instruction and convert it to hex
     hex_lines = []
     for instruction in instructions:
         bin_str = parse_instruction(instruction)
@@ -410,6 +408,40 @@ def main(instructions_str):
     hex_output = '\n'.join(hex_lines)
     
     return hex_output
+
+def checkpsudo (instructions_str):
+    inss = instructions_str.splitlines()
+    while '' in inss:
+        inss.remove('')
+    retinstructions = []
+    for instruction in inss:
+        parts = re.split(r'\s|,', instruction.strip())
+        while('' in parts):
+            parts.remove('')
+        inst_name = parts[0]
+        print("parts in check " ,parts)
+        # print (inst_name)
+        if inst_name in PSEUDO_INSTRUCTION_SET:
+            
+            base_inst = PSEUDO_INSTRUCTION_SET[inst_name]
+            # print(base_inst)
+            # print(inst_name[0])
+            
+            if (inst_name == 'nop'):
+                retinstructions.append(base_inst)
+            elif(inst_name[0] == 'b'):
+                retinstructions.append(base_inst.format(rs=parts[1], offset=parts[2]))
+            elif(inst_name[0] == 'j'):
+                retinstructions.append(base_inst.format(a=parts[1]))
+            elif(inst_name == 'ret'):
+                retinstructions.append(base_inst)
+            elif (inst_name == 'li'):
+                retinstructions.append((base_inst.format(rd=parts[1], imm=parts[2])))
+            elif (inst_name == 'mv'):
+                retinstructions.append(base_inst.format(rd=parts[1], rs=parts[2]))
+        else :
+            retinstructions.append(instruction)         
+    return retinstructions
 
 # def main(input_file, output_file):
 #     with open(input_file, 'r') as file:
