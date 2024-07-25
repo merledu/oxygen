@@ -22,7 +22,7 @@
         </nav>
     </header>
 
-    <main class="container my-5">
+    <main class="container_my-5">
         <div class="tab-content">
             <div class="tab-pane fade show active" id="editor-tab">
                 <section id="editor" class="mb-5">
@@ -57,7 +57,6 @@
             </div>
             <div class="tab-pane fade" id="datapath-tab">
                 <section id="datapath" class="mb-5">
-                    <h2>Data Path</h2>
                     <!-- Content for Data Path -->
                     <section id="data-path">
                         <h2>Data Path</h2>
@@ -138,32 +137,130 @@
             </div>
             <div class="tab-pane fade" id="decoder-tab">
                 <section id="decoder" class="mb-5">
-                    <h2>Decoder</h2>
-
                     <!-- Content for Decoder -->
                     <section id="decoder">
                         <h2>Decoder</h2>
-                        <div class="decoder-container">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>PC</th>
-                                        <th>Machine Code</th>
-                                        <th>Basic Code</th>
-                                        <th>Original Code</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="decoderTableBody">
-                                    <!-- Rows will be populated by JavaScript -->
-                                </tbody>
-                            </table>
-                            <div class="step-container">
-                                <button class="step-button" onclick="stepInstruction()">Step</button>
+                        <div class="decoder-container row">
+                            <div class="col-md-7">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>PC</th>
+                                            <th>Machine Code</th>
+                                            <th>Basic Code</th>
+                                            <th>Original Code</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="decoderTableBody">
+                                        <!-- Rows will be populated by JavaScript -->
+                                    </tbody>
+                                </table>
                             </div>
+                            <div class="col-md-5">
+                                <ul class="nav nav-tabs" id="myTab" role="tablist">
+                                    <li class="nav-item">
+                                        <a class="nav-link active" id="registers-tab" data-toggle="tab" href="#registers" role="tab">Registers</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" id="ftype-registers-tab" data-toggle="tab" href="#ftype-registers" role="tab">F-Type Registers</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" id="memory-tab" data-toggle="tab" href="#memory" role="tab">Memory</a>
+                                    </li>
+                                </ul>
+                                <div class="tab-content" id="myTabContent">
+                                    <div class="tab-pane fade show active" id="registers" role="tabpanel">
+                                        <!-- Registers content -->
+                                        <div id="registers-content">
+                                            <table class="registers-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Register</th>
+                                                        <th>ABI Name</th>
+                                                        <th>Value</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <!-- Dynamically populate RISC-V registers -->
+                                                    <script>
+                                                        const registers = [
+                                                            { number: 0, name: "zero" }, { number: 1, name: "ra" }, { number: 2, name: "sp" },
+                                                            { number: 3, name: "gp" }, { number: 4, name: "tp" }, { number: 5, name: "t0" },
+                                                            { number: 6, name: "t1" }, { number: 7, name: "t2" }, { number: 8, name: "s0/fp" },
+                                                            { number: 9, name: "s1" }, { number: 10, name: "a0" }, { number: 11, name: "a1" },
+                                                            { number: 12, name: "a2" }, { number: 13, name: "a3" }, { number: 14, name: "a4" },
+                                                            { number: 15, name: "a5" }, { number: 16, name: "a6" }, { number: 17, name: "a7" },
+                                                            { number: 18, name: "s2" }, { number: 19, name: "s3" }, { number: 20, name: "s4" },
+                                                            { number: 21, name: "s5" }, { number: 22, name: "s6" }, { number: 23, name: "s7" },
+                                                            { number: 24, name: "s8" }, { number: 25, name: "s9" }, { number: 26, name: "s10" },
+                                                            { number: 27, name: "s11" }, { number: 28, name: "t3" }, { number: 29, name: "t4" },
+                                                            { number: 30, name: "t5" }, { number: 31, name: "t6" }
+                                                        ];
+                                                        registers.forEach(register => {
+                                                            document.write(`
+                                                                <tr>
+                                                                    <td>x${register.number}</td>
+                                                                    <td>${register.name}</td>
+                                                                    <td id="reg-${register.number}">0x00000000</td>
+                                                                </tr>
+                                                            `);
+                                                        });
+                                                    </script>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="tab-pane fade" id="ftype-registers" role="tabpanel">
+                                        <!-- F-Type Registers content -->
+                                        <div id="ftype-registers-content">
+                                            <table class="ftype-registers-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Register</th>
+                                                        <th>Value</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <!-- Dynamically populate F-Type registers -->
+                                                    <script>
+                                                        for (let i = 0; i < 32; i++) {
+                                                            document.write(`
+                                                                <tr>
+                                                                    <td>f${i}</td>
+                                                                    <td id="freg-${i}">0.0</td>
+                                                                </tr>
+                                                            `);
+                                                        }
+                                                    </script>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="tab-pane fade" id="memory" role="tabpanel">
+                                        <!-- Memory content -->
+                                        <div id="memory-content">
+                                            <table class="memory-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Address</th>
+                                                        <th>Value</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="memoryTableBody">
+                                                    <!-- Rows will be populated by JavaScript -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="step-container text-center mt-3">
+                            <button class="step-button" onclick="stepInstruction()">Step</button>
                         </div>
                     </section>
                 </section>
-            </div>
+            </div>            
         </div>
     </main>
 
