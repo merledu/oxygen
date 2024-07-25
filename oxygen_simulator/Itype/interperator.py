@@ -9,13 +9,14 @@ FORMATS = {
     'U': '{imm:020}{rd:05}{opcode:07}',
     'J': '{imm_20}{imm_10_1:010}{imm_11}{imm_19_12:08}{rd:05}{opcode:07}',
     'CR': '{funct4:04}{rd_rs1:05}{rs2:05}{opcode:02}',
-    'CI': '{funct3:03}{imm:06}{rd_rs1:05}{imm:06}{opcode:02}',
-    'CSS': '{funct3:03}{imm:6}{rs2:05}{opcode:02}',
+    'CI': '{funct3:03}{imm:06}{rd_rs1:05}{opcode:02}',
+    'CSS': '{funct3:03}{imm:06}{rs2:05}{opcode:02}',
     'CIW': '{funct3:03}{imm:08}{rd:03}{opcode:02}',
-    'CL': '{funct3:03}{imm:06}{rs1:05}{imm:06}{rd:05}{opcode:02}',
-    'CS': '{funct3:03}{imm:06}{rd_rs1:05}{imm:06}{rs2:05}{opcode:02}',
-    'CB': '{funct3:03}{imm:06}{rs1:05}{imm:06}{opcode:02}',
-    'CJ': '{funct3:03}{offset:11}{opcode:02}'
+    'CL': '{funct3:03}{imm:03}{rs1:03}{imm:02}{rd:03}{opcode:02}',
+    'CS': '{funct3:03}{imm:03}{rd_rs1:03}{imm:02}{rs2:03}{opcode:02}',
+    'CA': '{funct6:06}{rd_rs1:03}{rs2:03}{opcode:02}',
+    'CB': '{funct3:03}{offset:08}{rd_rs1:03}{offset:03}{opcode:02}',
+    'CJ': '{funct3:03}{jump_target:11}{opcode:02}'
 }
 
 Registers_ABI = {
