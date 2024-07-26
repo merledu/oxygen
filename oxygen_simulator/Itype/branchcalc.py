@@ -57,12 +57,12 @@ def replace_labels_with_immediates(instructions):
 
 # Example usage:
 instructions = """
-li x1,1
+li x1,  1
 li x2,5
 jump:
-blt x1,x2,label
+beq x1,x2,  label
 addi x1,x1,1
-jalr x1,x1,12
+j jump
 label:
 nop
 """

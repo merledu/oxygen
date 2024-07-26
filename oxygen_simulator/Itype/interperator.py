@@ -510,6 +510,7 @@ def main(instructions_str):
     return hex_output
 
 def checkpsudo (instructions_str):
+    instructions_str = replace_labels_with_immediates(instructions_str)
     inss = instructions_str.splitlines()
     while '' in inss:
         inss.remove('')

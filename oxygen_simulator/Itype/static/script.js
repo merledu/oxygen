@@ -1,25 +1,8 @@
-let pipelineEnabled = false;
-let dataForwardingEnabled = false;
-let variantEnabled = false;
 
-const getRequest = async () => {
-    const response = await axios.get('/request', {
-    params: {
-    'test' : "test"
-    }
-    })
-    console.log(response.data)
-    }
-    getRequest();
+let variantEnabled = false;
 
 function updateConfig(type, isChecked) {
     switch (type) {
-        case 'pipeline':
-            pipelineEnabled = isChecked;
-            break;
-        case 'dataForwarding':
-            dataForwardingEnabled = isChecked;
-            break;
         case 'variant':
             variantEnabled = isChecked;
             break;
@@ -83,27 +66,13 @@ function populateDecoderTable(code,hex_dump,baseins) {
     let count = 0
 
     instructions.forEach((instruction, index) => {
-        // const pc = `0x${(index * 4).toString(16)}`;
-        // // const machineCode = `0x${(index * 4 + 0x10000000).toString(16)}`; // Dummy machine code
-        // const machineCode = hex_dump;
-        // const basicCode = instruction; // Assuming basic code is the same as the original for now
-        // const originalCode = instruction; // Placeholder
-
-        // const row = document.createElement('tr');
-        // row.innerHTML = `
-        //     <td>${pc}</td>
-        //     <td>${machineCode}</td>
-        //     <td>${basicCode}</td>
-        //     <td>${originalCode}</td>
-        // `;
-        // tableBody.appendChild(row);
             const pc = `0x${(index * 4).toString(16)}`;
             hexdumparr = hex_dump.split('\n').filter(line => line.trim() !== '')
             
             console.log((hexdumparr));
             const machineCode = hexdumparr[count];
-            const basicCode = baseins[count]; // Assuming basic code is the same as the original for now
-            const originalCode = instruction; // Placeholder
+            const basicCode = baseins[count]; 
+            const originalCode = instruction; 
     
             const row = document.createElement('tr');
             row.innerHTML = `

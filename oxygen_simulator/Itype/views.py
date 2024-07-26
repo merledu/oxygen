@@ -5,6 +5,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from .interperator import main
 from .interperator import checkpsudo
+from .interperator import replace_labels_with_immediates
 from django.views.decorators.csrf import csrf_exempt
 
 # Create your views here.
@@ -36,7 +37,8 @@ def assemble_code(request):
         
         hex_output = main(code)
         sudo_or_base  = checkpsudo(code)
-        print(sudo_or_base)
+        
+        
 
         return JsonResponse({'hex': hex_output ,
                              'is_sudo' : sudo_or_base}, )
