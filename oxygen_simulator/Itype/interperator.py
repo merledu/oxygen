@@ -242,6 +242,62 @@ PSEUDO_INSTRUCTION_SET = {
     'jr': 'jalr x0,{a},0',
     'ret': 'jalr x0,x1,0'
 }
+def replace_labels_with_immediates(instructions):
+    # Split the instructions into a list of lines
+    lines = instructions.split('\n')
+    print(lines)
+    # First pass: Identify labels and their addresses
+    labels = {}
+    address = 0
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        if ':' in line:
+            label = line.split(':')[0].strip()
+            labels[label] = address
+            print(label)
+        else:
+            print(address , " " , line)
+            address += 4
+            print(labels)
+            
+            
+
+    # Second pass: Calculate immediates and replace labels
+    result = []
+    address = 0
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        if ':' in line:
+            label = line.split(':')[0].strip()
+            line = line.split(':')[1].strip()
+            if not line:
+                continue
+        if line[0].lower()=='b':
+            parts = line.split(',')
+            label = parts[-1].strip()
+            if label in labels:
+                immediate = labels[label] - address
+                new_line = f"{parts[0]},{parts[1]},{immediate}"
+                result.append(new_line)
+        elif line[0].lower()=='j':
+            parts = line.split(' ')
+            label = parts[-1].strip()
+            if (label in labels):
+                immediate = labels[label]-address
+                new_line = f"{parts[0]} {immediate}"
+                result.append(new_line)
+                
+            else:
+                result.append(line)
+        else:
+            result.append(line)
+        address += 4
+    
+    return '\n'.join(result)
 
 def register_to_bin(register):
     """Convert register name to binary representation"""
@@ -384,24 +440,15 @@ def parse_instruction(instruction):
     
     elif inst_type == 'J':
         rd = register_to_bin(parts[1])
-        # print("rd : " ,rd)
-        # print("imm no bin " ,parts[2])
         imm = imm_to_bin(parts[2], 21)
-        print(imm)
-        # imm = ''.join(reversed(str(imm)))
         imm_20 = imm[0]
         imm_10_1 = imm[10:20]
-        # print("imm 10_1 :",imm_10_1)
         imm_11 = imm[9]
         imm_19_12 = imm[1:9]
-        # print("bin imm " ,imm)
-        
-        # print("imm broken : ",imm_20,imm_10_1,imm_11,imm_19_12,rd,opcode, end=" ")
         return FORMATS['J'].format(imm_20=imm_20, imm_10_1=imm_10_1, imm_11=imm_11, imm_19_12=imm_19_12, rd=rd, opcode=opcode)
+    
     elif inst_type == 'LI':
         rd = register_to_bin(parts[1])
-        # rs1 = register_to_bin(parts[3])
-        
         if (len(parts) == 3):
             offset_base_str = parts[2]
             print(offset_base_str)
@@ -421,16 +468,6 @@ def parse_instruction(instruction):
             else:
                 imm_value = int(immediate)
                 imm = imm_to_bin(str(imm_value),12)
-        # offset_base_str = parts[3]
-        # print(offset_base_str)
-        # match_brackets = re.match(r'^([^(]+)\(([^)]+)\)$', offset_base_str)
-        # if match_brackets:
-        #     imm = imm_to_bin(match_brackets.group(1))
-        #     rs1 = match_brackets.group(2)
-        # else:
-        #     # If no brackets, assume offset is the immediate and base register is the next part
-        #     imm = imm_to_bin(str(imm_value),12)
-        #     rs1 = register_to_bin(offset_base_str)
         
         return FORMATS['I'].format(imm=imm, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
         
@@ -442,15 +479,19 @@ def convert_to_hex(bin_str):
     return hex_str
 
 def main(instructions_str):
+    instructions_str = replace_labels_with_immediates(instructions_str)
     if ('(' or ')' in instructions_str):
        
         instructions_str=instructions_str.replace('(', ' ')
         instructions_str=instructions_str.replace(')', ' ')
+    
+    
 
 
     instructions = instructions_str.lower().splitlines()
     while '' in instructions:
         instructions.remove('')
+    
     # if ('(' or ')' in instructions):
     #     print(instructions)
     #     instructions.replace('(', ' ')
@@ -458,7 +499,8 @@ def main(instructions_str):
     
     hex_lines = []
     for instruction in instructions:
-        bin_str = parse_instruction(instruction)
+        
+        bin_str = parse_instruction((instruction))
         hex_str = convert_to_hex(bin_str)
         hex_lines.append(hex_str)
     
