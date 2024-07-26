@@ -8,15 +8,34 @@ FORMATS = {
     'B': '{imm_12}{imm_10_5:06}{rs2:05}{rs1:05}{funct3:03}{imm_4_1:04}{imm_11}{opcode:07}',
     'U': '{imm:020}{rd:05}{opcode:07}',
     'J': '{imm_20}{imm_10_1:010}{imm_11}{imm_19_12:08}{rd:05}{opcode:07}',
-    'CR': '{funct4:04}{rd_rs1:05}{rs2:05}{opcode:02}',
-    'CI': '{funct3:03}{imm:06}{rd_rs1:05}{opcode:02}',
-    'CSS': '{funct3:03}{imm:06}{rs2:05}{opcode:02}',
-    'CIW': '{funct3:03}{imm:08}{rd:03}{opcode:02}',
+    # C custom formats
+    'CR': '{funct4:04}{rd_rs1:05}{rs2:05}{opcode:02}',#mv,add
+    'CR(1)': '{funct4:06}{rd_rs1:03}{funct2:02}{rs2:03}{opcode:02}',#and,or,xor,sub,addw,subw
+    'CR(2)': '{funct4:04}{imm:10}{opcode:02}',#ebreak
+    'CR(3)': '{funct4:04}{rd_rs1:05}{rs2:05}{opcode:02}',#jr,jalr
+    'CI': '{funct3:03}{imm:01}{rd_rs1:05}{imm:05}{opcode:02}',#slli,nop
+    'CI(1)': '{funct3:03}{imm:01}{rd:05}{imm:05}{opcode:02}',#lwsp,Flwsp
+    'CI(2)': '{funct3:03}{imm:01}{rd:05}{imm:05}{opcode:02}',#ldsp,fldsp
+    'CI(3)': '{funct3:03}{imm:01}{rd:05}{imm:05}{opcode:02}',#lqsp
+    'CI(4)': '{funct3:03}{imm:01}{rd:05}{imm:05}{opcode:02}',#li,lui
+    'CI(5)': '{funct3:03}{imm:01}{rd:05}{imm:05}{opcode:02}',#addi,addiw
+    'CI(6)': '{funct3:03}{imm:01}{rd:05}{imm:05}{opcode:02}',#addi16sp
+    'CSS(1)': '{funct3:03}{imm:06}{rs2:05}{opcode:02}',#swsp,fswsp
+    'CSS(2)': '{funct3:03}{imm:06}{rs2:05}{opcode:02}',#sdsp,fsdsp
+    'CSS(3)': '{funct3:03}{imm:06}{rs2:05}{opcode:02}',#sqsp
+    'CIW': '{funct3:03}{imm:08}{rd:03}{opcode:02}',#addi4spn
     'CL': '{funct3:03}{imm:03}{rs1:03}{imm:02}{rd:03}{opcode:02}',
+    'CL(1)': '{funct3:03}{imm:03}{rs1:03}{imm:02}{rd:03}{opcode:02}',#lw,flw
+    'CL(2)': '{funct3:03}{imm:03}{rs1:03}{imm:02}{rd:03}{opcode:02}',#ld,lq,fld
     'CS': '{funct3:03}{imm:03}{rd_rs1:03}{imm:02}{rs2:03}{opcode:02}',
+    'CS(1)': '{funct3:03}{imm:03}{rd_rs1:03}{imm:02}{rs2:03}{opcode:02}',#sw,fsw
+    'CS(2)': '{funct3:03}{imm:03}{rd_rs1:03}{imm:02}{rs2:03}{opcode:02}',#sd,fsd
+    'CS(3)': '{funct3:03}{imm:03}{rd_rs1:03}{imm:02}{rs2:03}{opcode:02}',#sq    
     'CA': '{funct6:06}{rd_rs1:03}{rs2:03}{opcode:02}',
     'CB': '{funct3:03}{offset:08}{rd_rs1:03}{offset:03}{opcode:02}',
-    'CJ': '{funct3:03}{jump_target:11}{opcode:02}'
+    'CB(1)': '{funct3:03}{offset:03}{rs1:03}{offset:05}{opcode:02}',#beqz,bnez
+    'CB(2)': '{funct3:03}{offset:01}{funct2:02}{rs1:03}{offset:05}{opcode:02}',#srli,srai,andi
+    'CJ': '{funct3:03}{jump_target:11}{opcode:02}'#j,jal
 }
 
 Registers_ABI = {
@@ -123,45 +142,83 @@ INSTRUCTION_SET = {
 
 C_INST_SET  = {
     # RV32C (Compressed) extension instructions
-    'c.add':    ('10', None, '1000', 'CR'),
-    'c.addi':   ('01', '000', None, 'CI'),
+    'c.add':    ('10', None, '1001', 'CR'),
+    'c.mv':     ('10', None, '1000', 'CR'),
+    
+    'c.or':     ('01', '10', '100011', 'CR(1)'),
+    'c.and':    ('01', '11', '100011', 'CR(1)'),
+    'c.sub':    ('01', '00', '100011', 'CR(1)'),
+    'c.subw':   ('01', '00', '100111', 'CR(1)'),
+    'c.xor':    ('01', '01', '100011', 'CR(1)'),
+    'c.addw':   ('01', '01', '100111', 'CR(1)'),
+    
+    'c.ebreak': ('10', None, '1001', 'CR(2)'),
+    
+    'c.jalr':   ('10', None, '1001', 'CR(3)'),
+    'c.jr':     ('10', None, '1000', 'CR(3)'),
+    
+    
+    
+    'c.nop':    ('01', '000', None, 'CI'),
+    'c.slli':   ('10', '000', None, 'CI'),
+    
+    'c.flwsp':  ('10', '011', None, 'CI(1)'),
+    'c.lwsp':   ('10', '010', None, 'CI(1)'),
+    
+    'c.fldsp':  ('10', '001', None, 'CI(2)'),
+    'c.ldsp':   ('10', '011', None, 'CI(2)'),
+    #CI(3) ins missing
+    'c.li':     ('01', '010', None, 'CI(4)'),
+    'c.lui':    ('01', '011', None, 'CI(4)'),
+    
+    'c.addi':   ('01', '000', None, 'CI(5)'),
+    'c.addiw':   ('01', '001', None, 'CI(5)'),
+    
+    'c.addi16sp':('01', '011', None, 'CI(6)'),
+    
+    
+    
     'c.addi4spn':('00', '000', None, 'CIW'),
-    'c.addi16sp':('01', '011', None, 'CI'),
-    'c.addw':   ('10', None, '1001', 'CR'),
-    'c.and':    ('10', None, '1000', 'CR'),
-    'c.andi':   ('01', '100', None, 'CI'),
-    'c.beqz':   ('01', '110', None, 'CB'),
-    'c.bnez':   ('01', '111', None, 'CB'),
-    'c.ebreak': ('10', None, '0001', 'CR'),
-    'c.fld':    ('00', '001', None, 'CL'),
-    'c.fldsp':  ('10', '001', None, 'CL'),
-    'c.flw':    ('00', '010', None, 'CL'),
-    'c.flwsp':  ('10', '010', None, 'CL'),
-    'c.fsd':    ('00', '101', None, 'CS'),
-    'c.fsdsp':  ('10', '101', None, 'CS'),
-    'c.fsw':    ('00', '110', None, 'CS'),
-    'c.fswsp':  ('10', '110', None, 'CS'),
+    
+    
+    
+    'c.beqz':   ('01', '110', None, 'CB(1)'),
+    'c.bnez':   ('01', '111', None, 'CB(1)'),
+    
+    'c.srai':   ('01', '100', '01', 'CB(2)'),
+    'c.srli':   ('01', '100', '00', 'CB(2)'),
+    'c.andi':   ('01', '100', '10', 'CB(2)'),
+    
+    
+    'c.fswsp':  ('10', '111', None, 'CSS(1)'),
+    'c.swsp':   ('10', '110', None, 'CSS(1)'),
+    
+    'c.sdsp':  ('10', '111', None, 'CSS(2)'),
+    'c.fsdsp':  ('10', '101', None, 'CSS(2)'),
+    
+    'c.sqsp':  ('10', '101', None, 'CSS(3)'),
+    
+    
+    
+    'c.flw':    ('00', '011', None, 'CL(1)'),
+    'c.lw':     ('00', '010', None, 'CL(1)'),
+    
+    'c.fld':    ('00', '001', None, 'CL(2)'),
+    'c.ld':     ('00', '011', None, 'CL(2)'),
+    
+    
+    
     'c.j':      ('01', '101', None, 'CJ'),
     'c.jal':    ('01', '001', None, 'CJ'),
-    'c.jalr':   ('10', None, '1001', 'CR'),
-    'c.jr':     ('10', None, '1000', 'CR'),
-    'c.ld':     ('00', '011', None, 'CL'),
-    'c.ldsp':   ('10', '011', None, 'CL'),
-    'c.li':     ('01', '010', None, 'CI'),
-    'c.lui':    ('01', '011', None, 'CI'),
-    'c.lw':     ('00', '010', None, 'CL'),
-    'c.lwsp':   ('10', '010', None, 'CL'),
-    'c.mv':     ('10', None, '1000', 'CR'),
-    'c.nop':    ('01', '000', None, 'CI'),
-    'c.or':     ('10', None, '1000', 'CR'),
-    'c.slli':   ('00', '000', None, 'CI'),
-    'c.srai':   ('10', None, '1000', 'CR'),
-    'c.srli':   ('10', None, '1000', 'CR'),
-    'c.sub':    ('10', None, '1000', 'CR'),
-    'c.subw':   ('10', None, '1001', 'CR'),
-    'c.sw':     ('00', '110', None, 'CS'),
-    'c.swsp':   ('10', '110', None, 'CSS'),
-    'c.xor':    ('10', None, '1000', 'CR'),
+    
+    
+    
+    'c.fsw':    ('00', '111', None, 'CS(1)'),
+    'c.sw':     ('00', '110', None, 'CS(1)'),
+    
+    'c.sd':    ('00', '111', None, 'CS(2)'),
+    'c.fsd':    ('00', '101', None, 'CS(2)'),
+    
     
 }
 
