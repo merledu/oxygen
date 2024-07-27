@@ -162,40 +162,40 @@ class RISCVSimulator:
         #BEQ
         if funct3 == 0x0:
             if self.registers[rs1] == self.registers[rs2]:
-                self.pc += self.sign_extend(imm, 13)  # Adjust for the increment after execution
+                self.pc += self.sign_extend(imm, 13)  
             else:
                 self.pc += 4
                 
         # BNE
         elif funct3 == 0x1:
             if self.registers[rs1] != self.registers[rs2]:
-                self.pc += self.sign_extend(imm, 13) - 4  # Adjust for the increment after execution
+                self.pc += self.sign_extend(imm, 13) 
             else:
                 self.pc += 4
         # BLT
         elif funct3 == 0x4:
             if self.registers[rs1] < self.registers[rs2]:
-                self.pc += self.sign_extend(imm, 13) - 4  # Adjust for the increment after execution
+                self.pc += self.sign_extend(imm, 13) 
             else:
                 self.pc += 4
         # BGE
         elif funct3 == 0x5:
             if self.registers[rs1] >= self.registers[rs2]:
-                self.pc += self.sign_extend(imm, 13) - 4  # Adjust for the increment after execution
+                self.pc += self.sign_extend(imm, 13) 
             else:
                 self.pc += 4
         # BLTU
         elif funct3 == 0x6:
             if self.registers[rs1] < self.registers[rs2]:
-                self.pc += self.sign_extend(imm, 13) - 4  # Adjust for the increment after execution
+                self.pc += self.sign_extend(imm, 13) 
             else:
                 self.pc += 4
         # BGEU
         elif funct3 == 0x7:
             if self.registers[rs1] >= self.registers[rs2]:
-                self.pc += self.sign_extend(imm, 13) - 4  # Adjust for the increment after execution
+                self.pc += self.sign_extend(imm, 13)
             else:
-                self.pc += 4 # Adjust for the increment after execution
+                self.pc += 4 
 
     def execute_u_type(self, instruction):
        
