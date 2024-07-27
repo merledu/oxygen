@@ -8,7 +8,6 @@ class RISCVSimulator:
     def load_instructions(self, instructions):
         for i, instruction in enumerate(instructions):
             self.instruction_memory[i * 4] = instruction
-        print(self.instruction_memory)
             
     def execute_instruction(self, instruction):
         
@@ -233,17 +232,18 @@ class RISCVSimulator:
         return value
 
     def run(self, instructions):
+        instructions = instructions.split('\n')
+        instructions = list(filter(('').__ne__, instructions))
+        for i in range(len(instructions)):
+            hex_int = int(instructions[i], 16)
+            instructions[i]=hex_int
+            
         self.load_instructions(instructions)
         while self.pc < len(instructions) * 4:
             instruction = self.instruction_memory[self.pc]
             self.execute_instruction(instruction)
-            print(instruction)
-            
-            
-            # if self.pc != self.pc + 4:  # Check if PC has been updated
-            #     self.pc = self.pc  # Update the pc value
-            # else:
-            #     self.pc += 4  # Increment pc by 4
+        
+        return self.registers
 
     def dump_registers(self):
         # register values ye main pa bhejna
@@ -252,15 +252,12 @@ class RISCVSimulator:
 
 
 simulator = RISCVSimulator()
-instructions = [
-    0x00100093,
-    0x00500113,
-    0x00208663,
-    0x00108093,
-    0xff9ff06f,
-    0x00000013
-
-    
-]
-simulator.run(instructions)
-simulator.dump_registers()
+instructions = """
+00100093
+00500113
+00208663
+00108093
+ff9ff06f
+00000013
+"""
+print(simulator.run(instructions))

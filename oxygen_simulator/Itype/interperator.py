@@ -506,6 +506,7 @@ def main(instructions_str):
     
     # Join the hex strings with newline characters
     hex_output = '\n'.join(hex_lines)
+    print(hex_output)
     
     return hex_output
 

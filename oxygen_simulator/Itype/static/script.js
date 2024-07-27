@@ -8,21 +8,31 @@ function updateConfig(type, isChecked) {
             break;
     }
 }
+function updateRegisterValues(data) {
+    data.forEach((value, index) => {
+        document.getElementById(`reg-${index}`).innerText = `0x${value.toString(16).padStart(8, '0')}`;
+    });
+}
 
 function assembleCode() {
     // const code = document.getElementById('editor-container').value;
     code = document.getElementsByClassName('codeEditor')[0].value
     let hehe
     let base
+    let registers
     axios.post('/assemble-code/', { code: code })
             .then(response => {
                 const hex = response.data.hex;
                 const baseins = response.data.is_sudo
+                const reg = response.data.registers
                 console.log(baseins)
                 hehe = hex
                 base = baseins
+                console.log(reg)
+                registers = reg
                 document.getElementById('hexDump').value = hex;
                 populateDecoderTable(code,hehe,base);
+                updateRegisterValues(registers)
             })
             .catch(error => {
                 console.error('There was an error!', error);
