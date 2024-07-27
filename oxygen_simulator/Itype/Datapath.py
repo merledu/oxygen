@@ -1,21 +1,27 @@
 class RISCVSimulator:
     def __init__(self):
-       
         self.registers = [0] * 32
-        
         self.pc = 0
-       
         self.memory = {}
+        self.instruction_memory = {}
 
+    def load_instructions(self, instructions):
+        for i, instruction in enumerate(instructions):
+            self.instruction_memory[i * 4] = instruction
+        print(self.instruction_memory)
+            
     def execute_instruction(self, instruction):
         
         opcode = instruction & 0x7F
         if opcode == 0x33:  # Rtype 
             self.execute_r_type(instruction)
+            self.pc+=4
         elif opcode == 0x13:  # Itype
             self.execute_i_type(instruction)
+            self.pc+=4
         elif opcode == 0x23:  # Stype 
             self.execute_s_type(instruction)
+            self.pc+=4
         elif opcode == 0x63:  # Btype
             self.execute_b_type(instruction)
         elif opcode == 0x37:  # Utype 
@@ -32,12 +38,37 @@ class RISCVSimulator:
         rd = (instruction >> 7) & 0x1F
         opcode = instruction & 0x7F
         
-        #  ADD 
+        # ADD 
         if funct3 == 0x0 and funct7 == 0x00:
             self.registers[rd] = self.registers[rs1] + self.registers[rs2]
         # SUB 
         elif funct3 == 0x0 and funct7 == 0x20:
             self.registers[rd] = self.registers[rs1] - self.registers[rs2]
+        # SLL 
+        elif funct3 == 0x1 and funct7 == 0x00:
+            self.registers[rd] = self.registers[rs1] << self.registers[rs2]
+        # SLT 
+        elif funct3 == 0x2 and funct7 == 0x00:
+            self.registers[rd] = 1 if self.registers[rs1] < self.registers[rs2] else 0
+        # SLTU 
+        elif funct3 == 0x3 and funct7 == 0x00:
+            self.registers[rd] = 1 if self.registers[rs1] < self.registers[rs2] else 0
+        # XOR 
+        elif funct3 == 0x4 and funct7 == 0x00:
+            self.registers[rd] = self.registers[rs1] ^ self.registers[rs2]
+        # SRL 
+        elif funct3 == 0x5 and funct7 == 0x00:
+            self.registers[rd] = self.registers[rs1] >> self.registers[rs2]
+        # SRA 
+        elif funct3 == 0x5 and funct7 == 0x20:
+            self.registers[rd] = self.registers[rs1] >> self.registers[rs2]
+        # OR 
+        elif funct3 == 0x6 and funct7 == 0x00:
+            self.registers[rd] = self.registers[rs1] | self.registers[rs2]
+        # AND 
+        elif funct3 == 0x7 and funct7 == 0x00:
+            self.registers[rd] = self.registers[rs1] & self.registers[rs2]
+
         
 
     def execute_i_type(self, instruction):
@@ -47,11 +78,53 @@ class RISCVSimulator:
         funct3 = (instruction >> 12) & 0x7
         rd = (instruction >> 7) & 0x1F
         opcode = instruction & 0x7F
-
-        # ADDI 
+ 
+        # ADDI
         if funct3 == 0x0:
             self.registers[rd] = self.registers[rs1] + self.sign_extend(imm, 12)
-        
+        # SLLI
+        elif funct3 == 0x1:
+            self.registers[rd] = self.registers[rs1] << self.sign_extend(imm, 12)
+        # SLTI
+        elif funct3 == 0x2:
+            self.registers[rd] = 1 if self.registers[rs1] < self.sign_extend(imm, 12) else 0
+        # SLTIU
+        elif funct3 == 0x3:
+            self.registers[rd] = 1 if self.registers[rs1] < self.sign_extend(imm, 12) else 0
+        # XORI
+        elif funct3 == 0x4:
+            self.registers[rd] = self.registers[rs1] ^ self.sign_extend(imm, 12)
+        # SRLI
+        elif funct3 == 0x5:
+            self.registers[rd] = self.registers[rs1] >> self.sign_extend(imm, 12)
+        # SRAI
+        elif funct3 == 0x5 and imm & 0x400 == 0x400:
+            self.registers[rd] = self.registers[rs1] >> self.sign_extend(imm, 12)
+        # ORI
+        elif funct3 == 0x6:
+            self.registers[rd] = self.registers[rs1] | self.sign_extend(imm, 12)
+        # ANDI
+        elif funct3 == 0x7:
+            self.registers[rd] = self.registers[rs1] & self.sign_extend(imm, 12)
+        # JALR
+        elif opcode == 0x67:
+            self.registers[rd] = self.pc + 4
+            self.pc = (self.registers[rs1] + self.sign_extend(imm, 12)) & 0xFFFFFFFE
+        # LB
+        elif funct3 == 0x0 and opcode == 0x3:
+            self.registers[rd] = self.sign_extend(self.memory[self.registers[rs1] + self.sign_extend(imm, 12)], 8)
+        # LH
+        elif funct3 == 0x1 and opcode == 0x3:
+            self.registers[rd] = self.sign_extend(self.memory[self.registers[rs1] + self.sign_extend(imm, 12)] << 8 | self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 1], 16)
+        # LW
+        elif funct3 == 0x2 and opcode == 0x3:
+            self.registers[rd] = self.memory[self.registers[rs1] + self.sign_extend(imm, 12)] << 24 | self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 1] << 16 | self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 2] << 8 | self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 3]
+        # LBU
+        elif funct3 == 0x4 and opcode == 0x3:
+            self.registers[rd] = self.memory[self.registers[rs1] + self.sign_extend(imm, 12)]
+        # LHU
+        elif funct3 == 0x5 and opcode == 0x3:
+            self.registers[rd] = self.memory[self.registers[rs1] + self.sign_extend(imm, 12)] << 8 | self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 1]
 
     def execute_s_type(self, instruction):
         
@@ -61,11 +134,22 @@ class RISCVSimulator:
         funct3 = (instruction >> 12) & 0x7
         opcode = instruction & 0x7F
 
-        #SW
-        if funct3 == 0x2:
-            address = self.registers[rs1] + self.sign_extend(imm, 12)
-            self.memory[address] = self.registers[rs2]
         
+        # SB
+        if funct3 == 0x0:
+            self.memory[self.registers[rs1] + self.sign_extend(imm, 12)] = self.registers[rs2] & 0xFF
+        # SH
+        elif funct3 == 0x1:
+            self.memory[self.registers[rs1] + self.sign_extend(imm, 12)] = self.registers[rs2] & 0xFF
+            self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 1] = (self.registers[rs2] >> 8) & 0xFF
+        # SW
+        elif funct3 == 0x2:
+            self.memory[self.registers[rs1] + self.sign_extend(imm, 12)] = self.registers[rs2] & 0xFF
+            self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 1] = (self.registers[rs2] >> 8) & 0xFF
+            self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 2] = (self.registers[rs2] >> 16) & 0xFF
+            self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 3] = (self.registers[rs2] >> 24) & 0xFF
+        
+            
 
     def execute_b_type(self, instruction):
        
@@ -75,12 +159,44 @@ class RISCVSimulator:
         rs1 = (instruction >> 15) & 0x1F
         funct3 = (instruction >> 12) & 0x7
         opcode = instruction & 0x7F
-
+        
         #BEQ
         if funct3 == 0x0:
             if self.registers[rs1] == self.registers[rs2]:
+                self.pc += self.sign_extend(imm, 13)  # Adjust for the increment after execution
+            else:
+                self.pc += 4
+                
+        # BNE
+        elif funct3 == 0x1:
+            if self.registers[rs1] != self.registers[rs2]:
                 self.pc += self.sign_extend(imm, 13) - 4  # Adjust for the increment after execution
-       
+            else:
+                self.pc += 4
+        # BLT
+        elif funct3 == 0x4:
+            if self.registers[rs1] < self.registers[rs2]:
+                self.pc += self.sign_extend(imm, 13) - 4  # Adjust for the increment after execution
+            else:
+                self.pc += 4
+        # BGE
+        elif funct3 == 0x5:
+            if self.registers[rs1] >= self.registers[rs2]:
+                self.pc += self.sign_extend(imm, 13) - 4  # Adjust for the increment after execution
+            else:
+                self.pc += 4
+        # BLTU
+        elif funct3 == 0x6:
+            if self.registers[rs1] < self.registers[rs2]:
+                self.pc += self.sign_extend(imm, 13) - 4  # Adjust for the increment after execution
+            else:
+                self.pc += 4
+        # BGEU
+        elif funct3 == 0x7:
+            if self.registers[rs1] >= self.registers[rs2]:
+                self.pc += self.sign_extend(imm, 13) - 4  # Adjust for the increment after execution
+            else:
+                self.pc += 4 # Adjust for the increment after execution
 
     def execute_u_type(self, instruction):
        
@@ -88,9 +204,12 @@ class RISCVSimulator:
         rd = (instruction >> 7) & 0x1F
         opcode = instruction & 0x7F
 
-        #LUI
+            # LUI
         if opcode == 0x37:
             self.registers[rd] = imm
+        # AUIPC
+        elif opcode == 0x17:
+            self.registers[rd] = self.pc + imm
         
 
     def execute_j_type(self, instruction):
@@ -103,7 +222,8 @@ class RISCVSimulator:
         # JAL
         if opcode == 0x6F:
             self.registers[rd] = self.pc + 4
-            self.pc += self.sign_extend(imm, 21) - 4  # increment after execution
+            self.pc += self.sign_extend(imm, 21)  # increment after execution
+        
         
 
     def sign_extend(self, value, bits):
@@ -113,10 +233,17 @@ class RISCVSimulator:
         return value
 
     def run(self, instructions):
-        #input will be a list from hex dump code
-        for instruction in instructions:
+        self.load_instructions(instructions)
+        while self.pc < len(instructions) * 4:
+            instruction = self.instruction_memory[self.pc]
             self.execute_instruction(instruction)
-            self.pc += 4
+            print(instruction)
+            
+            
+            # if self.pc != self.pc + 4:  # Check if PC has been updated
+            #     self.pc = self.pc  # Update the pc value
+            # else:
+            #     self.pc += 4  # Increment pc by 4
 
     def dump_registers(self):
         # register values ye main pa bhejna
@@ -126,13 +253,14 @@ class RISCVSimulator:
 
 simulator = RISCVSimulator()
 instructions = [
-    0x00200093,  # addi x1, x0, 2
-    0x00300113,  # addi x2, x0, 3
-    0x002081B3,  # add x3, x1, x2
-    0x00400023,  # sw x4, 0(x0)
-    0x00100063,  # beq x0, x1, 4
-    0x000002B7,  # lui x5, 0x2
-    0x0000006F,  # jal x0, 0
+    0x00100093,
+    0x00500113,
+    0x00208663,
+    0x00108093,
+    0xff9ff06f,
+    0x00000013
+
+    
 ]
 simulator.run(instructions)
 simulator.dump_registers()
