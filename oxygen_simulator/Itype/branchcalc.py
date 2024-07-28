@@ -1,7 +1,7 @@
 def replace_labels_with_immediates(instructions):
     # Split the instructions into a list of lines
     lines = instructions.split('\n')
-    
+    print(lines)
     # First pass: Identify labels and their addresses
     labels = {}
     address = 0
@@ -32,14 +32,14 @@ def replace_labels_with_immediates(instructions):
             line = line.split(':')[1].strip()
             if not line:
                 continue
-        if 'beq' in line:
+        if line[0].lower()=='b':
             parts = line.split(',')
             label = parts[-1].strip()
             if label in labels:
                 immediate = labels[label] - address
                 new_line = f"{parts[0]},{parts[1]},{immediate}"
                 result.append(new_line)
-        elif 'j' in line:
+        elif line[0].lower()=='j':
             parts = line.split(' ')
             label = parts[-1].strip()
             if (label in labels):
@@ -57,10 +57,10 @@ def replace_labels_with_immediates(instructions):
 
 # Example usage:
 instructions = """
-li x1,1
+li x1,  1
 li x2,5
 jump:
-beq x1,x2,label
+beq x1,x2,  label
 addi x1,x1,1
 j jump
 label:

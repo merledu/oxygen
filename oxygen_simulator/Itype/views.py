@@ -5,6 +5,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from .interperator import main
 from .interperator import checkpsudo
+from .Datapath import *
 from django.views.decorators.csrf import csrf_exempt
 
 # Create your views here.
@@ -36,8 +37,13 @@ def assemble_code(request):
         
         hex_output = main(code)
         sudo_or_base  = checkpsudo(code)
-        print(sudo_or_base)
+        execution = RISCVSimulator()
+        
+        registers = execution.run(hex_output)
+        
+        
 
         return JsonResponse({'hex': hex_output ,
-                             'is_sudo' : sudo_or_base}, )
+                             'is_sudo' : sudo_or_base,
+                             'registers': registers}, )
     return JsonResponse({'error': 'Invalid request'}, status=400)
