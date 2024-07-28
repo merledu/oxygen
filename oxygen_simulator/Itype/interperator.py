@@ -10,31 +10,31 @@ FORMATS = {
     'J': '{imm_20}{imm_10_1:010}{imm_11}{imm_19_12:08}{rd:05}{opcode:07}',
     # C custom formats
     'CR': '{funct4:04}{rd_rs1:05}{rs2:05}{opcode:02}',#mv,add
-    'CR(1)': '{funct4:06}{rd_rs1:03}{funct2:02}{rs2:03}{opcode:02}',#and,or,xor,sub,addw,subw
+    'CR(1)': '{funct6:06}{rd_rs1:03}{funct2:02}{rs2:03}{opcode:02}',#and,or,xor,sub,addw,subw
     'CR(2)': '{funct4:04}{imm:10}{opcode:02}',#ebreak
     'CR(3)': '{funct4:04}{rd_rs1:05}{rs2:05}{opcode:02}',#jr,jalr
-    'CI': '{funct3:03}{imm:01}{rd_rs1:05}{imm:05}{opcode:02}',#slli,nop
-    'CI(1)': '{funct3:03}{imm:01}{rd:05}{imm:05}{opcode:02}',#lwsp,Flwsp
-    'CI(2)': '{funct3:03}{imm:01}{rd:05}{imm:05}{opcode:02}',#ldsp,fldsp
-    'CI(3)': '{funct3:03}{imm:01}{rd:05}{imm:05}{opcode:02}',#lqsp
-    'CI(4)': '{funct3:03}{imm:01}{rd:05}{imm:05}{opcode:02}',#li,lui
-    'CI(5)': '{funct3:03}{imm:01}{rd:05}{imm:05}{opcode:02}',#addi,addiw
-    'CI(6)': '{funct3:03}{imm:01}{rd:05}{imm:05}{opcode:02}',#addi16sp
+    'CI': '{funct3:03}{imm2:01}{rd_rs1:05}{imm:05}{opcode:02}',#slli,nop
+    'CI(1)': '{funct3:03}{imm2:01}{rd:05}{imm:05}{opcode:02}',#lwsp,Flwsp
+    'CI(2)': '{funct3:03}{imm2:01}{rd:05}{imm:05}{opcode:02}',#ldsp,fldsp
+    'CI(3)': '{funct3:03}{imm2:01}{rd:05}{imm:05}{opcode:02}',#lqsp
+    'CI(4)': '{funct3:03}{imm2:01}{rd:05}{imm:05}{opcode:02}',#li,lui
+    'CI(5)': '{funct3:03}{imm2:01}{rd:05}{imm:05}{opcode:02}',#addi,addiw
+    'CI(6)': '{funct3:03}{imm2:01}{rd:05}{imm:05}{opcode:02}',#addi16sp
     'CSS(1)': '{funct3:03}{imm:06}{rs2:05}{opcode:02}',#swsp,fswsp
     'CSS(2)': '{funct3:03}{imm:06}{rs2:05}{opcode:02}',#sdsp,fsdsp
     'CSS(3)': '{funct3:03}{imm:06}{rs2:05}{opcode:02}',#sqsp
     'CIW': '{funct3:03}{imm:08}{rd:03}{opcode:02}',#addi4spn
     'CL': '{funct3:03}{imm:03}{rs1:03}{imm:02}{rd:03}{opcode:02}',
-    'CL(1)': '{funct3:03}{imm:03}{rs1:03}{imm:02}{rd:03}{opcode:02}',#lw,flw
-    'CL(2)': '{funct3:03}{imm:03}{rs1:03}{imm:02}{rd:03}{opcode:02}',#ld,lq,fld
+    'CL(1)': '{funct3:03}{imm2:03}{rs1:03}{imm:02}{rd:03}{opcode:02}',#lw,flw
+    'CL(2)': '{funct3:03}{imm2:03}{rs1:03}{imm:02}{rd:03}{opcode:02}',#ld,lq,fld
     'CS': '{funct3:03}{imm:03}{rd_rs1:03}{imm:02}{rs2:03}{opcode:02}',
-    'CS(1)': '{funct3:03}{imm:03}{rd_rs1:03}{imm:02}{rs2:03}{opcode:02}',#sw,fsw
-    'CS(2)': '{funct3:03}{imm:03}{rd_rs1:03}{imm:02}{rs2:03}{opcode:02}',#sd,fsd
-    'CS(3)': '{funct3:03}{imm:03}{rd_rs1:03}{imm:02}{rs2:03}{opcode:02}',#sq    
+    'CS(1)': '{funct3:03}{imm2:03}{rd_rs1:03}{imm:02}{rs2:03}{opcode:02}',#sw,fsw
+    'CS(2)': '{funct3:03}{imm2:03}{rd_rs1:03}{imm:02}{rs2:03}{opcode:02}',#sd,fsd
+    'CS(3)': '{funct3:03}{imm2:03}{rd_rs1:03}{imm:02}{rs2:03}{opcode:02}',#sq    
     'CA': '{funct6:06}{rd_rs1:03}{rs2:03}{opcode:02}',
     'CB': '{funct3:03}{offset:08}{rd_rs1:03}{offset:03}{opcode:02}',
-    'CB(1)': '{funct3:03}{offset:03}{rs1:03}{offset:05}{opcode:02}',#beqz,bnez
-    'CB(2)': '{funct3:03}{offset:01}{funct2:02}{rs1:03}{offset:05}{opcode:02}',#srli,srai,andi
+    'CB(1)': '{funct3:03}{offset2:03}{rs1:03}{offset:05}{opcode:02}',#beqz,bnez
+    'CB(2)': '{funct3:03}{offset2:01}{funct2:02}{rs1:03}{offset:05}{opcode:02}',#srli,srai,andi
     'CJ': '{funct3:03}{jump_target:11}{opcode:02}'#j,jal
 }
 
@@ -299,28 +299,153 @@ def parse_instruction(instruction):
         elif (inst_name == 'mv'):
             return parse_instruction(base_inst.format(rd=parts[1], rs=parts[2]))
     elif inst_name in C_INST_SET:
-        opcode, funct3, funct4, inst_type = C_INST_SET[inst_name]
-        if inst_type == 'CSS':
-            rs2 = register_to_bin(parts[1])
-            imm = imm_to_bin(parts[2],6)
-            return FORMATS['CSS'].format(funct3=funct3, imm=imm, rs2=rs2, opcode=opcode)
-        elif inst_type == 'CIW':
-            rd=register_to_bin(parts[1])
-            imm = imm_to_bin(parts[2],8)
-            return FORMATS['CIW'].format(funct3=funct3, imm=imm, rd=rd, opcode=opcode)
-        elif inst_type == 'CL':
-            rd = register_to_bin(parts[1])
-            rs1 = register_to_bin(parts[3])
+        opcode, funct3_2, funct4_2_6, inst_type = C_INST_SET[inst_name]
+        if inst_type == 'CR':
+            rd_rs1=register_to_bin(parts[1])
+            rs2=register_to_bin(parts[2])
+            return FORMATS['CR'].format(funct4=funct4_2_6,rd_rs1=rd_rs1,rs2=rs2,opcode=opcode)
+        elif inst_type=='CR(1)':
+            rd_rs1=register_to_bin(parts[1])
+            rs2=register_to_bin(parts[2])
+            return FORMATS['CR(1)'].format(funct6=funct4_2_6,rd_rs1=rd_rs1,funct2=funct3_2,rs2=rs2,opcode=opcode)
+        elif inst_type== 'CR(2)':
+            imm=0
+            return FORMATS['CR(2)'].format(funct4=funct4_2_6,imm=imm,opcode=opcode)
+        elif inst_type=='CR(3)':
+            rd_rs1=register_to_bin(parts[1])
+            rs2=0
+            return FORMATS['CR(3)'].format(funct4=funct4_2_6,rd_rs1=rd_rs1,rs2=rs2,opcode=opcode)
+        elif inst_type == 'CI':
+            rd_rs1=register_to_bin(parts[1])
+            imm=imm_to_bin(parts[2],6)
+            imm4_0=imm[0:4]
+            imm5=imm[5]
+            return FORMATS['CI'].format(funct3=funct3_2,imm2=imm5,rd_rs1=rd_rs1,imm=imm4_0,opcode=opcode)
+        # elif inst_type == 'CI(1)':
+        #     rd=register_to_bin(parts[1])
+        #     imm=imm_to_bin(parts[2])
+        #     imm1= imm[]
+        #     imm2 = imm[]
+        #     return FORMATS['CI(1)'].format(funct3=funct3_2,imm2=imm2,rd=rd,imm=imm1,opcode=opcode)
+        # elif inst_type == 'CI(2)':
+        #     rd=register_to_bin(parts[1])
+        #     imm = imm_to_bin(parts[2])
+        #     imm1=imm[]
+        #     imm2=imm[]
+        #     return FORMATS['CI(2)'].format(funct3=funct3_2,imm2=imm2,rd=rd,imm=imm1,opcode=opcode)
+        # elif inst_type=='CI(3)':
+        #     rd=register_to_bin(parts[1])
+        #     imm=imm_to_bin(parts(2))
+        #     imm1=imm[]
+        #     imm2=imm[]
+        #     return FORMATS['CI(3)'].format(funct3=funct3_2,imm2=imm2,rd=rd,imm=imm1,opcode=opcode)
+        # elif inst_type=='CI(4)':
+        #     rd=register_to_bin(parts[1])
+        #     imm=imm_to_bin(parts(2))
+        #     imm1=imm[]
+        #     imm2=imm[]
+        #     return FORMATS['CI(4)'].format(funct3=funct3_2,imm2=imm2,rd=rd,imm=imm1,opcode=opcode)
+        # elif inst_type=='CI(5)':
+        #     rd=register_to_bin(parts[1])
+        #     imm=imm_to_bin(parts(2))
+        #     imm1=imm[]
+        #     imm2=imm[]
+        #     return FORMATS['CI(5)'].format(funct3=funct3_2,imm2=imm2,rd=rd,imm=imm1,opcode=opcode)
+        # elif inst_type=='CI(6)':
+        #     rd=register_to_bin(parts[1])
+        #     imm=imm_to_bin(parts(2))
+        #     imm1=imm[]
+        #     imm2=imm[]
+        #     return FORMATS['CI(6)'].format(funct3=funct3_2,imm2=imm2,rd=rd,imm=imm1=opcode=opcode)
+        # elif inst_type=='CSS(1)':
+        #     rs2=register_to_bin(parts[1])
+        #     imm=imm_to_bin(parts[2],6)
+        #     return FORMATS['CSS(1)'].format(funct3=funct3_2,imm=imm,rs2=rs2,opcode=opcode)
+        # elif inst_type=='CSS(2)':
+        #     rs2=register_to_bin(parts[1])
+        #     imm=imm_to_bin(parts[2],6)
+        #     return FORMATS['CSS(2)'].format(funct3=funct3_2,imm=imm,rs2=rs2,opcode=opcode)
+        # elif inst_type=='CSS(3)':
+        #     rs2=register_to_bin(parts[1])
+        #     imm=imm_to_bin(parts[2],6)
+        #     return FORMATS['CSS(3)'].format(funct3=funct3_2,imm=imm,rs2=rs2,opcode=opcode)
+        # elif inst_type=='CIW':
+        #     rd=register_to_bin(parts(1))
+        #     imm=imm_to_bin(parts(2),8)
+        #     return FORMATS['CIW'].format(funct3=funct3_2,imm=imm,rd=rd,opcode=opcode)
+        # elif inst_type=='CL(1)':
+        #     rd=register_to_bin(parts[1])
+        #     imm = imm_to_bin(parts(2),5)
+        #     rs1 = register_to_bin(parts[3])
+        #     imm1=imm[]
+        #     imm2=imm[]
+        #     return FORMATS['CL(1)'].format(funct3=funct3_2,imm2=imm2,rs1=rs1,imm=imm1,rd=rd,opcode=opcode)
+        # elif inst_type=='CL(2)':
+        #     rd=register_to_bin(parts[1])
+        #     imm = imm_to_bin(parts(2),5)
+        #     rs1 = register_to_bin(parts[3])
+        #     imm1=imm[]
+        #     imm2=imm[]
+        #     return FORMATS['CL(2)'].format(funct3=funct3_2,imm2=imm2,rs1=rs1,imm=imm1,rd=rd,opcode=opcode)
+        # elif inst_type=='CS(1)':
+        #     rs2=register_to_bin(parts[1])
+        #     imm=imm_to_bin(parts[2],5)
+        #     rs1=register_to_bin(parts[3])
+        #     imm1=imm[]
+        #     imm2=imm[]
+        #     return FORMATS['CS(1)'].format(funct3=funct3_2,imm2=imm2,rd_rs1=rs1,imm=imm1,rs2=rs2,opcode=opcode)
+        # elif inst_type=='CS(2)':
+        #     rs2=register_to_bin(parts[1])
+        #     imm=imm_to_bin(parts[2],5)
+        #     rs1=register_to_bin(parts[3])
+        #     imm1=imm[]
+        #     imm2=imm[]
+        #     return FORMATS['CS(2)'].format(funct3=funct3_2,imm2=imm2,rd_rs1=rs1,imm=imm1,rs2=rs2,opcode=opcode)
+        # elif inst_type=='CS(3)':
+        #     rs2=register_to_bin(parts[1])
+        #     imm=imm_to_bin(parts[2],5)
+        #     rs1=register_to_bin(parts[3])
+        #     imm1=imm[]
+        #     imm2=imm[]
+        #     return FORMATS['CS(3)'].format(funct3=funct3_2,imm2=imm2,rd_rs1=rs1,imm=imm1,rs2=rs2,opcode=opcode)
+        # elif inst_type=='CB(1)':
+        #     rs1=register_to_bin(parts[1])
+        #     imm=imm_to_bin(parts[2],8)
+        #     imm1=imm[]
+        #     imm2=imm[]
+        #     return FORMATS['CB(1)'].format(funct3=funct3_2,offset2=imm2,rs1=rs1,offset=imm1,opcode=opcode)
+        # elif inst_type=='CB(2)':
+        #     rs1=register_to_bin(parts[1])
+        #     imm=imm_to_bin(parts[2],6)
+        #     imm1=imm[]
+        #     imm2=imm[]
+        #     return FORMATS['CB(2)'].format(funct3=funct3_2,offset2=imm2,funct2=funct4_2_6,rs1=rs1,offset=imm1,opcode=opcode)
+        # elif inst_type=='CJ':
+        #     imm=imm_to_bin(parts[1],11)
+        #     return FORMATS['CJ'].format(funct3=funct3_2,jump_target=imm,opcode=opcode)
+            
+            
+        # if inst_type == 'CSS':
+        #     rs2 = register_to_bin(parts[1])
+        #     imm = imm_to_bin(parts[2],6)
+        #     return FORMATS['CSS'].format(funct3=funct3, imm=imm, rs2=rs2, opcode=opcode)
+        # elif inst_type == 'CIW':
+        #     rd=register_to_bin(parts[1])
+        #     imm = imm_to_bin(parts[2],8)
+        #     return FORMATS['CIW'].format(funct3=funct3, imm=imm, rd=rd, opcode=opcode)
+        # elif inst_type == 'CL':
+        #     rd = register_to_bin(parts[1])
+        #     rs1 = register_to_bin(parts[3])
             
             
             
-        elif inst_type == 'CJ':
-            imm=imm_to_bin(parts[1],11)
-            return FORMATS['CJ'].format(funct3=funct3, offset=imm, opcode=opcode)
-        elif inst_type == 'CR':
-            rd_rs1 = register_to_bin(parts[1])
-            rs2 = register_to_bin(parts[2])
-            return FORMATS['CR'].format(funct4=funct4,rd_rs1=rd_rs1,rs2=rs2,opcode=opcode)
+        # elif inst_type == 'CJ':
+        #     imm=imm_to_bin(parts[1],11)
+        #     return FORMATS['CJ'].format(funct3=funct3, offset=imm, opcode=opcode)
+        # elif inst_type == 'CR':
+        #     rd_rs1 = register_to_bin(parts[1])
+        #     rs2 = register_to_bin(parts[2])
+        #     return FORMATS['CR'].format(funct4=funct4,rd_rs1=rd_rs1,rs2=rs2,opcode=opcode)
     # print(inst_name)
     opcode, funct3, funct7, inst_type = INSTRUCTION_SET[inst_name]
     
