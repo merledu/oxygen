@@ -26,7 +26,8 @@ FORMATS = {
     'CIW': '{funct3:03}{imm5_4:02}{imm9_6:04}{imm2:01}{imm3:01}{rd:03}{opcode:02}',#addi4spn
     'CL': '{funct3:03}{imm:03}{rs1:03}{imm:02}{rd:03}{opcode:02}',
     'CL(1)': '{funct3:03}{imm5_3:03}{rs1:03}{imm2:01}{imm6:01}{rd:03}{opcode:02}',#lw,flw
-    'CL(2)': '{funct3:03}{imm2:03}{rs1:03}{imm:02}{rd:03}{opcode:02}',#ld,lq,fld
+    'CL(2)': '{funct3:03}{imm2:03}{rs1:03}{imm:02}{rd:03}{opcode:02}',#ld,fld
+    'CL(3)': '{funct3:03}{imm5_4:02}{imm8:01}{rs1:03}{imm:02}{rd:03}{opcode:02}',#lq
     'CS': '{funct3:03}{imm:03}{rd_rs1:03}{imm:02}{rs2:03}{opcode:02}',
     'CS(1)': '{funct3:03}{imm5_3:03}{rd_rs1:03}{imm2:01}{imm6:01}{rs2:03}{opcode:02}',#sw,fsw
     'CS(2)': '{funct3:03}{imm2:03}{rd_rs1:03}{imm:02}{rs2:03}{opcode:02}',#sd,fsd
@@ -460,6 +461,14 @@ def parse_instruction(instruction):
             imm1=imm[0:2]
             imm2=imm[2:5]
             return FORMATS['CL(2)'].format(funct3=funct3_2,imm2=imm2,rs1=rs1,imm=imm1,rd=rd,opcode=opcode)
+        elif inst_type=='CL(3)':
+            rd=register_to_bin(parts[1])
+            imm=imm_to_bin(parts[2],9)
+            rs1=register_to_bin(parts[3])
+            imm1=imm[1:3]
+            imm8=imm[0]
+            imm5_4=imm[3:5]
+            return FORMATS['CL(3)'].format(funct3=funct3_2,imm5_4=imm5_4,rs1=rs1,imm=imm1,rd=rd,opcode=opcode)
         elif inst_type=='CS(1)':
             rs2=register_to_bin(parts[1])
             imm=imm_to_bin(parts[2],5)
