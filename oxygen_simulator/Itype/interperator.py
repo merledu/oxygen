@@ -28,14 +28,14 @@ FORMATS = {
     'CL(1)': '{funct3:03}{imm5_3:03}{rs1:03}{imm2:01}{imm6:01}{rd:03}{opcode:02}',#lw,flw
     'CL(2)': '{funct3:03}{imm2:03}{rs1:03}{imm:02}{rd:03}{opcode:02}',#ld,lq,fld
     'CS': '{funct3:03}{imm:03}{rd_rs1:03}{imm:02}{rs2:03}{opcode:02}',
-    'CS(1)': '{funct3:03}{imm2:03}{rd_rs1:03}{imm:02}{rs2:03}{opcode:02}',#sw,fsw
+    'CS(1)': '{funct3:03}{imm5_3:03}{rd_rs1:03}{imm2:01}{imm6:01}{rs2:03}{opcode:02}',#sw,fsw
     'CS(2)': '{funct3:03}{imm2:03}{rd_rs1:03}{imm:02}{rs2:03}{opcode:02}',#sd,fsd
-    'CS(3)': '{funct3:03}{imm2:03}{rd_rs1:03}{imm:02}{rs2:03}{opcode:02}',#sq    
+    'CS(3)': '{funct3:03}{imm5_4:02}{imm8:01}{rd_rs1:03}{imm:02}{rs2:03}{opcode:02}',#sq    
     'CA': '{funct6:06}{rd_rs1:03}{rs2:03}{opcode:02}',
     'CB': '{funct3:03}{offset:08}{rd_rs1:03}{offset:03}{opcode:02}',
-    'CB(1)': '{funct3:03}{offset2:03}{rs1:03}{offset:05}{opcode:02}',#beqz,bnez
+    'CB(1)': '{funct3:03}{offset8:01}{offset4_3:02}{rs1:03}{offset7_6:02}{offset2_1:02}{offset5:01}{opcode:02}',#beqz,bnez
     'CB(2)': '{funct3:03}{offset2:01}{funct2:02}{rs1:03}{offset:05}{opcode:02}',#srli,srai,andi
-    'CJ': '{funct3:03}{jump_target:11}{opcode:02}'#j,jal
+    'CJ': '{funct3:03}{jump_target11:01}{jump_target4:01}{jump_target9_8:02}{jump_target10:01}{jump_target6:01}{jump_target7:01}{jump_target3_1:03}{jump_target5:01}{opcode:02}'#j,jal
 }
 
 Registers_ABI = {
@@ -453,49 +453,62 @@ def parse_instruction(instruction):
             imm2=imm[4]
             imm5_3=imm[1:4]
             return FORMATS['CL(1)'].format(funct3=funct3_2,imm5_3=imm5_3,rs1=rs1,imm2=imm2,imm6=imm6,rd=rd,opcode=opcode)
-        # elif inst_type=='CL(2)':
-        #     rd=register_to_bin(parts[1])
-        #     imm = imm_to_bin(parts(2),5)
-        #     rs1 = register_to_bin(parts[3])
-        #     imm1=imm[]
-        #     imm2=imm[]
-        #     return FORMATS['CL(2)'].format(funct3=funct3_2,imm2=imm2,rs1=rs1,imm=imm1,rd=rd,opcode=opcode)
-        # elif inst_type=='CS(1)':
-        #     rs2=register_to_bin(parts[1])
-        #     imm=imm_to_bin(parts[2],5)
-        #     rs1=register_to_bin(parts[3])
-        #     imm1=imm[]
-        #     imm2=imm[]
-        #     return FORMATS['CS(1)'].format(funct3=funct3_2,imm2=imm2,rd_rs1=rs1,imm=imm1,rs2=rs2,opcode=opcode)
-        # elif inst_type=='CS(2)':
-        #     rs2=register_to_bin(parts[1])
-        #     imm=imm_to_bin(parts[2],5)
-        #     rs1=register_to_bin(parts[3])
-        #     imm1=imm[]
-        #     imm2=imm[]
-        #     return FORMATS['CS(2)'].format(funct3=funct3_2,imm2=imm2,rd_rs1=rs1,imm=imm1,rs2=rs2,opcode=opcode)
-        # elif inst_type=='CS(3)':
-        #     rs2=register_to_bin(parts[1])
-        #     imm=imm_to_bin(parts[2],5)
-        #     rs1=register_to_bin(parts[3])
-        #     imm1=imm[]
-        #     imm2=imm[]
-        #     return FORMATS['CS(3)'].format(funct3=funct3_2,imm2=imm2,rd_rs1=rs1,imm=imm1,rs2=rs2,opcode=opcode)
-        # elif inst_type=='CB(1)':
-        #     rs1=register_to_bin(parts[1])
-        #     imm=imm_to_bin(parts[2],8)
-        #     imm1=imm[]
-        #     imm2=imm[]
-        #     return FORMATS['CB(1)'].format(funct3=funct3_2,offset2=imm2,rs1=rs1,offset=imm1,opcode=opcode)
-        # elif inst_type=='CB(2)':
-        #     rs1=register_to_bin(parts[1])
-        #     imm=imm_to_bin(parts[2],6)
-        #     imm1=imm[]
-        #     imm2=imm[]
-        #     return FORMATS['CB(2)'].format(funct3=funct3_2,offset2=imm2,funct2=funct4_2_6,rs1=rs1,offset=imm1,opcode=opcode)
-        # elif inst_type=='CJ':
-        #     imm=imm_to_bin(parts[1],11)
-        #     return FORMATS['CJ'].format(funct3=funct3_2,jump_target=imm,opcode=opcode)
+        elif inst_type=='CL(2)':
+            rd=register_to_bin(parts[1])
+            imm = imm_to_bin(parts(2),8)
+            rs1 = register_to_bin(parts[3])
+            imm1=imm[0:2]
+            imm2=imm[2:5]
+            return FORMATS['CL(2)'].format(funct3=funct3_2,imm2=imm2,rs1=rs1,imm=imm1,rd=rd,opcode=opcode)
+        elif inst_type=='CS(1)':
+            rs2=register_to_bin(parts[1])
+            imm=imm_to_bin(parts[2],5)
+            rs1=register_to_bin(parts[3])
+            imm6=imm[0]
+            imm2=imm[4]
+            imm5_3=imm[1:4]
+            return FORMATS['CS(1)'].format(funct3=funct3_2,imm2=imm5_3,rd_rs1=rs1,imm5_3=imm2,imm6=imm6,rs2=rs2,opcode=opcode)
+        elif inst_type=='CS(2)':
+            rs2=register_to_bin(parts[1])
+            imm=imm_to_bin(parts[2],8)
+            rs1=register_to_bin(parts[3])
+            imm7_6=imm[0:2]
+            imm2=imm[2:5]
+            return FORMATS['CS(2)'].format(funct3=funct3_2,imm2=imm2,rd_rs1=rs1,imm=imm7_6,rs2=rs2,opcode=opcode)
+        elif inst_type=='CS(3)':
+            rs2=register_to_bin(parts[1])
+            imm=imm_to_bin(parts[2],9)
+            rs1=register_to_bin(parts[3])
+            imm7_6=imm[1:3]
+            imm8=imm[0]
+            imm5_4=imm[3:5]
+            return FORMATS['CS(3)'].format(funct3=funct3_2,imm2=imm2,rd_rs1=rs1,imm=imm1,rs2=rs2,opcode=opcode)
+        elif inst_type=='CB(1)':
+            rs1=register_to_bin(parts[1])
+            imm=imm_to_bin(parts[2],9)
+            imm5=imm[3]
+            imm2_1=imm[6:8]
+            imm7_6=imm[1:3]
+            imm4_3=imm[4:6]
+            imm8=imm[0]
+            return FORMATS['CB(1)'].format(funct3=funct3_2,offset8=imm8,offset4_3=imm4_3,rs1=rs1,offset7_6=imm7_6,offset2_1=imm2_1,offset5=imm5,opcode=opcode)
+        elif inst_type=='CB(2)':
+            rs1=register_to_bin(parts[1])
+            imm=imm_to_bin(parts[2],6)
+            imm1=imm[1:6]
+            imm2=imm[0]
+            return FORMATS['CB(2)'].format(funct3=funct3_2,offset2=imm2,funct2=funct4_2_6,rs1=rs1,offset=imm1,opcode=opcode)
+        elif inst_type=='CJ':
+            imm=imm_to_bin(parts[1],12)
+            imm5=imm[6]
+            imm3_1=imm[8:11]
+            imm7=imm[4]
+            imm6=imm[5]
+            imm10=imm[1]
+            imm9_8=imm[2:4]
+            imm4=imm[7]
+            imm11=imm[0]
+            return FORMATS['CJ'].format(funct3=funct3_2,jump_target11=imm11,jump_target4=imm4,jump_target9_8=imm9_8,jump_target10=imm10,jump_target6=imm6,jump_target7=imm7,jump_target3_1=imm3_1,jump_target5=imm5,opcode=opcode)
     # print(inst_name)
     opcode, funct3, funct7, inst_type = INSTRUCTION_SET[inst_name]
     
