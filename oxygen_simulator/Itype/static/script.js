@@ -72,7 +72,11 @@ function populateDecoderTable(code,hex_dump,baseins) {
     const instructions = code.split('\n').filter(line => line.trim() !== '');
     console.log(instructions)
     const tableBody = document.getElementById('decoderTableBody');
+    const tableBody2 = document.getElementById('adecoderTableBody');
+    console.log("table" , tableBody);
+    console.log("table 2 " , tableBody2);
     tableBody.innerHTML = '';
+    tableBody2.innerHTML = '';
     let count = 0
 
     instructions.forEach((instruction, index) => {
@@ -85,13 +89,22 @@ function populateDecoderTable(code,hex_dump,baseins) {
             const originalCode = instruction; 
     
             const row = document.createElement('tr');
+            const row2 = document.createElement('tr');
             row.innerHTML = `
                 <td>${pc}</td>
                 <td>${machineCode}</td>
                 <td>${basicCode}</td>
                 <td>${originalCode}</td>
             `;
+            row2.innerHTML = `
+                <td>${pc}</td>
+                <td>${machineCode}</td>
+                <td>${basicCode}</td>
+                <td>${originalCode}</td>
+            `;
             tableBody.appendChild(row);
+            tableBody2.appendChild(row2);
+            
             count = count +1
         });
 }
@@ -99,4 +112,20 @@ function populateDecoderTable(code,hex_dump,baseins) {
 function stepInstruction() {
     // Logic to step through instructions
 }
+
+// function advanceCycle() {
+//     axios.post('/5-stage/')
+//     .then(response => {
+
+//     // Call your Python method to advance the pipeline cycle and update the UI
+//     // This is a placeholder for the interaction between frontend and backend
+//     // Typically, you would use an AJAX request to communicate with the backend
+
+//     // Example: Update UI based on new pipeline state
+//     document.getElementById('fetch-step').textContent = "Updated Fetch Step";
+//     document.getElementById('decode-step').textContent = "Updated Decode Step";
+//     document.getElementById('execute-step').textContent = "Updated Execute Step";
+//     document.getElementById('memory-step').textContent = "Updated Memory Step";
+//     document.getElementById('writeback-step').textContent = "Updated Write Back Step";
+// }
 
