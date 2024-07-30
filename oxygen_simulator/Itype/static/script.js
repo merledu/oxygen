@@ -23,6 +23,7 @@ function assembleCode() {
     axios.post('assemble-code', { code: code })
             .then(response => {
                 const hex = response.data.hex;
+                console.log("hello" ,hex)
                 const memory = response.data.memory
                 memorydic = memory
 
@@ -85,33 +86,33 @@ function populateDecoderTable(code,hex_dump,baseins) {
     let count = 0
 
     instructions.forEach((instruction, index) => {
-            const pc = `0x${(index * 4).toString(16)}`;
-            hexdumparr = hex_dump.split('\n').filter(line => line.trim() !== '')
-            
-            console.log((hexdumparr));
-            const machineCode = hexdumparr[count];
-            const basicCode = baseins[count]; 
-            const originalCode = instruction; 
-    
-            const row = document.createElement('tr');
-            const row2 = document.createElement('tr');
-            row.innerHTML = `
-                <td>${pc}</td>
-                <td>${machineCode}</td>
-                <td>${basicCode}</td>
-                <td>${originalCode}</td>
-            `;
-            row2.innerHTML = `
-                <td>${pc}</td>
-                <td>${machineCode}</td>
-                <td>${basicCode}</td>
-                <td>${originalCode}</td>
-            `;
-            tableBody.appendChild(row);
-            tableBody2.appendChild(row2);
-            
-            count = count +1
-        });
+        const pc = `0x${(index * 4).toString(16)}`;
+        let hexdumparr = hex_dump.split('\n').filter(line => line.trim() !== '')
+        
+        console.log((hexdumparr));
+        const machineCode = hexdumparr[count];
+        const basicCode = baseins[count]; 
+        const originalCode = instruction;
+
+        const row = document.createElement('tr');
+        const row2 = document.createElement('tr');
+        row.innerHTML = `
+            <td>${pc}</td>
+            <td>${machineCode}</td>
+            <td>${basicCode}</td>
+            <td>${originalCode}</td>
+        `;
+        row2.innerHTML = `
+            <td>${pc}</td>
+            <td>${machineCode}</td>
+            <td>${basicCode}</td>
+            <td>${originalCode}</td>
+        `;
+        tableBody.appendChild(row);
+        tableBody2.appendChild(row2);
+        
+        count = count +1
+    });
 }
 
 function stepInstruction() {
