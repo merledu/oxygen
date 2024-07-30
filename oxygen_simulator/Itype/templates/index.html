@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 {% load static %}
+{% csrf_token %}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -286,6 +287,8 @@
                                                     <!-- Rows will be populated by JavaScript -->
                                                 </tbody>
                                             </table>
+                                            <button id="scrollUpBtn">Scroll Up</button>
+                                            <button id="scrollDownBtn">Scroll Down</button>
                                         </div>
                                     </div>
                                 </div>
