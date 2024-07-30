@@ -23,6 +23,7 @@ function assembleCode() {
     axios.post('/assemble-code/', { code: code })
             .then(response => {
                 const hex = response.data.hex;
+                console.log(hex)
                 const baseins = response.data.is_sudo
                 const reg = response.data.registers
                 console.log(baseins)

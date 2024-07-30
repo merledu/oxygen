@@ -246,7 +246,7 @@ PSEUDO_INSTRUCTION_SET = {
 def replace_labels_with_immediates(instructions):
     # Split the instructions into a list of lines
     lines = instructions.split('\n')
-    print(lines)
+    # print(lines)
     # First pass: Identify labels and their addresses
     labels = {}
     address = 0
@@ -306,7 +306,7 @@ def register_to_bin(register):
         x = Registers_ABI[register]
         
         x = int(x[1:])
-        print(x)
+        # print(x)
         x = '{0:05b}'.format(x)
         return x
     
@@ -333,7 +333,7 @@ def parse_instruction(instruction):
     parts = re.split(r'\s|,', instruction.strip())
     while('' in parts):
         parts.remove('')
-    print("after remove : " ,parts)
+    # print("after remove : " ,parts)
     inst_name = parts[0]
     print(parts)
     # print (inst_name)
@@ -592,7 +592,7 @@ def parse_instruction(instruction):
         rd = register_to_bin(parts[1])
         if (len(parts) == 3):
             offset_base_str = parts[2]
-            print(offset_base_str)
+            # print(offset_base_str)
             match_brackets = re.match(r'^([^(]+)\(([^)]+)\)$', offset_base_str)
             if match_brackets:
                 imm = imm_to_bin(int(match_brackets.group(1),16),12)
@@ -625,10 +625,7 @@ def main(instructions_str):
        
         instructions_str=instructions_str.replace('(', ' ')
         instructions_str=instructions_str.replace(')', ' ')
-    
-    
-
-
+        
     instructions = instructions_str.lower().splitlines()
     while '' in instructions:
         instructions.remove('')
@@ -648,7 +645,6 @@ def main(instructions_str):
     # Join the hex strings with newline characters
     hex_output = '\n'.join(hex_lines)
     print(hex_output)
-    
     return hex_output
 
 def checkpsudo (instructions_str):
@@ -662,7 +658,7 @@ def checkpsudo (instructions_str):
         while('' in parts):
             parts.remove('')
         inst_name = parts[0]
-        print("parts in check " ,parts)
+        # print("parts in check " ,parts)
         # print (inst_name)
         if inst_name in PSEUDO_INSTRUCTION_SET:
             
