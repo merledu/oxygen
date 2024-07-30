@@ -89,8 +89,22 @@ textarea {
     margin-inline-start: 0;
     text-align: center;
 }
+.stats-box{
+    display: flex;
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #fff;
+    width: 100%;
+    flex-wrap: nowrap;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: baseline;
+    
+}
 
-.hex-dump-box, .timeline-box, .stats-box, .decoder-container {
+.hex-dump-box, .timeline-box, .decoder-container {
     margin-top: 1rem;
     padding: 1rem;
     border: 1px solid #ccc;
@@ -137,6 +151,24 @@ button:hover {
 .hex-dump-buttons button:last-child {
     margin-right: 0.5rem;
 }
+#stats_table{
+    width: 30%;
+    border-collapse: collapse;
+    margin-top: 3rem;
+    border: 1px solid #ccc;
+}
+
+#decode{
+    width: 50;
+}
+
+/* #datapath-tab{
+    display: flex;
+
+} */
+#datapath{
+    display: block;
+}  
 
 table {
     width: 100%;

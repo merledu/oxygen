@@ -62,29 +62,46 @@
                         <h2>Data Path</h2>
                         <div class="timeline-box">
                             <h3>Timeline</h3>
-                            <table>
-                                <tr>
-                                    <th>Instruction</th>
-                                    <th>Fetch</th>
-                                    <th>Decode</th>
-                                    <th>Execute</th>
-                                    <th>Memory</th>
-                                    <th>Write Back</th>
-                                </tr>
-                                <tr>
-                                    <td>Instruction 1</td>
-                                    <td>Step 1</td>
-                                    <td>Step 2</td>
-                                    <td>Step 3</td>
-                                    <td>Step 4</td>
-                                    <td>Step 5</td>
-                                </tr>
-                                <!-- Additional rows for more instructions -->
+                            <table id="pipeline-table">
+                                <thead>
+                                    <tr>
+                                        <th>Fetch</th>
+                                        <th>Decode</th>
+                                        <th>Execute</th>
+                                        <th>Memory</th>
+                                        <th>Write Back</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td id="fetch-step">Step 1</td>
+                                        <td id="decode-step">Step 2</td>
+                                        <td id="execute-step">Step 3</td>
+                                        <td id="memory-step">Step 4</td>
+                                        <td id="writeback-step">Step 5</td>
+                                    </tr>
+                                </tbody>
                             </table>
                         </div>
+                        <button onclick="advanceCycle()">Next Cycle</button>
                         <div class="stats-box">
                             <h3>Stats</h3>
-                            <table>
+                             <div class="col-md-7">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>PC</th>
+                                            <th>Machine Code</th>
+                                            <th>Basic Code</th>
+                                            <th>Original Code</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="adecoderTableBody">
+                                        <!-- Rows will be populated by JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <table id = 'stats_table'>
                                 <tr>
                                     <th>Type</th>
                                     <th>Value</th>
@@ -131,7 +148,23 @@
                                 </tr>
                             </table>
                         </div>
+                        
                     </section>
+                    {% comment %} <div class="col-md-7">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>PC</th>
+                                    <th>Machine Code</th>
+                                    <th>Basic Code</th>
+                                    <th>Original Code</th>
+                                </tr>
+                            </thead>
+                            <tbody id="decoderTableBody">
+                                <!-- Rows will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div> {% endcomment %}
                     
                 </section>
             </div>
@@ -243,7 +276,10 @@
                                                 <thead>
                                                     <tr>
                                                         <th>Address</th>
-                                                        <th>Value</th>
+                                                        <th>+0</th>
+                                                        <th>+1</th>
+                                                        <th>+2</th>
+                                                        <th>+3</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody id="memoryTableBody">

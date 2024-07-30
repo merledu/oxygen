@@ -36,6 +36,8 @@ def assemble_code(request):
 
         
         hex_output = main(code)
+        print("asdasd")
+        print("views " ,hex_output)
         sudo_or_base  = checkpsudo(code)
         execution = RISCVSimulator()
         

@@ -1,40 +1,126 @@
-class RISCVSimulator:
+class RISCVSimulator3:
     def __init__(self):
         self.registers = [0] * 32
         self.pc = 0
         self.memory = {}
         self.instruction_memory = {}
-        self.f_registers = [0.0] * 32 
+        self.pipeline = [None] * 5  # To store pipeline stages
+        self.cycle = 0
 
     def load_instructions(self, instructions):
         for i, instruction in enumerate(instructions):
             self.instruction_memory[i * 4] = instruction
             
-    def execute_instruction(self, instruction):
+    def fetch(self):
+        if self.pc in self.instruction_memory:
+            self.pipeline[0] = self.instruction_memory[self.pc]
+            self.pc += 4
+        else:
+            self.pipeline[0] = None
+
+    def decode(self):
+        self.pipeline[1] = self.pipeline[0]
+
+    def execute(self):
+        instruction = self.pipeline[1]
+        if instruction is not None:
+            opcode = instruction & 0x7F
+            if opcode == 0x33:  # Rtype
+                self.execute_r_type(instruction)
+            elif opcode == 0x13:  # Itype
+                self.execute_i_type(instruction)
+            elif opcode == 0x23:  # Stype
+                self.execute_s_type(instruction)
+            elif opcode == 0x63:  # Btype
+                self.execute_b_type(instruction)
+            elif opcode == 0x37:  # Utype
+                self.execute_u_type(instruction)
+            elif opcode == 0x6F:  # Jtype
+                self.execute_j_type(instruction)
+        self.pipeline[2] = self.pipeline[1]
+
+    def memory_access(self):
+        self.pipeline[3] = self.pipeline[2]
+
+    def write_back(self):
+        self.pipeline[4] = self.pipeline[3]
+
+    def cycle_pipeline(self):
+        self.write_back()
+        self.memory_access()
+        self.execute()
+        self.decode()
+        self.fetch()
+        self.cycle += 1
+
+    def run(self, instructions):
+        instructions = instructions.split('\n')
+        instructions = list(filter(('').__ne__, instructions))
+        for i in range(len(instructions)):
+            hex_int = int(instructions[i], 16)
+            instructions[i] = hex_int
+            
+        self.load_instructions(instructions)
+        while self.pc < len(instructions) * 4:
+            self.cycle_pipeline()
         
-        opcode = instruction & 0x7F
-        if opcode == 0x33:  # Rtype 
-            self.execute_r_type(instruction)
-            self.pc+=4
-        elif opcode == 0x13:  # Itype
-            self.execute_i_type(instruction)
-            self.pc+=4
-        elif opcode == 0x23:  # Stype 
-            self.execute_s_type(instruction)
-            self.pc+=4
-        elif opcode == 0x63:  # Btype
-            self.execute_b_type(instruction)
-        elif opcode == 0x37:  # Utype 
-            self.execute_u_type(instruction)
-            self.pc+=4
-        elif opcode == 0x6F:  # Jtype 
-            self.execute_j_type(instruction)
-        elif opcode == 0x43:  # Mtype
-            self.execute_m_type(instruction)
-            self.pc+=4
-        elif opcode == 0x67:  # Ftype
-            self.execute_f_type(instruction)
-            self.pc+=4
+        return self.registers
+
+    def dump_registers(self):
+        for i in range(32):
+            print(f"x{i}: {hex(self.registers[i])}")
+
+    def get_pipeline(self):
+        return [hex(inst) if inst is not None else None for inst in self.pipeline]
+    
+
+    # def load_instructions(self, instructions):
+    #     for i, instruction in enumerate(instructions):
+    #         self.instruction_memory[i * 4] = instruction
+            
+    # def fetch(self):
+    #     if self.pc in self.instruction_memory:
+    #         self.pipeline[0] = self.instruction_memory[self.pc]
+    #         self.pc += 4
+    #     else:
+    #         self.pipeline[0] = None
+
+    # def decode(self):
+    #     self.pipeline[1] = self.pipeline[0]
+
+    # def execute_instruction(self, instruction):
+    #     opcode = instruction & 0x7F
+    #     if opcode == 0x33:  # Rtype 
+    #         self.execute_r_type(instruction)
+    #         self.pc+=4
+    #     elif opcode == 0x13:  # Itype
+    #         self.execute_i_type(instruction)
+    #         self.pc+=4
+    #     elif opcode == 0x23:  # Stype 
+    #         self.execute_s_type(instruction)
+    #         self.pc+=4
+    #     elif opcode == 0x63:  # Btype
+    #         self.execute_b_type(instruction)
+    #     elif opcode == 0x37:  # Utype 
+    #         self.execute_u_type(instruction)
+    #     elif opcode == 0x6F:  # Jtype 
+    #         self.execute_j_type(instruction)
+    #     self.pipeline[2] = self.pipeline[1]
+
+    # def memory_access(self):
+    #     self.pipeline[3] = self.pipeline[2]
+
+    # def write_back(self):
+    #     self.pipeline[4] = self.pipeline[3]
+
+    # def cycle_pipeline(self):
+    #     self.write_back()
+    #     self.memory_access()
+    #     self.execute()
+    #     self.decode()
+    #     self.fetch()
+    #     self.cycle += 1
+        
     def execute_r_type(self, instruction):
         
         funct7 = (instruction >> 25) & 0x7F
@@ -75,39 +161,7 @@ class RISCVSimulator:
         elif funct3 == 0x7 and funct7 == 0x00:
             self.registers[rd] = self.registers[rs1] & self.registers[rs2]
 
-    def execute_m_type(self, instruction):
-    # M-type instructions (e.g., MUL, DIV, REM)
-        funct7 = (instruction >> 25) & 0x7F
-        rs2 = (instruction >> 20) & 0x1F
-        rs1 = (instruction >> 15) & 0x1F
-        funct3 = (instruction >> 12) & 0x7
-        rd = (instruction >> 7) & 0x1F
-        opcode = instruction & 0x7F
-
-        # MUL
-        if funct3 == 0x0 and funct7 == 0x01:
-            self.registers[rd] = self.registers[rs1] * self.registers[rs2]
-        # MULH
-        elif funct3 == 0x1 and funct7 == 0x01:
-            self.registers[rd] = (self.registers[rs1] * self.registers[rs2]) >> 32
-        # MULHU
-        elif funct3 == 0x2 and funct7 == 0x01:
-            self.registers[rd] = (self.registers[rs1] * self.registers[rs2]) & 0xFFFFFFFF
-        # MULHSU
-        elif funct3 == 0x3 and funct7 == 0x01:
-            self.registers[rd] = (self.registers[rs1] * self.sign_extend(self.registers[rs2], 32)) >> 32
-        # DIV
-        elif funct3 == 0x4 and funct7 == 0x01:
-            self.registers[rd] = self.registers[rs1] // self.registers[rs2]
-        # DIVU
-        elif funct3 == 0x5 and funct7 == 0x01:
-            self.registers[rd] = self.registers[rs1] // self.registers[rs2]
-        # REM
-        elif funct3 == 0x6 and funct7 == 0x01:
-            self.registers[rd] = self.registers[rs1] % self.registers[rs2]
-        # REMU
-        elif funct3 == 0x7 and funct7 == 0x01:
-            self.registers[rd] = self.registers[rs1] % self.registers[rs2]
+        
 
     def execute_i_type(self, instruction):
         
@@ -262,33 +316,7 @@ class RISCVSimulator:
             self.registers[rd] = self.pc + 4
             self.pc += self.sign_extend(imm, 21)  # increment after execution
         
-    def execute_f_type(self, instruction):
-    # F-type instructions (e.g., ADD, SUB, MUL, DIV)
-        funct7 = (instruction >> 25) & 0x7F
-        rs2 = (instruction >> 20) & 0x1F
-        rs1 = (instruction >> 15) & 0x1F
-        funct3 = (instruction >> 12) & 0x7
-        rd = (instruction >> 7) & 0x1F
-        opcode = instruction & 0x7F
-
-        # FLW
-        if opcode == 0x37 and funct3 == 0x2:
-            self.f_registers[rd] = self.memory[self.registers[rs1] + self.sign_extend(instruction & 0xFFF, 12)]
-        # FSW
-        elif opcode == 0x3B and funct3 == 0x2:
-            self.memory[self.registers[rs1] + self.sign_extend(instruction & 0xFFF, 12)] = self.f_registers[rs2]
-        # FADD
-        elif opcode == 0x67 and funct7 == 0x00 and funct3 == 0x0:
-            self.f_registers[rd] = self.f_registers[rs1] + self.f_registers[rs2]
-        # FSUB
-        elif opcode == 0x67 and funct7 == 0x20 and funct3 == 0x0:
-            self.f_registers[rd] = self.f_registers[rs1] - self.f_registers[rs2]
-        # FMUL
-        elif opcode == 0x67 and funct7 == 0x00 and funct3 == 0x1:
-            self.f_registers[rd] = self.f_registers[rs1] * self.f_registers[rs2]
-        # FDIV
-        elif opcode == 0x67 and funct7 == 0x00 and funct3 == 0x2:
-            self.f_registers[rd] = self.f_registers[rs1] / self.f_registers[rs2]
+        
 
     def sign_extend(self, value, bits):
         # imm ka signextend
@@ -296,35 +324,45 @@ class RISCVSimulator:
             value -= 1 << bits
         return value
 
-    def run(self, instructions):
-        instructions = instructions.split('\n')
-        instructions = list(filter(('').__ne__, instructions))
-        for i in range(len(instructions)):
-            hex_int = int(instructions[i], 16)
-            instructions[i]=hex_int
+    # def run(self, instructions):
+    #     instructions = instructions.split('\n')
+    #     instructions = list(filter(('').__ne__, instructions))
+    #     for i in range(len(instructions)):
+    #         hex_int = int(instructions[i], 16)
+    #         instructions[i]=hex_int
             
-        self.load_instructions(instructions)
-        while self.pc < len(instructions) * 4:
-            instruction = self.instruction_memory[self.pc]
-            self.execute_instruction(instruction)
+    #     self.load_instructions(instructions)
+    #     while self.pc < len(instructions) * 4:
+    #         instruction = self.instruction_memory[self.pc]
+    #         self.execute_instruction(instruction)
         
-        print(self.memory)
-        
-        return self.registers
+    #     return self.registers
 
-    def dump_registers(self):
-        # register values ye main pa bhejna
-        for i in range(32):
-            print(f"x{i}: {hex(self.registers[i])}")
+    # def dump_registers(self):
+    #     # register values ye main pa bhejna
+    #     for i in range(32):
+    #         print(f"x{i}: {hex(self.registers[i])}")
 
 
-simulator = RISCVSimulator()
+# simulator = RISCVSimulator()
+# instructions = """
+# 00100093
+# 00500113
+# 00208663
+# 00108093
+# ff9ff06f
+# 00000013
+# """
+# print(simulator.run(instructions))
+
+
+simulator = RISCVSimulator3()
 instructions = """
-00c08093
-00100113
-00200193
-00212023
-0020a023
-0021a023
+00100093
+00500113
+00208663
+00108093
+ff9ff06f
+00000013
 """
 print(simulator.run(instructions))
