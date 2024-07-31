@@ -16,7 +16,7 @@ class RISCVSimulator:
         if opcode == 0x33:  # Rtype 
             self.execute_r_type(instruction)
             self.pc+=4
-        elif opcode == 0x13:  # Itype
+        elif opcode == 0x13 or opcode == 0x3:  # Itype
             self.execute_i_type(instruction)
             self.pc+=4
         elif opcode == 0x23:  # Stype 
@@ -116,6 +116,8 @@ class RISCVSimulator:
         funct3 = (instruction >> 12) & 0x7
         rd = (instruction >> 7) & 0x1F
         opcode = instruction & 0x7F
+        
+        print(rd , rs1 , imm)
  
         # ADDI
         if funct3 == 0x0:
@@ -124,7 +126,7 @@ class RISCVSimulator:
         elif funct3 == 0x1:
             self.registers[rd] = self.registers[rs1] << self.sign_extend(imm, 12)
         # SLTI
-        elif funct3 == 0x2:
+        elif funct3 == 0x2 and opcode == 0x13:
             self.registers[rd] = 1 if self.registers[rs1] < self.sign_extend(imm, 12) else 0
         # SLTIU
         elif funct3 == 0x3:
@@ -157,7 +159,7 @@ class RISCVSimulator:
         # LW
         elif funct3 == 0x2 and opcode == 0x3:
             self.registers[rd] = self.memory[self.registers[rs1] + self.sign_extend(imm, 12)] << 24 | self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 1] << 16 | self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 2] << 8 | self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 3]
-        # LBU
+            self.registers[rd] = self.memory[self.registers[rs1] + self.sign_extend(imm, 12)] | self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 1] | self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 2] | self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 3]
         elif funct3 == 0x4 and opcode == 0x3:
             self.registers[rd] = self.memory[self.registers[rs1] + self.sign_extend(imm, 12)]
         # LHU
@@ -321,12 +323,9 @@ class RISCVSimulator:
 
 simulator = RISCVSimulator()
 instructions = """
-00c08093
-00100113
-00200193
-00212023
-00112023
-00312023
+00400213
+00402023
+00002083
 """
 print(simulator.run(instructions))
 print(simulator.memory)
