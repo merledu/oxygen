@@ -308,14 +308,15 @@ class RISCVSimulator:
             instruction = self.instruction_memory[self.pc]
             self.execute_instruction(instruction)
         
-        print(self.memory)
-        
         return self.registers
 
     def dump_registers(self):
         # register values ye main pa bhejna
         for i in range(32):
             print(f"x{i}: {hex(self.registers[i])}")
+    
+    def memory_dump(self):
+        return self.memory
 
 
 simulator = RISCVSimulator()
@@ -324,7 +325,8 @@ instructions = """
 00100113
 00200193
 00212023
-0020a023
-0021a023
+00112023
+00312023
 """
 print(simulator.run(instructions))
+print(simulator.memory)

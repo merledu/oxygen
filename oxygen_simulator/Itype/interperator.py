@@ -549,9 +549,9 @@ def parse_instruction(instruction):
     
     
     elif inst_type == 'S':
-        rs1 = register_to_bin(parts[1],5)
-        rs2 = register_to_bin(parts[2],5)
-        imm = imm_to_bin(parts[3], 12)
+        rs1 = register_to_bin(parts[3],5)
+        rs2 = register_to_bin(parts[1],5)
+        imm = imm_to_bin(parts[2], 12)
         imm_11_5 = imm[:7]
         imm_4_0 = imm[7:]
         return FORMATS['S'].format(imm_11_5=imm_11_5, rs2=rs2, rs1=rs1, funct3=funct3, imm_4_0=imm_4_0, opcode=opcode)

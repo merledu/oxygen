@@ -13,16 +13,20 @@ function updateRegisterValues(data) {
         document.getElementById(`reg-${index}`).innerText = `0x${value.toString(16).padStart(8, '0')}`;
     });
 }
-
+let memorydic = {}
 function assembleCode() {
     // const code = document.getElementById('editor-container').value;
     code = document.getElementsByClassName('codeEditor')[0].value
     let hehe
     let base
     let registers
-    axios.post('/assemble-code/', { code: code })
+    axios.post('assemble-code', { code: code })
             .then(response => {
                 const hex = response.data.hex;
+                console.log("hello" ,hex)
+                const memory = response.data.memory
+                memorydic = memory
+
                 console.log(hex)
                 const baseins = response.data.is_sudo
                 const reg = response.data.registers
@@ -34,6 +38,7 @@ function assembleCode() {
                 document.getElementById('hexDump').value = hex;
                 populateDecoderTable(code,hehe,base);
                 updateRegisterValues(registers)
+                populateMemoryTable(memory)
             })
             .catch(error => {
                 console.error('There was an error!', error);
@@ -81,33 +86,33 @@ function populateDecoderTable(code,hex_dump,baseins) {
     let count = 0
 
     instructions.forEach((instruction, index) => {
-            const pc = `0x${(index * 4).toString(16)}`;
-            hexdumparr = hex_dump.split('\n').filter(line => line.trim() !== '')
-            
-            console.log((hexdumparr));
-            const machineCode = hexdumparr[count];
-            const basicCode = baseins[count]; 
-            const originalCode = instruction; 
-    
-            const row = document.createElement('tr');
-            const row2 = document.createElement('tr');
-            row.innerHTML = `
-                <td>${pc}</td>
-                <td>${machineCode}</td>
-                <td>${basicCode}</td>
-                <td>${originalCode}</td>
-            `;
-            row2.innerHTML = `
-                <td>${pc}</td>
-                <td>${machineCode}</td>
-                <td>${basicCode}</td>
-                <td>${originalCode}</td>
-            `;
-            tableBody.appendChild(row);
-            tableBody2.appendChild(row2);
-            
-            count = count +1
-        });
+        const pc = `0x${(index * 4).toString(16)}`;
+        let hexdumparr = hex_dump.split('\n').filter(line => line.trim() !== '')
+        
+        console.log((hexdumparr));
+        const machineCode = hexdumparr[count];
+        const basicCode = baseins[count]; 
+        const originalCode = instruction;
+
+        const row = document.createElement('tr');
+        const row2 = document.createElement('tr');
+        row.innerHTML = `
+            <td>${pc}</td>
+            <td>${machineCode}</td>
+            <td>${basicCode}</td>
+            <td>${originalCode}</td>
+        `;
+        row2.innerHTML = `
+            <td>${pc}</td>
+            <td>${machineCode}</td>
+            <td>${basicCode}</td>
+            <td>${originalCode}</td>
+        `;
+        tableBody.appendChild(row);
+        tableBody2.appendChild(row2);
+        
+        count = count +1
+    });
 }
 
 function stepInstruction() {
@@ -130,3 +135,61 @@ function stepInstruction() {
 //     document.getElementById('writeback-step').textContent = "Updated Write Back Step";
 // }
 
+// Function to populate memory table
+let memoryAddress = 0; // Initial memory address
+let memoryValues = {}; // Dictionary of memory values
+
+// Function to populate memory table
+function populateMemoryTable(data) {
+    const tableBody = document.getElementById('memoryTableBody');
+    tableBody.innerHTML = ''; // Clear existing rows
+
+    // Make AJAX call to Django backend to retrieve memory values
+    
+            memoryValues = data; // Update memory values dictionary
+            for (let i = 0; i < 10; i++) { // Display 10 rows
+                const addr1 = memoryAddress + (i * 4);
+                const addr2 = memoryAddress + (i);
+                console.log(memoryValues)
+                console.log()
+                const value = memoryValues[addr2] || 0; // Get value from dictionary or default to 0
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>0x${addr1.toString(16)}</td>
+                    <td>0x${(memoryValues[addr1] || 0).toString(16)}</td>
+                    <td>0x${(memoryValues[addr1+1] || 0)}</td>
+                    <td>0x${(memoryValues[addr1+2] || 0)}</td>
+                    <td>0x${(memoryValues[addr1+3] || 0)}</td>
+                `;
+                tableBody.appendChild(row);
+                
+            }
+        ;
+}
+
+// Scroll up button click handler
+document.getElementById('scrollUpBtn').addEventListener('click', () => {
+    const scrollUpBtn = document.getElementById('scrollUpBtn');
+    if (memoryAddress <= 0) {
+        scrollUpBtn.disabled = true; // Disable scroll up button
+        scrollUpBtn.classList.add('disabled');
+    } else {
+        memoryAddress -= 16; // Decrement memory address by 16
+        populateMemoryTable(memorydic);
+        scrollUpBtn.disabled = false; // Enable scroll up button
+        scrollUpBtn.classList.remove('disabled');
+    }
+});
+
+// Scroll down button click handler
+document.getElementById('scrollDownBtn').addEventListener('click', () => {
+    memoryAddress += 16; // Increment memory address by 16
+    populateMemoryTable(memorydic);
+    const scrollUpBtn = document.getElementById('scrollUpBtn');
+    if (memoryAddress > 0) {
+        scrollUpBtn.disabled = false; // Enable scroll up button
+        scrollUpBtn.classList.remove('disabled');
+    }
+});
+
+// Initialize memory table
