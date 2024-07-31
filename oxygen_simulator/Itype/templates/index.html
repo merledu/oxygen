@@ -177,15 +177,18 @@
                         <div class="decoder-container row">
                             <div class="col-md-7">
                                 <div class="assemble-container text-center mt-4">
+                                    <button class="assemble-button btn btn-primary" onclick="runCode()">Run</button>
                                     <button class="assemble-button btn btn-primary" onclick="assembleCode()">Assemble</button>
+                                    <button class="assemble-button btn btn-primary" onclick="stepInstruction()">Step</button>
+                                
                                 </div>
                                 <table>
                                     <thead>
                                         <tr>
                                             <th>PC</th>
                                             <th>Machine Code</th>
-                                            <th>Basic Code</th>
-                                            <th>Original Code</th>
+                                            <th>Base Instruction</th>
+                                            <th>Original Instruction</th>
                                         </tr>
                                     </thead>
                                     <tbody id="decoderTableBody">
@@ -297,9 +300,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="step-container text-center mt-3">
-                            <button class="step-button" onclick="stepInstruction()">Step</button>
-                        </div>
+                        
                     </section>
                 </section>
             </div>            

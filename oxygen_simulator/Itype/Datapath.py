@@ -340,11 +340,15 @@ class RISCVSimulator:
 
 
 simulator = RISCVSimulator()
-instructions = """
-deadc237
-eef20213
-00402223
-00402083
+instructions1 = """
+00108093
 """
-print(simulator.run(instructions))
+instructions2 = """
+00110113
+00102023
+"""
+print(simulator.run(instructions1))
+print(simulator.memory)
+print(simulator.run(instructions2))
+
 print(simulator.memory)

@@ -300,34 +300,34 @@ def replace_labels_with_immediates(instructions):
     
     return '\n'.join(result)
 
-def register_to_bin(register,bits):
+def register_to_bin(register, bits):
     """Convert register name to binary representation"""
-    if register in Registers_ABI:
-        x = Registers_ABI[register]
-        x = int(x[1:])
-        print(x)
-        if bits==5:
-            x = '{0:05b}'.format(x)
-            return x
-        elif bits==3:
-            x = '{0:03b}'.format(x)
-            return x
-        
-    
-    elif register.startswith('x'):
-        x = int(register[1:])
-        if bits==5:
-            x = '{0:05b}'.format(x)
-            return x
-        elif bits==3:
-            x = '{0:03b}'.format(x)
-            return x
-        
-        
-            
-        # return int(register[1:])
-    
-    raise ValueError(f"Unknown register: {register}")
+    try:
+        if register in Registers_ABI:
+            x = Registers_ABI[register]
+            x = int(x[1:])
+            if bits == 5:
+                x = '{0:05b}'.format(x)
+                return x
+            elif bits == 3:
+                x = '{0:03b}'.format(x)
+                return x
+        elif register.startswith('x'):
+            x = int(register[1:])
+            if bits == 5:
+                x = '{0:05b}'.format(x)
+                return x
+            elif bits == 3:
+                x = '{0:03b}'.format(x)
+                return x
+        else:
+            raise ValueError(f"Unknown register: {register}")
+    except ValueError as e:
+        print(f"Error: wrong input")
+        return None
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return None
 
 def imm_to_bin(imm, length):
     """Convert immediate value to binary representation of given length"""

@@ -8,45 +8,35 @@ function updateConfig(type, isChecked) {
             break;
     }
 }
+let reg_value = []
 function updateRegisterValues(data) {
     data.forEach((value, index) => {
         document.getElementById(`reg-${index}`).innerText = `0x${value.toString(16).padStart(8, '0')}`;
     });
 }
 let memorydic = {}
-function assembleCode() {
+function runCode() {
     // const code = document.getElementById('editor-container').value;
     code = document.getElementsByClassName('codeEditor')[0].value
-    let hehe
-    let base
-    let registers
-    axios.post('assemble-code', { code: code })
+    console.log(typeof(code))
+
+    axios.post('run-code', { code: code })
             .then(response => {
                 const hex = response.data.hex;
                 console.log("hello" ,hex)
                 const memory = response.data.memory
                 memorydic = memory
-
-                console.log(hex)
                 const baseins = response.data.is_sudo
                 const reg = response.data.registers
-                console.log(baseins)
-                hehe = hex
-                base = baseins
-                console.log(reg)
-                registers = reg
-                populateDecoderTable(code,hehe,base);
-                updateRegisterValues(registers)
+                reg_value = reg
+                populateDecoderTable(code,hex,baseins);
+                updateRegisterValues(reg)
                 populateMemoryTable(memory)
             })
             .catch(error => {
                 console.error('There was an error!', error);
             });
     console.log(code)
-    
-    // const hexDump = "Generated Hex Dump";
-    // document.getElementById('hexDump').value = hexDump;
-    
     
 }
 
@@ -60,6 +50,21 @@ function dumpHex() {
             .catch(error => {
                 console.error('There was an error!', error);
             })
+
+}
+
+function assembleCode(){
+    code = document.getElementsByClassName('codeEditor')[0].value
+    axios.post('assemble-code', { code: code })
+            .then(response => {
+                const hex = response.data.hex;
+                const baseins = response.data.is_sudo
+                populateDecoderTable(code,hex,baseins);
+            })
+            .catch(error => {
+                console.error('There was an error!', error);
+            })
+
 
 }
 
@@ -81,10 +86,13 @@ function downloadHex() {
 
 function clearHex() {
     document.getElementById('hexDump').value = '';
+
 }
 
 function populateDecoderTable(code,hex_dump,baseins) {
-    const instructions = code.split('\n').filter(line => line.trim() !== '');
+    let instructions = code.split('\n').filter(line => line.trim() !== '');
+    
+    instructions = instructions.filter((ins) => !ins.includes(':'));
     console.log(instructions)
     const tableBody = document.getElementById('decoderTableBody');
     const tableBody2 = document.getElementById('adecoderTableBody');
@@ -125,24 +133,9 @@ function populateDecoderTable(code,hex_dump,baseins) {
 }
 
 function stepInstruction() {
-    // Logic to step through instructions
+    
 }
 
-// function advanceCycle() {
-//     axios.post('/5-stage/')
-//     .then(response => {
-
-//     // Call your Python method to advance the pipeline cycle and update the UI
-//     // This is a placeholder for the interaction between frontend and backend
-//     // Typically, you would use an AJAX request to communicate with the backend
-
-//     // Example: Update UI based on new pipeline state
-//     document.getElementById('fetch-step').textContent = "Updated Fetch Step";
-//     document.getElementById('decode-step').textContent = "Updated Decode Step";
-//     document.getElementById('execute-step').textContent = "Updated Execute Step";
-//     document.getElementById('memory-step').textContent = "Updated Memory Step";
-//     document.getElementById('writeback-step').textContent = "Updated Write Back Step";
-// }
 
 // Function to populate memory table
 let memoryAddress = 0; // Initial memory address
@@ -158,8 +151,6 @@ function populateMemoryTable(data) {
             for (let i = 0; i < 10; i++) { 
                 const addr1 = memoryAddress + (i * 4);
                 const addr2 = memoryAddress + (i);
-                console.log(memoryValues)
-                console.log()
                 const value = memoryValues[addr2] || 0; 
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -199,5 +190,35 @@ document.getElementById('scrollDownBtn').addEventListener('click', () => {
         scrollUpBtn.classList.remove('disabled');
     }
 });
+
+function stepInstruction() {
+    const code = document.getElementsByClassName('codeEditor')[0].value;
+    const pc = document.getElementById('pc').value;
+    const registers = JSON.parse(document.getElementById('registers').value);
+    const memory = JSON.parse(document.getElementById('memory').value);
+
+    axios.post('step-instruction', {
+        code: code,
+        pc: pc,
+        registers: registers,
+        memory: memory
+    })
+    .then(response => {
+        const updatedPc = response.data.pc;
+        const updatedRegisters = response.data.registers;
+        const updatedMemory = response.data.memory;
+
+        // Update the frontend with the new values
+        document.getElementById('pc').value = updatedPc;
+        document.getElementById('registers').value = JSON.stringify(updatedRegisters);
+        document.getElementById('memory').value = JSON.stringify(updatedMemory);
+
+        // Update the decoder table
+        populateDecoderTable(code, updatedPc);
+    })
+    .catch(error => {
+        console.error('There was an error!', error);
+    });
+}
 
 // Initialize memory table
