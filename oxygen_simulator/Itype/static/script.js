@@ -35,7 +35,6 @@ function assembleCode() {
                 base = baseins
                 console.log(reg)
                 registers = reg
-                document.getElementById('hexDump').value = hex;
                 populateDecoderTable(code,hehe,base);
                 updateRegisterValues(registers)
                 populateMemoryTable(memory)
@@ -45,13 +44,23 @@ function assembleCode() {
             });
     console.log(code)
     
-    const hexDump = "Generated Hex Dump";
-    document.getElementById('hexDump').value = hexDump;
+    // const hexDump = "Generated Hex Dump";
+    // document.getElementById('hexDump').value = hexDump;
     
     
 }
 
 function dumpHex() {
+    code = document.getElementsByClassName('codeEditor')[0].value
+    axios.post('dump-code', { code: code })
+            .then(response => {
+                const hex = response.data.hex;
+                document.getElementById('hexDump').value = hex;
+            })
+            .catch(error => {
+                console.error('There was an error!', error);
+            })
+
 }
 
 function copyHex() {
@@ -144,22 +153,21 @@ function populateMemoryTable(data) {
     const tableBody = document.getElementById('memoryTableBody');
     tableBody.innerHTML = ''; // Clear existing rows
 
-    // Make AJAX call to Django backend to retrieve memory values
     
-            memoryValues = data; // Update memory values dictionary
-            for (let i = 0; i < 10; i++) { // Display 10 rows
+            memoryValues = data; 
+            for (let i = 0; i < 10; i++) { 
                 const addr1 = memoryAddress + (i * 4);
                 const addr2 = memoryAddress + (i);
                 console.log(memoryValues)
                 console.log()
-                const value = memoryValues[addr2] || 0; // Get value from dictionary or default to 0
+                const value = memoryValues[addr2] || 0; 
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>0x${addr1.toString(16)}</td>
                     <td>0x${(memoryValues[addr1] || 0).toString(16)}</td>
-                    <td>0x${(memoryValues[addr1+1] || 0)}</td>
-                    <td>0x${(memoryValues[addr1+2] || 0)}</td>
-                    <td>0x${(memoryValues[addr1+3] || 0)}</td>
+                    <td>0x${(memoryValues[addr1+1] || 0).toString(16)}</td>
+                    <td>0x${(memoryValues[addr1+2] || 0).toString(16)}</td>
+                    <td>0x${(memoryValues[addr1+3] || 0).toString(16)}</td>
                 `;
                 tableBody.appendChild(row);
                 

@@ -108,7 +108,7 @@ class RISCVSimulator:
         # REMU
         elif funct3 == 0x7 and funct7 == 0x01:
             self.registers[rd] = self.registers[rs1] % self.registers[rs2]
-
+            
     def execute_i_type(self, instruction):
         
         imm = (instruction >> 20) & 0xFFF
@@ -117,7 +117,6 @@ class RISCVSimulator:
         rd = (instruction >> 7) & 0x1F
         opcode = instruction & 0x7F
         
-        print(rd , rs1 , imm)
  
         # ADDI
         if funct3 == 0x0:
@@ -151,29 +150,45 @@ class RISCVSimulator:
             self.registers[rd] = self.pc + 4
             self.pc = (self.registers[rs1] + self.sign_extend(imm, 12)) & 0xFFFFFFFE
         # LB
+        # LB
         elif funct3 == 0x0 and opcode == 0x3:
-            self.registers[rd] = self.sign_extend(self.memory[self.registers[rs1] + self.sign_extend(imm, 12)], 8)
+            address = self.registers[rs1] + self.sign_extend(imm, 12)
+            self.registers[rd] = self.sign_extend(self.memory.get(address, 0), 8)
+
         # LH
         elif funct3 == 0x1 and opcode == 0x3:
-            self.registers[rd] = self.sign_extend(self.memory[self.registers[rs1] + self.sign_extend(imm, 12)] << 8 | self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 1], 16)
+            address = self.registers[rs1] + self.sign_extend(imm, 12)
+            self.registers[rd] = self.sign_extend((self.memory.get(address, 0) << 8 | self.memory.get(address + 1, 0)), 16)
+
         # LW
         elif funct3 == 0x2 and opcode == 0x3:
-            self.registers[rd] = self.memory[self.registers[rs1] + self.sign_extend(imm, 12)] << 24 | self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 1] << 16 | self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 2] << 8 | self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 3]
-            self.registers[rd] = self.memory[self.registers[rs1] + self.sign_extend(imm, 12)] | self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 1] | self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 2] | self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 3]
+            address = self.registers[rs1] + self.sign_extend(imm, 12)
+            self.registers[rd] = (
+                self.memory.get(address, 0) << 24 |
+                self.memory.get(address + 1, 0) << 16 |
+                self.memory.get(address + 2, 0) << 8 |
+                self.memory.get(address + 3, 0)
+            )
+
+        # LBU
         elif funct3 == 0x4 and opcode == 0x3:
-            self.registers[rd] = self.memory[self.registers[rs1] + self.sign_extend(imm, 12)]
+            address = self.registers[rs1] + self.sign_extend(imm, 12)
+            self.registers[rd] = self.memory.get(address, 0)
+
         # LHU
         elif funct3 == 0x5 and opcode == 0x3:
-            self.registers[rd] = self.memory[self.registers[rs1] + self.sign_extend(imm, 12)] << 8 | self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 1]
-
+            address = self.registers[rs1] + self.sign_extend(imm, 12)
+            self.registers[rd] = self.memory.get(address, 0) << 8 | self.memory.get(address + 1, 0)
+            
+            
+            
     def execute_s_type(self, instruction):
-        
+                
         imm = ((instruction >> 25) << 5) | ((instruction >> 7) & 0x1F)
         rs2 = (instruction >> 20) & 0x1F
         rs1 = (instruction >> 15) & 0x1F
         funct3 = (instruction >> 12) & 0x7
         opcode = instruction & 0x7F
-
         
         # SB
         if funct3 == 0x0:
@@ -185,8 +200,11 @@ class RISCVSimulator:
         # SW
         elif funct3 == 0x2:
             self.memory[self.registers[rs1] + self.sign_extend(imm, 12)] = self.registers[rs2] & 0xFF
+            print(self.registers[rs2] & 0xFF)
             self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 1] = (self.registers[rs2] >> 8) & 0xFF
+            print((self.registers[rs2] >> 8) & 0xFF)
             self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 2] = (self.registers[rs2] >> 16) & 0xFF
+            print((self.registers[rs2] >> 16) & 0xFF)
             self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 3] = (self.registers[rs2] >> 24) & 0xFF
         
             
@@ -323,9 +341,10 @@ class RISCVSimulator:
 
 simulator = RISCVSimulator()
 instructions = """
-00400213
-00402023
-00002083
+deadc237
+eef20213
+00402223
+00402083
 """
 print(simulator.run(instructions))
 print(simulator.memory)
