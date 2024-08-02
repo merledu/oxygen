@@ -6,9 +6,10 @@ from django.shortcuts import render
 from .interperator import main
 from .interperator import checkpsudo
 from .Datapath import *
+from .Datapath_single import *
 from django.views.decorators.csrf import csrf_exempt
 
-execution = RISCVSimulator()
+execution = RISCVSimulatorSingle()
 
 # Create your views here.
 @csrf_exempt
@@ -25,47 +26,69 @@ def assemble_code(request):
  
         hex_output = main(code)
         sudo_or_base  = checkpsudo(code)
-        execution = RISCVSimulator()
+        return JsonResponse({'hex': hex_output ,
+                             'is_sudo' : sudo_or_base,
+                             }, )
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+@csrf_exempt
+def step_code(request):
+    if request.method == "POST":
+        print("check")
+        data = json.loads(request.body)
         
-        registers = execution.run(hex_output)
+        instruction = data.get('instruction', '')
+        pc = data.get('pc', '')
+        
+        memory = data.get('memory', '')
+        register = data.get('register', '')
+ 
+        execution.pc = pc
+        if (pc != 0):
+            execution.memory = memory
+            execution.registers = register
+            
+        register=execution.run(instruction)
         memory = execution.memory
+        pc = execution.pc
+        print(pc)
+        
+        return JsonResponse({'memory': memory ,
+                             'register' : register,
+                             'pc': pc,}, )
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+@csrf_exempt
+def run_code(request):
+    if request.method == "POST":
+        data = json.loads(request.body)
+        
+        code = data.get('code', '')
+ 
+        hex_output = main(code)
+        sudo_or_base  = checkpsudo(code)
+        execution2 = RISCVSimulator()
+        
+        registers = execution2.run(hex_output)
+        memory = execution2.memory
         return JsonResponse({'hex': hex_output ,
                              'is_sudo' : sudo_or_base,
                              'registers': registers,
                              'memory': memory}, )
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
-def get_memory_values(request, address):
-    execution = RISCVSimulator()
-    
-    memory_values = execution.memory
-    return JsonResponse(memory_values, safe=False)
-
-def step_instruction(request):
+@csrf_exempt
+def reset(request):
     if request.method == "POST":
-        data = json.loads(request.body)
-        code = data.get('code', '')
-        pc = data.get('pc', 0)
-        registers = data.get('registers', {})
-        memory = data.get('memory', {})
-
-        # Initialize the simulator
-        execution = RISCVSimulator()
-        execution.pc = pc
-        execution.registers = registers
-        execution.memory = memory
-
-        # Split the code into instructions
-        instructions = [line for line in code.split('\n') if line.strip()]
-        # Execute the current instruction
-        current_instruction = instructions[pc]
-        hex_output = main(current_instruction)
-        execution.run(hex_output)
-
-        # Return the updated state
+        execution.memory={}
+        execution.registers=[0]*32
+        execution.pc=0
+        execution.instruction_memory = {}
+        execution.f_registers = [0.0] * 32 
+        
         return JsonResponse({
-            'pc': execution.pc + 1,
-            'registers': execution.registers,
-            'memory': execution.memory
-        })
+                             'register': execution.registers,
+                             'memory': execution.memory,
+                             'pc':execution.pc}, )
     return JsonResponse({'error': 'Invalid request'}, status=400)

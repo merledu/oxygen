@@ -1,4 +1,4 @@
-class RISCVSimulator:
+class RISCVSimulatorSingle:
     def __init__(self):
         self.registers = [0] * 32
         self.pc = 0
@@ -316,17 +316,17 @@ class RISCVSimulator:
             value -= 1 << bits
         return value
 
-    def run(self, instructions):
-        instructions = instructions.split('\n')
-        instructions = list(filter(('').__ne__, instructions))
-        for i in range(len(instructions)):
-            hex_int = int(instructions[i], 16)
-            instructions[i]=hex_int
-            
-        self.load_instructions(instructions)
-        while self.pc < len(instructions) * 4:
-            instruction = self.instruction_memory[self.pc]
-            self.execute_instruction(instruction)
+    def run(self, instruction):
+        # instructions = instructions.split('\n')
+        # instructions = list(filter(('').__ne__, instructions))
+        
+        hex_int = int(instruction, 16)
+        instruction=hex_int
+        self.execute_instruction(instruction)
+        # self.load_instructions(instruction)
+        # while self.pc < len(instructions) * 4:
+            # instruction = self.instruction_memory[self.pc]
+            # self.execute_instruction(instruction)
         
         return self.registers
     
@@ -340,43 +340,4 @@ class RISCVSimulator:
         return self.memory
 
 
-simulator = RISCVSimulator()
-instructions1 = """
-00108093
-"""
-instructions2 = """
-00110113
-00102023
-00108093
-"""
 
-ins = """00510113"""
-
-instructions2 = instructions2.split('\n')
-instructions2 = list(filter(('').__ne__, instructions2))
-ins = ins.split('\n')
-ins= list(filter(('').__ne__, ins))
-
-instructions1 = instructions1.split('\n')
-instructions1= list(filter(('').__ne__, instructions1))
-
-for ins1 in instructions1:
-    print(ins1)
-    print(simulator.run(ins1))
-    print(simulator.memory)
-    print(simulator.pc)
-    
-for ins1 in instructions2:
-    print(ins1)
-    print(simulator.run(ins1))
-    print(simulator.memory)
-    print(simulator.pc)
-
-for ins1 in ins:
-    print(simulator.run(ins1))
-    print(simulator.memory)
-    print(simulator.pc)
-
-
-print(simulator.memory)
-print(simulator.pc)

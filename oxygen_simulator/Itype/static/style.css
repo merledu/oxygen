@@ -7,6 +7,48 @@ body {
     animation: fadeIn 1s ease-in-out;
 }
 
+.initial-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('images/p3.jpg');
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.initial-content {
+    text-align: center;
+    color: white;
+}
+
+.initial-content h1 {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.initial-content button {
+    padding: 0.5rem 2rem;
+    font-size: 1.5rem;
+}
+
+.container_my-5 {
+    max-width: 100%;
+    padding: 2rem;
+}
+
+header {
+    background-color: #007BFF;
+    color: white;
+    padding: 1rem 0;
+    text-align: center;
+}
+
 .container_my-5 {
     max-width: 100%;
     padding: 2rem;
@@ -157,6 +199,9 @@ button:hover {
     margin-top: 3rem;
     border: 1px solid #ccc;
 }
+.highlight {
+    background-color: rgb(137, 214, 237);
+  }
 
 #decode{
     width: 50;
@@ -356,4 +401,56 @@ input:checked + .slider:before {
     padding: 0.5rem;
     text-align: left;
     font-family: monospace;
+}
+.container {
+display: flex;
+/*   border:1px solid red; */
+height: 100%;
+align-items: center;
+}
+
+svg {
+    display: block;
+    font: 10.5em 'Montserrat';
+    width: 960px;
+    height: 300px;
+    margin: 0 auto;
+}
+
+.text-copy {
+    fill: none;
+    stroke: white;
+    stroke-dasharray: 6% 29%;
+    stroke-width: 5px;
+    stroke-dashoffset: 0%;
+    animation: stroke-offset 5.5s infinite linear;
+}
+
+.text-copy:nth-child(1){
+stroke: #4D163D;
+animation-delay: -1;
+}
+
+.text-copy:nth-child(2){
+stroke: #840037;
+animation-delay: -2s;
+}
+
+.text-copy:nth-child(3){
+stroke: #BD0034;
+animation-delay: -3s;
+}
+
+.text-copy:nth-child(4){
+stroke: #BD0034;
+animation-delay: -4s;
+}
+
+.text-copy:nth-child(5){
+stroke: #FDB731;
+animation-delay: -5s;
+}
+
+@keyframes stroke-offset{
+100% {stroke-dashoffset: -35%;}
 }
