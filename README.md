@@ -19,8 +19,10 @@ Oxygen is a RISC-V assembly simulator built with a Django backend. It supports t
 Ensure you have the following installed on your system:
 
 - Python 3.x
-- Django
 - Git
+```sh
+sudo apt install python3 git
+```
 
 ### Installation
 
@@ -36,6 +38,7 @@ Ensure you have the following installed on your system:
     ```sh
     python -m venv venv
     source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
+    pip3 install django
     ```
 
 3. **Apply migrations:**
