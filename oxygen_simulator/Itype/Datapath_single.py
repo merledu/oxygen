@@ -327,7 +327,7 @@ class RISCVSimulatorSingle:
         # while self.pc < len(instructions) * 4:
             # instruction = self.instruction_memory[self.pc]
             # self.execute_instruction(instruction)
-        
+        self.registers[0]=0
         return self.registers
     
 

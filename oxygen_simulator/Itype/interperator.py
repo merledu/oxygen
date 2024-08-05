@@ -706,4 +706,4 @@ if __name__ == '__main__':
     # Example input string
     instructions_str = "add x1,x2,x3"
     hex_output = main(instructions_str)
-    print(hex_output)
+    print("0x"+hex_output)
