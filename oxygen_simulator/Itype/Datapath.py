@@ -200,11 +200,11 @@ class RISCVSimulator:
         # SW
         elif funct3 == 0x2:
             self.memory[self.registers[rs1] + self.sign_extend(imm, 12)] = self.registers[rs2] & 0xFF
-            print(self.registers[rs2] & 0xFF)
+            
             self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 1] = (self.registers[rs2] >> 8) & 0xFF
-            print((self.registers[rs2] >> 8) & 0xFF)
+            
             self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 2] = (self.registers[rs2] >> 16) & 0xFF
-            print((self.registers[rs2] >> 16) & 0xFF)
+            
             self.memory[self.registers[rs1] + self.sign_extend(imm, 12) + 3] = (self.registers[rs2] >> 24) & 0xFF
         
             
@@ -329,6 +329,7 @@ class RISCVSimulator:
             self.execute_instruction(instruction)
         
         return self.registers
+    
 
     def dump_registers(self):
         # register values ye main pa bhejna
@@ -346,9 +347,36 @@ instructions1 = """
 instructions2 = """
 00110113
 00102023
+00108093
 """
-print(simulator.run(instructions1))
-print(simulator.memory)
-print(simulator.run(instructions2))
+
+ins = """00510113"""
+
+instructions2 = instructions2.split('\n')
+instructions2 = list(filter(('').__ne__, instructions2))
+ins = ins.split('\n')
+ins= list(filter(('').__ne__, ins))
+
+instructions1 = instructions1.split('\n')
+instructions1= list(filter(('').__ne__, instructions1))
+
+for ins1 in instructions1:
+    print(ins1)
+    print(simulator.run(ins1))
+    print(simulator.memory)
+    print(simulator.pc)
+    
+for ins1 in instructions2:
+    print(ins1)
+    print(simulator.run(ins1))
+    print(simulator.memory)
+    print(simulator.pc)
+
+for ins1 in ins:
+    print(simulator.run(ins1))
+    print(simulator.memory)
+    print(simulator.pc)
+
 
 print(simulator.memory)
+print(simulator.pc)

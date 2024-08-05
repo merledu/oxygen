@@ -9,12 +9,14 @@ function updateConfig(type, isChecked) {
     }
 }
 let reg_value = []
+let memorydic = {}
+let pc = 0
 function updateRegisterValues(data) {
     data.forEach((value, index) => {
         document.getElementById(`reg-${index}`).innerText = `0x${value.toString(16).padStart(8, '0')}`;
     });
 }
-let memorydic = {}
+
 function runCode() {
     // const code = document.getElementById('editor-container').value;
     code = document.getElementsByClassName('codeEditor')[0].value
@@ -23,7 +25,6 @@ function runCode() {
     axios.post('run-code', { code: code })
             .then(response => {
                 const hex = response.data.hex;
-                console.log("hello" ,hex)
                 const memory = response.data.memory
                 memorydic = memory
                 const baseins = response.data.is_sudo
@@ -64,8 +65,6 @@ function assembleCode(){
             .catch(error => {
                 console.error('There was an error!', error);
             })
-
-
 }
 
 function copyHex() {
@@ -133,9 +132,72 @@ function populateDecoderTable(code,hex_dump,baseins) {
 }
 
 function stepInstruction() {
-    
+    const currentInstruction = document.getElementById('decoderTableBody').rows[pc/4].cells[1].textContent;
+    console.log(currentInstruction)
+    const currentInstructionRow = document.getElementById('decoderTableBody').rows[pc/4];
+    if (currentInstructionRow) {
+        currentInstructionRow.classList.add('highlight'); // Add highlight class
+    }
+
+
+    axios.post('step', {
+      instruction: currentInstruction,
+      pc: pc,
+      memory:memorydic,
+      register : reg_value
+    })
+    .then(response => {
+      const newPc = response.data.pc;
+      memorydic = response.data.memory
+      reg_value = response.data.register
+      pc = newPc;
+      console.log(pc)
+      // Remove highlight from previous row
+        if (currentInstructionRow) {
+        currentInstructionRow.classList.remove('highlight');
+        }
+
+    // Highlight new row
+    const newInstructionRow = document.getElementById('decoderTableBody').rows[pc/4];
+        if (newInstructionRow) {
+            newInstructionRow.classList.add('highlight');
+        }
+
+
+      populateMemoryTable(memorydic)
+      updateRegisterValues(reg_value)
+    })
+    .catch(error => {
+      console.error(error);
+    });
+  }
+function reset(){
+
+    axios.post('reset', {
+      })
+      .then(response => {
+        const newPc = response.data.pc;
+        memorydic = response.data.memory
+        console.log(memorydic)
+        reg_value = response.data.register
+        console.log(reg_value)
+        pc = newPc;
+        console.log(pc)
+
+        populateMemoryTable(memorydic)
+        updateRegisterValues(reg_value)
+      })
+
 }
 
+// function highlightInstruction(pc) {
+// const rows = document.getElementById('decoderTableBody').rows;
+// for (let i = 0; i < rows.length; i++) {
+//     rows[i].classList.remove('highlight');
+// }
+// rows[pc].classList.add('highlight');
+// }
+  
 
 // Function to populate memory table
 let memoryAddress = 0; // Initial memory address
@@ -191,34 +253,34 @@ document.getElementById('scrollDownBtn').addEventListener('click', () => {
     }
 });
 
-function stepInstruction() {
-    const code = document.getElementsByClassName('codeEditor')[0].value;
-    const pc = document.getElementById('pc').value;
-    const registers = JSON.parse(document.getElementById('registers').value);
-    const memory = JSON.parse(document.getElementById('memory').value);
+// function stepInstruction() {
+//     const code = document.getElementsByClassName('codeEditor')[0].value;
+//     const pc = document.getElementById('pc').value;
+//     const registers = JSON.parse(document.getElementById('registers').value);
+//     const memory = JSON.parse(document.getElementById('memory').value);
 
-    axios.post('step-instruction', {
-        code: code,
-        pc: pc,
-        registers: registers,
-        memory: memory
-    })
-    .then(response => {
-        const updatedPc = response.data.pc;
-        const updatedRegisters = response.data.registers;
-        const updatedMemory = response.data.memory;
+//     axios.post('step-instruction', {
+//         code: code,
+//         pc: pc,
+//         registers: registers,
+//         memory: memory
+//     })
+//     .then(response => {
+//         const updatedPc = response.data.pc;
+//         const updatedRegisters = response.data.registers;
+//         const updatedMemory = response.data.memory;
 
-        // Update the frontend with the new values
-        document.getElementById('pc').value = updatedPc;
-        document.getElementById('registers').value = JSON.stringify(updatedRegisters);
-        document.getElementById('memory').value = JSON.stringify(updatedMemory);
+//         // Update the frontend with the new values
+//         document.getElementById('pc').value = updatedPc;
+//         document.getElementById('registers').value = JSON.stringify(updatedRegisters);
+//         document.getElementById('memory').value = JSON.stringify(updatedMemory);
 
-        // Update the decoder table
-        populateDecoderTable(code, updatedPc);
-    })
-    .catch(error => {
-        console.error('There was an error!', error);
-    });
-}
+//         // Update the decoder table
+//         populateDecoderTable(code, updatedPc);
+//     })
+//     .catch(error => {
+//         console.error('There was an error!', error);
+//     });
+// }
 
 // Initialize memory table
