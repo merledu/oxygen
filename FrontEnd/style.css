@@ -1,11 +1,13 @@
 body, html {
+    background-image: url('p3.jpg');
     margin: 0;
     padding: 0;
     width: 100%;
     height: 100%;
     overflow: auto;
     font-family: Arial, sans-serif;
-    background-color: #212121;
+    /* background-color: #212121; */
+    
 }
 
 #splash-screen {
@@ -108,6 +110,7 @@ canvas {
   display: flex;
   flex-direction: column;
   justify-content:space-around ;
+  
 }
 
 #main-content.show {

@@ -650,7 +650,7 @@ def main(instructions_str):
         
         bin_str = parse_instruction((instruction))
         hex_str = convert_to_hex(bin_str)
-        hex_lines.append(hex_str)
+        hex_lines.append('0x'+hex_str)
     
     # Join the hex strings with newline characters
     hex_output = '\n'.join(hex_lines)
