@@ -169,4 +169,4 @@ function showMainContent() {
 
 
 
-setTimeout(hideSplashScreen, 0); // Hide the splash screen after 3 seconds
+setTimeout(hideSplashScreen, 10000); // Hide the splash screen after 3 seconds
