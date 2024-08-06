@@ -5,6 +5,7 @@ body, html {
     width: 100%;
     height: 100%;
     overflow: auto;
+    overflow-x: hidden;
     font-family: Arial, sans-serif;
     /* background-color: #212121; */
     
@@ -124,8 +125,8 @@ canvas {
 
 :root {
   --color-light: white;
-  --color-dark: #212121;
-  --color-signal: #0085fa;
+  --color-dark: #151029c4;
+  --color-signal: #45a3f56c;
   
   --color-background: var(--color-light);
   --color-text: var(--color-dark);
