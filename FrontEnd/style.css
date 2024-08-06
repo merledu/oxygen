@@ -183,6 +183,7 @@ mark {
   align-self: center;
   height:500px;
   width: 100%;
+  backdrop-filter: blur(10px)
 }
 
 
@@ -210,9 +211,7 @@ mark {
   max-width: 0rem;
   padding: 0rem;
 }
-#creators{
 
-}
 
 .input {
   position: relative;
@@ -238,9 +237,11 @@ mark {
 #Dump-div{
   height: 250px;
   width: 100%;
+  backdrop-filter: blur(8px);
 }
 
 #config{
+  backdrop-filter: blur(8px);
   width: 100%;
   height: 50%;
 }
@@ -280,7 +281,6 @@ button {
 
 button[type=reset] {
   background: var(--color-background);
-  font-weight: 200;
 }
 
 button + button {
