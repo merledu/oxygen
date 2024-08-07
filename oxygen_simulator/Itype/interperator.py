@@ -404,26 +404,26 @@ def parse_instruction(instruction):
             return FORMATS['CI(2)'].format(funct3=funct3_2,imm2=imm2,rd=rd,imm4_3=imm4_3,imm8_6=imm8_6,opcode=opcode)
         elif inst_type=='CI(3)':
             rd=register_to_bin(parts[1],5)
-            imm=imm_to_bin(parts(2),10)
+            imm=imm_to_bin(parts[2],10)
             imm9_6=imm[0:4]
             imm4=imm[5]
             imm2=imm[4]
             return FORMATS['CI(3)'].format(funct3=funct3_2,imm2=imm2,rd=rd,imm4=imm4,imm9_6=imm9_6,opcode=opcode)
         elif inst_type=='CI(4)':
             rd=register_to_bin(parts[1],5)
-            imm=imm_to_bin(parts(2),6)
+            imm=imm_to_bin(parts[2],6)
             imm1=imm[1:6]
             imm2=imm[0]
             return FORMATS['CI(4)'].format(funct3=funct3_2,imm2=imm2,rd=rd,imm=imm1,opcode=opcode)
         elif inst_type=='CI(5)':
             rd=register_to_bin(parts[1],5)
-            imm=imm_to_bin(parts(2),6)
+            imm=imm_to_bin(parts[2],6)
             imm1=imm[1:6]
             imm2=imm[0]
             return FORMATS['CI(5)'].format(funct3=funct3_2,imm2=imm2,rd=rd,imm=imm1,opcode=opcode)
         elif inst_type=='CI(6)':
             rd=register_to_bin(parts[1],5)
-            imm=imm_to_bin(parts(2),10)
+            imm=imm_to_bin(parts[2],10)
             imm5=imm[4]
             imm8_7=imm[1:3]
             imm6=imm[3]
@@ -458,7 +458,7 @@ def parse_instruction(instruction):
             return FORMATS['CIW'].format(funct3=funct3_2,imm5_4=imm5_4,imm9_6=imm9_6,imm2=imm2,imm3=imm3,rd=rd,opcode=opcode)
         elif inst_type=='CL(1)':
             rd=register_to_bin(parts[1],3)
-            imm = imm_to_bin(parts(2),7)
+            imm = imm_to_bin(parts[2],7)
             rs1 = register_to_bin(parts[3],3)
             imm6=imm[0]
             imm2=imm[4]
@@ -466,7 +466,7 @@ def parse_instruction(instruction):
             return FORMATS['CL(1)'].format(funct3=funct3_2,imm5_3=imm5_3,rs1=rs1,imm2=imm2,imm6=imm6,rd=rd,opcode=opcode)
         elif inst_type=='CL(2)':
             rd=register_to_bin(parts[1],3)
-            imm = imm_to_bin(parts(2),8)
+            imm = imm_to_bin(parts[2],8)
             rs1 = register_to_bin(parts[3],3)
             imm1=imm[0:2]
             imm2=imm[2:5]

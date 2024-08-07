@@ -93,6 +93,8 @@ body {
   justify-content: space-between;
   width: 30%;
   height: 80vh;
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
   overflow-y: scroll;
   overflow-x: hidden;
 
@@ -293,7 +295,7 @@ mark {
 }
 #textbox{
   align-self: center;
-  height:50%;
+  height:62%;
   width: 100%;
   backdrop-filter: blur(10px)
 }
@@ -409,6 +411,9 @@ button + button {
 .hidden-text {
   display: none;
 } 
+.nav-item{
+  background-color: var(--color-background);
+}
 
 
  /* Navbar container */
@@ -448,7 +453,7 @@ button + button {
 
 /* Add a red background color to navbar links on hover */
 .navbar a:hover, .dropdown:hover .dropbtn {
-  background-color: red;
+  background-color: var(--color-signal);
 }
 
 /* Dropdown content (hidden by default) */
