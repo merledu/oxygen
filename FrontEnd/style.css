@@ -74,6 +74,11 @@ body {
 
 #tablediv{
   width: 40%;
+  height: 80vh;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
 }
 .run-button{
   display: flex;
@@ -373,11 +378,16 @@ mark {
   resize: none;
   font-size: larger;
   font-weight: 200px;
+  outline: 0;
 }
+.input__field:focus{
+  border-color: rgba(35, 218, 242, 0.588);
+}
+
 
 .input__field:focus + .input__label,
 .input__field:not(:placeholder-shown) + .input__label {
-  transform: translate(.25rem, -65%) scale(.8);
+  transform: translate(1.25rem, -65%) scale(.8);
   color: var(--color-accent);
 }
 
