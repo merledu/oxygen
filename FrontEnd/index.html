@@ -1,34 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Oxygen Simulator</title>
     <!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"> -->
-    <link rel="stylesheet" href="style.css">
-
-</head>
-<body >
-    <div id = 'splash-screen'>
-        <div >
-            <canvas id="c"></canvas>
-            <div id="text">
-                <span id="letter-o" class = 'slide-in'>O</span>
-                <span id="rest-text" class="hidden">xygen</span>
-            </div>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="splash-screen">
+      <div>
+        <canvas id="c"></canvas>
+        <div id="text">
+          <span id="letter-o" class="slide-in">O</span>
+          <span id="rest-text" class="hidden">xygen</span>
         </div>
+      </div>
     </div>
     <div id="main-content" class="hidden">
-      <div id ='editor'>
-        <div id = 'code-editor'>
-          <div class="card card--inverted" id = 'textbox' >
+      <div id="editor">
+        <div id="code-editor">
+          <div class="card card--inverted" id="textbox">
             <h2>Assembly Code Editor</h2>
             <label class="input">
-              <textarea autocapitalize="off"
-              autocomplete="off"
-              autocorrect="off"
-              spellcheck="false"class="input__field" type="text" placeholder="" value="Valuable value" style="height:80%;"></textarea>
-              <span class="input__label">Enter your Instructions</span>
+              <textarea
+                autocapitalize="off"
+                autocomplete="off"
+                autocorrect="off"
+                spellcheck="false"
+                class="input__field"
+                type="text"
+                placeholder="Enter your Instructions"
+                value="Valuable value"
+                style="height: 80%"
+              ></textarea>
             </label>
             <div class="button-group">
               <button>Assemble</button>
@@ -36,37 +41,237 @@
             </div>
           </div>
         </div>
-      
-        <div id = 'dump-config'>
-          <div id = 'config' class="card card--inverted">
+
+        <div id="dump-config">
+          <div id="config" class="card card--inverted">
             <h2>Configration</h2>
             <label for="dog-names">Choose a dog name:</label>
-            <select name="dog-names" id="dog-names">     
-                <option value="rigatoni">Rigatoni</option>
-                <option value="dave">Dave</option>
-                <option value="pumpernickel">Pumpernickel</option>
-                <option value="reeses">Reeses</option>
+            <select name="dog-names" id="dog-names">
+              <option value="rigatoni">Rigatoni</option>
+              <option value="dave">Dave</option>
+              <option value="pumpernickel">Pumpernickel</option>
+              <option value="reeses">Reeses</option>
             </select>
           </div>
-          <div id ='Dump-div' class="card card--inverted">
+          <div id="Dump-div" class="card card--inverted">
             <h2>Hex Dump</h2>
-            <textarea readonly id = 'dump-box' class="input__field" type="text" placeholder="Hex dump will appear here" value="" style="height: 150px"></textarea>
+            <textarea
+              readonly
+              id="dump-box"
+              class="input__field"
+              type="text"
+              placeholder="Hex dump will appear here"
+              value=""
+              style="height: 150px"
+            ></textarea>
             <div class="button-group">
               <button>Copy</button>
-              <button style="background-color: green;">Download</button>
-              <button type="reset" style="background-color: red;">clear</button>
+              <button style="background-color: green">Download</button>
+              <button type="reset" style="background-color: red">clear</button>
             </div>
           </div>
-
         </div>
       </div>
-      <div id = 'decoder'>
-        <h1 style="color: aqua;">Decoder tab</h1>
-        <textarea readonly id = 'dump-box' class="input__field" type="text" placeholder="Hex dump will appear here" value="" style="height: 150px"></textarea>
+      <div id="decoder">
+        <div id="tablediv" class="card card--inverted">
+          <div class="run-button">
+            <button class="assemble-button btn btn-primary" onclick="runCode()">Run</button>
+            <button class="assemble-button btn btn-primary" onclick="assembleCode()">Assemble</button>
+            <button class="assemble-button btn btn-primary" onclick="stepInstruction()">Step</button>
+            <button class="assemble-button btn btn-primary" onclick="reset()">Reset</button>
+        </div>
+          <table id="decodetable">
+            <thead>
+              <tr>
+                <th><h3>PC</h3></th>
+                <th><h3>Machine Code</h3></th>
+                <th><h3>Base Instruction</h3></th>
+                <th><h3>Original Instruction</h3></th>
+              </tr>
+            </thead>
 
+            <tbody id="decoderTableBody">
+              <tr>
+                <td><h4>check</h4></td>
+                <td><h4>check</h4></td>
+                <td><h4>check</h4></td>
+                <td><h4>check</h4></td>
+              </tr>
+              <tr>
+                <td><h4>check</h4></td>
+                <td><h4>check</h4></td>
+                <td><h4>check</h4></td>
+                <td><h4>check</h4></td>
+              </tr>
+              <tr>
+                <td><h4>check</h4></td>
+                <td><h4>check</h4></td>
+                <td><h4>check</h4></td>
+                <td><h4>check</h4></td>
+              </tr>
+              <tr>
+                <td><h4>check</h4></td>
+                <td><h4>check</h4></td>
+                <td><h4>check</h4></td>
+                <td><h4>check</h4></td>
+              </tr>
+              <tr>
+                <td><h4>check</h4></td>
+                <td><h4>check</h4></td>
+                <td><h4>check</h4></td>
+                <td><h4>check</h4></td>
+              </tr>
+              <tr>
+                <td><h4>check</h4></td>
+                <td><h4>check</h4></td>
+                <td><h4>check</h4></td>
+                <td><h4>check</h4></td>
+              </tr>
+              <tr>
+                <td><h4>check</h4></td>
+                <td><h4>check</h4></td>
+                <td><h4>check</h4></td>
+                <td><h4>check</h4></td>
+              </tr>
+              <tr>
+                <td><h4>check</h4></td>
+                <td><h4>check</h4></td>
+                <td><h4>check</h4></td>
+                <td><h4>check</h4></td>
+              </tr>
 
+            </tbody>
+          </table>
+        </div>
+        <div id="regmem" class="card card--inverted">
+          <div class="col-md-5">
+            <ul class="nav nav-tabs" id="myTab" role="tablist">
+              <li data-tab-target="#registers" class="nav-item">registers</li>
+              <li class="nav-item" data-tab-target="#ftype-registers">
+                ftype-registers
+              </li>
+              <li class="nav-item" data-tab-target="#memory">memory</li>
+            </ul>
+            <div class="tab-content" id="myTabContent">
+              <div
+                data-tab-content
+                id="registers"
+                role="tabpanel"
+                class="active"
+              >
+                <!-- Registers content -->
+                <div id="registers-content">
+                  <table class="registers-table">
+                    <thead>
+                      <tr>
+                        <th>Register</th>
+                        <th>ABI Name</th>
+                        <th>Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <!-- Dynamically populate RISC-V registers -->
+                      <script>
+                        const registers = [
+                          { number: 0, name: "zero" },
+                          { number: 1, name: "ra" },
+                          { number: 2, name: "sp" },
+                          { number: 3, name: "gp" },
+                          { number: 4, name: "tp" },
+                          { number: 5, name: "t0" },
+                          { number: 6, name: "t1" },
+                          { number: 7, name: "t2" },
+                          { number: 8, name: "s0/fp" },
+                          { number: 9, name: "s1" },
+                          { number: 10, name: "a0" },
+                          { number: 11, name: "a1" },
+                          { number: 12, name: "a2" },
+                          { number: 13, name: "a3" },
+                          { number: 14, name: "a4" },
+                          { number: 15, name: "a5" },
+                          { number: 16, name: "a6" },
+                          { number: 17, name: "a7" },
+                          { number: 18, name: "s2" },
+                          { number: 19, name: "s3" },
+                          { number: 20, name: "s4" },
+                          { number: 21, name: "s5" },
+                          { number: 22, name: "s6" },
+                          { number: 23, name: "s7" },
+                          { number: 24, name: "s8" },
+                          { number: 25, name: "s9" },
+                          { number: 26, name: "s10" },
+                          { number: 27, name: "s11" },
+                          { number: 28, name: "t3" },
+                          { number: 29, name: "t4" },
+                          { number: 30, name: "t5" },
+                          { number: 31, name: "t6" },
+                        ];
+                        registers.forEach((register) => {
+                          document.write(`
+                                    <tr>
+                                        <td>x${register.number}</td>
+                                        <td>${register.name}</td>
+                                        <td id="reg-${register.number}">0x00000000</td>
+                                    </tr>
+                                `);
+                        });
+                      </script>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div data-tab-content id="ftype-registers" role="tabpanel">
+                <!-- F-Type Registers content -->
+                <div id="ftype-registers-content">
+                  <table class="ftype-registers-table">
+                    <thead>
+                      <tr>
+                        <th>Register</th>
+                        <th>Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <!-- Dynamically populate F-Type registers -->
+                      <script>
+                        for (let i = 0; i < 32; i++) {
+                          document.write(`
+                                            <tr>
+                                                <td>f${i}</td>
+                                                <td id="freg-${i}">0.0</td>
+                                            </tr>
+                                        `);
+                        }
+                      </script>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div data-tab-content id="memory" role="tabpanel">
+                <!-- Memory content -->
+                <div id="memory-content">
+                  <table class="memory-table">
+                    <thead>
+                      <tr>
+                        <th>Address</th>
+                        <th>+0</th>
+                        <th>+1</th>
+                        <th>+2</th>
+                        <th>+3</th>
+                      </tr>
+                    </thead>
+                    <tbody id="memoryTableBody">
+                      <!-- Rows will be populated by JavaScript -->
+                    </tbody>
+                  </table>
+                  <button id="scrollUpBtn">Scroll Up</button>
+                  <button id="scrollDownBtn">Scroll Down</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
     <script src="script.js"></script>
-</body>
+  </body>
 </html>
