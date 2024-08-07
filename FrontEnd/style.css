@@ -11,6 +11,49 @@ body, html {
     
 }
 
+
+[data-tab-content] {
+  display: none;
+}
+
+.active[data-tab-content] {
+  display: block;
+}
+
+body {
+  padding: 0;
+  margin: 0;
+}
+
+.tabs {
+  display: flex;
+  justify-content: space-around;
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  border-bottom: 1px solid black;
+}
+
+.tab {
+  cursor: pointer;
+  padding: 10px;
+}
+
+.tab.active {
+  background-color: #CCC;
+}
+
+.tab:hover {
+  background-color: #AAA;
+}
+
+.tab-content {
+  margin-left: 20px;
+  margin-right: 20px;
+}
+
+
+
 #splash-screen {
     position: relative;
     width: 100%;
@@ -22,9 +65,34 @@ body, html {
 }
 
 #decoder{
+  width: 100%;
+  height: 100vh;
   display: flex;
+  justify-content: space-evenly;
+  align-items: flex-start;
 }
 
+#tablediv{
+  width: 40%;
+}
+.run-button{
+  display: flex;
+  justify-content: center;
+}
+#myTab{
+  display: flex;
+  justify-content: space-evenly;
+}
+
+#regmem{
+  display: flex;
+  justify-content: space-around;
+  width: 30%;
+  height: 80vh;
+  overflow-y: scroll;
+  overflow-x: hidden;
+
+}
 
 #header {
     position: relative;
@@ -61,6 +129,28 @@ body, html {
 .slide-in {
     animation: slideIn 2s forwards;
 }
+table {
+  width: 100%;
+  border-collapse:collapse;
+  margin-top: 1rem;
+  border-radius: 4px;
+}
+
+table, th, td {
+  border: 3px solid #ccc;
+}
+
+th, td {
+  padding: 0.5rem;
+  text-align: left;
+}
+
+#decodertable{
+  border: 2px;
+  border-radius: 4px;
+  border-color: aliceblue;
+}
+
 
 canvas {
     position: absolute;
@@ -110,9 +200,10 @@ canvas {
   height: 200vh;
   display: flex;
   flex-direction: column;
-  justify-content:space-around ;
+  justify-content:flex-start ;
   
 }
+
 
 #main-content.show {
     display: flex;
@@ -127,6 +218,7 @@ canvas {
   --color-light: white;
   --color-dark: #151029c4;
   --color-signal: #45a3f56c;
+  --font:'Inter', sans-serif;
   
   --color-background: var(--color-light);
   --color-text: var(--color-dark);
@@ -148,6 +240,9 @@ h1, h2, h3 {
 }
 
 #editor{
+  align-self: center;
+  width: 100%;
+  height: 100vh;
   display: flex;
   flex-direction: row;
   justify-content: space-around;
@@ -155,12 +250,17 @@ h1, h2, h3 {
 }
 #dump-config{
   display: flex;
+  justify-content: center;
   flex-direction: column;
   padding-right: 30px;
 }
+#decodetable{
+  
+}
 
 #code-editor{
-  width: 50%;
+  display: flex;
+  width: 60%;
   height: 100%;
 }
 
@@ -181,8 +281,9 @@ mark {
 }
 #textbox{
   align-self: center;
-  height:500px;
+  height:50%;
   width: 100%;
+  backdrop-filter: blur(10px)
 }
 
 
@@ -210,9 +311,7 @@ mark {
   max-width: 0rem;
   padding: 0rem;
 }
-#creators{
 
-}
 
 .input {
   position: relative;
@@ -238,11 +337,13 @@ mark {
 #Dump-div{
   height: 250px;
   width: 100%;
+  backdrop-filter: blur(8px);
 }
 
 #config{
+  backdrop-filter: blur(8px);
   width: 100%;
-  height: 50%;
+  height: 10%;
 }
 
 .input__field {
@@ -280,7 +381,6 @@ button {
 
 button[type=reset] {
   background: var(--color-background);
-  font-weight: 200;
 }
 
 button + button {
