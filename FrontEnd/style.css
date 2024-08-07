@@ -104,7 +104,7 @@ body {
     top: 5%;
     left: 40%;
     transform: translate(-50%, -50%);
-    color: rgb(3, 130, 248);
+    color: rgb(255, 255, 255);
     font-size: 100px;
     font-weight: bold;
     white-space: nowrap;
@@ -164,7 +164,7 @@ canvas {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    color: rgb(3, 130, 248);
+    color: rgb(255, 255, 255);
     font-size: 100px;
     font-weight: bold;
     white-space: nowrap;
