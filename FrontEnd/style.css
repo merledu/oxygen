@@ -295,6 +295,7 @@ mark {
   --size-radius: 4px;
   width: 60%;
   align-self: center;
+  backdrop-filter: blur(8px);
 }
 
 .card--accent {
