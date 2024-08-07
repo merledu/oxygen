@@ -144,14 +144,31 @@
           </table>
         </div>
         <div id="regmem" class="card card--inverted">
-          <div class="col-md-5">
+          <div>
+            <div class="notation-select">
+              <label for="notation">Notation:</label>
+              <select id="notation" onchange="changeNotation(this.value)">
+                <option value="hex">Hex</option>
+                <option value="decimal">Decimal</option>
+              </select>
+            </div>
             <ul class="nav nav-tabs" id="myTab" role="tablist">
-              <li data-tab-target="#registers" class="nav-item">registers</li>
-              <li class="nav-item" data-tab-target="#ftype-registers">
-                ftype-registers
-              </li>
+              <div class="dropdown">
+                <button class="dropbtn">Registers
+                  <i class="fa fa-caret-down"></i>
+                </button>
+                <div class="dropdown-content">
+                  <li class="nav-item" data-tab-target="#ftype-registers">ftype-registers</li>
+                  <li data-tab-target="#registers" class="nav-item">registers</li>
+                </div>
+              </div>
+              
               <li class="nav-item" data-tab-target="#memory">memory</li>
             </ul>
+          </div>
+          
+          <div class="col-md-5">
+            
             <div class="tab-content" id="myTabContent">
               <div
                 data-tab-content
@@ -221,14 +238,6 @@
                 </div>
               </div>
               <!-- Add this code to the bottom of each box -->
-
-<div class="notation-select">
-  <label for="notation">Notation:</label>
-  <select id="notation" onchange="changeNotation(this.value)">
-    <option value="hex">Hex</option>
-    <option value="decimal">Decimal</option>
-  </select>
-</div>
               <div data-tab-content id="ftype-registers" role="tabpanel">
                 <!-- F-Type Registers content -->
                 <div id="ftype-registers-content">
