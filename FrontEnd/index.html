@@ -220,6 +220,15 @@
                   </table>
                 </div>
               </div>
+              <!-- Add this code to the bottom of each box -->
+
+<div class="notation-select">
+  <label for="notation">Notation:</label>
+  <select id="notation" onchange="changeNotation(this.value)">
+    <option value="hex">Hex</option>
+    <option value="decimal">Decimal</option>
+  </select>
+</div>
               <div data-tab-content id="ftype-registers" role="tabpanel">
                 <!-- F-Type Registers content -->
                 <div id="ftype-registers-content">
