@@ -3,13 +3,12 @@ import os
 from pathlib import Path
 from django.http import JsonResponse
 from django.shortcuts import render
-from .interperator import main
-from .interperator import checkpsudo
-from .Datapath import *
-from .Datapath_single import *
+from .Temp import Datapath as DP
+from .Temp import Datapath_single as DPS  
+from .Temp import interperator as IP
 from django.views.decorators.csrf import csrf_exempt
 
-execution = RISCVSimulatorSingle()
+execution = DPS.RISCVSimulatorSingle()
 
 # Create your views here.
 @csrf_exempt
@@ -24,8 +23,8 @@ def assemble_code(request):
         
         code = data.get('code', '')
  
-        hex_output = main(code)
-        sudo_or_base  = checkpsudo(code)
+        hex_output = IP.main(code)
+        sudo_or_base  = IP.checkpsudo(code)
         return JsonResponse({'hex': hex_output ,
                              'is_sudo' : sudo_or_base,
                              }, )
@@ -70,9 +69,9 @@ def run_code(request):
         
         code = data.get('code', '')
  
-        hex_output = main(code)
-        sudo_or_base  = checkpsudo(code)
-        execution2 = RISCVSimulator()
+        hex_output = IP.main(code)
+        sudo_or_base  = IP.checkpsudo(code)
+        execution2 = DP.RISCVSimulator()
         
         registers = execution2.run(hex_output)
         f_registers = execution2.f_registers

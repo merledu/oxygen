@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <div id="splash-screen">
+    <div id="splash_screen">
       <div>
         <canvas id="c"></canvas>
         <div id="text">
@@ -288,7 +288,6 @@
                   </table>
                 </div>
               </div>
-              <!-- Add this code to the bottom of each box -->
               <div data-tab-content id="ftype-registers" role="tabpanel">
                 <!-- F-Type Registers content -->
                 <div id="ftype-registers-content">
@@ -300,7 +299,6 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <!-- Dynamically populate F-Type registers -->
                       <script>
                         for (let i = 0; i < 32; i++) {
                           document.write(`
@@ -316,7 +314,6 @@
                 </div>
               </div>
               <div data-tab-content id="memory" role="tabpanel">
-                <!-- Memory content -->
                 <div id="memory-content">
                   <table class="memory-table">
                     <thead>
@@ -329,7 +326,6 @@
                       </tr>
                     </thead>
                     <tbody id="memoryTableBody">
-                      <!-- Rows will be populated by JavaScript -->
                     </tbody>
                   </table>
                   <button id="scrollUpBtn">Scroll Up</button>

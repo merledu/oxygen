@@ -299,8 +299,8 @@ class RISCVSimulatorSingle:
             print(self.f_registers)
             print(instruction & 0xFFF)
             print(self.sign_extend(instruction & 0xFFF, 12))
-            address= self.registers[rs1] + 
-            self.f_registers[rd] = self.memory.get(self.registers[rs1] + self.sign_extend(instruction>>20 & 0xFFF, 12))
+            address= self.registers[rs1] + self.sign_extend(instruction>>20 & 0xFFF, 12)
+            self.f_registers[rd] = self.memory.get(address)
             print("check2")
             print(self.f_registers)
         # FSW

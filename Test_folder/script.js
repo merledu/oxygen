@@ -168,13 +168,13 @@ function showRestText() {
 setTimeout(showRestText, 1000); // Show the rest of the text after 1 second
 
 function hideSplashScreen() {
-    var splashScreen = document.getElementById('splash-screen');
+    var splashScreen = document.getElementById('splash_screen');
     splashScreen.classList.add('fade-out');
     splashScreen.addEventListener('animationend', removeSplashScreen); // Remove splash screen after fade-out animation ends
 }
 
 function removeSplashScreen() {
-    var splashScreen = document.getElementById('splash-screen');
+    var splashScreen = document.getElementById('splash_screen');
     splashScreen.remove();
     showMainContent();
 }
