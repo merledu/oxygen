@@ -23,17 +23,8 @@
           <div class="card card--inverted" id="textbox">
             <h2>Assembly Code Editor</h2>
             <label class="input">
-              <textarea
-                autocapitalize="off"
-                autocomplete="off"
-                autocorrect="off"
-                spellcheck="false"
-                class="input__field"
-                type="text"
-                placeholder="Enter your Instructions"
-                value="Valuable value"
-                style="height: 80%"
-              ></textarea>
+              <textarea autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" class="input__field"
+                type="text" placeholder="Enter your Instructions" value="Valuable value" style="height: 80%"></textarea>
             </label>
             <div class="button-group">
               <button>Assemble</button>
@@ -41,7 +32,7 @@
             </div>
           </div>
         </div>
-
+  
         <div id="dump-config">
           <div id="config" class="card card--inverted">
             <h2>Configration</h2>
@@ -49,20 +40,13 @@
             <select name="dog-names" id="dog-names">
               <option value="rigatoni">RV32</option>
               <option value="dave">RV64</option>
-             
+  
             </select>
           </div>
           <div id="Dump-div" class="card card--inverted">
             <h2>Hex Dump</h2>
-            <textarea
-              readonly
-              id="dump-box"
-              class="input__field"
-              type="text"
-              placeholder="Hex dump will appear here"
-              value=""
-              style="height: 150px"
-            ></textarea>
+            <textarea readonly id="dump-box" class="input__field" type="text" placeholder="Hex dump will appear here"
+              value="" style="height: 150px"></textarea>
             <div class="button-group">
               <button>Copy</button>
               <button style="background-color: green">Download</button>
@@ -77,67 +61,139 @@
             <button class="assemble-button btn btn-primary" onclick="runCode()">Run</button>
             <button class="assemble-button btn btn-primary" onclick="stepInstruction()">Step</button>
             <button class="assemble-button btn btn-primary" onclick="reset()">Reset</button>
-        </div>
+          </div>
           <table id="decodetable">
             <thead>
               <tr>
-                <th><h3>PC</h3></th>
-                <th><h3>Machine Code</h3></th>
-                <th><h3>Base Instruction</h3></th>
-                <th><h3>Original Instruction</h3></th>
+                <th>
+                  <h3>PC</h3>
+                </th>
+                <th>
+                  <h3>Machine Code</h3>
+                </th>
+                <th>
+                  <h3>Base Instruction</h3>
+                </th>
+                <th>
+                  <h3>Original Instruction</h3>
+                </th>
               </tr>
             </thead>
-
+  
             <tbody id="decoderTableBody">
               <tr>
-                <td><h4>check</h4></td>
-                <td><h4>check</h4></td>
-                <td><h4>check</h4></td>
-                <td><h4>check</h4></td>
+                <td>
+                  <h4>check</h4>
+                </td>
+                <td>
+                  <h4>check</h4>
+                </td>
+                <td>
+                  <h4>check</h4>
+                </td>
+                <td>
+                  <h4>check</h4>
+                </td>
               </tr>
               <tr>
-                <td><h4>check</h4></td>
-                <td><h4>check</h4></td>
-                <td><h4>check</h4></td>
-                <td><h4>check</h4></td>
+                <td>
+                  <h4>check</h4>
+                </td>
+                <td>
+                  <h4>check</h4>
+                </td>
+                <td>
+                  <h4>check</h4>
+                </td>
+                <td>
+                  <h4>check</h4>
+                </td>
               </tr>
               <tr>
-                <td><h4>check</h4></td>
-                <td><h4>check</h4></td>
-                <td><h4>check</h4></td>
-                <td><h4>check</h4></td>
+                <td>
+                  <h4>check</h4>
+                </td>
+                <td>
+                  <h4>check</h4>
+                </td>
+                <td>
+                  <h4>check</h4>
+                </td>
+                <td>
+                  <h4>check</h4>
+                </td>
               </tr>
               <tr>
-                <td><h4>check</h4></td>
-                <td><h4>check</h4></td>
-                <td><h4>check</h4></td>
-                <td><h4>check</h4></td>
+                <td>
+                  <h4>check</h4>
+                </td>
+                <td>
+                  <h4>check</h4>
+                </td>
+                <td>
+                  <h4>check</h4>
+                </td>
+                <td>
+                  <h4>check</h4>
+                </td>
               </tr>
               <tr>
-                <td><h4>check</h4></td>
-                <td><h4>check</h4></td>
-                <td><h4>check</h4></td>
-                <td><h4>check</h4></td>
+                <td>
+                  <h4>check</h4>
+                </td>
+                <td>
+                  <h4>check</h4>
+                </td>
+                <td>
+                  <h4>check</h4>
+                </td>
+                <td>
+                  <h4>check</h4>
+                </td>
               </tr>
               <tr>
-                <td><h4>check</h4></td>
-                <td><h4>check</h4></td>
-                <td><h4>check</h4></td>
-                <td><h4>check</h4></td>
+                <td>
+                  <h4>check</h4>
+                </td>
+                <td>
+                  <h4>check</h4>
+                </td>
+                <td>
+                  <h4>check</h4>
+                </td>
+                <td>
+                  <h4>check</h4>
+                </td>
               </tr>
               <tr>
-                <td><h4>check</h4></td>
-                <td><h4>check</h4></td>
-                <td><h4>check</h4></td>
-                <td><h4>check</h4></td>
+                <td>
+                  <h4>check</h4>
+                </td>
+                <td>
+                  <h4>check</h4>
+                </td>
+                <td>
+                  <h4>check</h4>
+                </td>
+                <td>
+                  <h4>check</h4>
+                </td>
               </tr>
               <tr>
-                <td><h4>check</h4></td>
-                <td><h4>check</h4></td>
-                <td><h4>check</h4></td>
-                <td><h4>check</h4></td>
+                <td>
+                  <h4>check</h4>
+                </td>
+                <td>
+                  <h4>check</h4>
+                </td>
+                <td>
+                  <h4>check</h4>
+                </td>
+                <td>
+                  <h4>check</h4>
+                </td>
               </tr>
-
+  
             </tbody>
           </table>
         </div>
@@ -161,20 +217,16 @@
                 </div>
               </div>
               <div class="dropdown">
-                <li data-tab-target="#memory"><button class="dropbtn">memory <i class="fa fa-caret-down"></i></button></li>
+                <li data-tab-target="#memory"><button class="dropbtn">memory <i class="fa fa-caret-down"></i></button>
+                </li>
               </div>
             </ul>
           </div>
-          
+  
           <div class="col-md-5">
-            
+  
             <div class="tab-content" id="myTabContent">
-              <div
-                data-tab-content
-                id="registers"
-                role="tabpanel"
-                class="active"
-              >
+              <div data-tab-content id="registers" role="tabpanel" class="active">
                 <!-- Registers content -->
                 <div id="registers-content">
                   <table class="registers-table">
@@ -224,12 +276,12 @@
                         ];
                         registers.forEach((register) => {
                           document.write(`
-                                    <tr>
-                                        <td>x${register.number}</td>
-                                        <td>${register.name}</td>
-                                        <td id="reg-${register.number}">0x00000000</td>
-                                    </tr>
-                                `);
+                                      <tr>
+                                          <td>x${register.number}</td>
+                                          <td>${register.name}</td>
+                                          <td id="reg-${register.number}">0x00000000</td>
+                                      </tr>
+                                  `);
                         });
                       </script>
                     </tbody>
@@ -252,11 +304,11 @@
                       <script>
                         for (let i = 0; i < 32; i++) {
                           document.write(`
-                                            <tr>
-                                                <td>f${i}</td>
-                                                <td id="freg-${i}">0.0</td>
-                                            </tr>
-                                        `);
+                                              <tr>
+                                                  <td>f${i}</td>
+                                                  <td id="freg-${i}">0.0</td>
+                                              </tr>
+                                          `);
                         }
                       </script>
                     </tbody>
