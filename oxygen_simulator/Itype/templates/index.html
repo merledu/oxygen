@@ -66,16 +66,16 @@
                                 <h3>Hex Dump</h3>
                                 <textarea id="hexDump" class="form-control mb-3" readonly placeholder="Hex dump will appear here..."></textarea>
                                 <div class="hex-dump-buttons">
-                                    <button class="btn btn-primary mr-2" onclick="dumpHex()">Dump</button>
-                                    <button class="btn btn-secondary mr-2" onclick="copyHex()">Copy</button>
-                                    <button class="btn btn-success mr-2" onclick="downloadHex()">Download</button>
-                                    <button class="btn btn-danger" onclick="clearHex()">Clear</button>
+                                    <button class="btn btn-primary mr-2" onclick="dump_hex()">Dump</button>
+                                    <button class="btn btn-secondary mr-2" onclick="copy_hex()">Copy</button>
+                                    <button class="btn btn-success mr-2" onclick="download_hex()">Download</button>
+                                    <button class="btn btn-danger" onclick="clear_hex()">Clear</button>
                                 </div>
                             </div>
                         </div>
                     </div>
                      <div class="assemble-container text-center mt-4">
-                        <button class="assemble-button btn btn-primary" onclick="assembleCode()">Assemble</button>
+                        <button class="assemble-button btn btn-primary" onclick="assemble_code()">Assemble</button>
                     </div> 
                 </section> 
             </div>
@@ -200,8 +200,8 @@
                         <div class="decoder-container row">
                             <div class="col-md-7">
                                 <div class="assemble-container text-center mt-4">
-                                    <button class="assemble-button btn btn-primary" onclick="runCode()">Run</button>
-                                    <button class="assemble-button btn btn-primary" onclick="assembleCode()">Assemble</button>
+                                    <button class="assemble-button btn btn-primary" onclick="run_code()">Run</button>
+                                    <button class="assemble-button btn btn-primary" onclick="assemble_code()">Assemble</button>
                                     <button class="assemble-button btn btn-primary" onclick="stepInstruction()">Step</button>
                                     <button class="assemble-button btn btn-primary" onclick="reset()">Reset</button>
                                 </div>
