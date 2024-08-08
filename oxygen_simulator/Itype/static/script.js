@@ -9,6 +9,7 @@ function updateConfig(type, isChecked) {
     }
 }
 let reg_value = []
+let f_reg_value = []
 let memorydic = {}
 let pc = 0
 function updateRegisterValues(data) {
@@ -16,6 +17,15 @@ function updateRegisterValues(data) {
         document.getElementById(`reg-${index}`).innerText = `0x${value.toString(16).padStart(8, '0')}`;
     });
 }
+
+
+function updateFRegisterValues(data){
+    data.forEach((value, index) => {
+        document.getElementById(`freg-${index}`).innerText = `0x${value.toString(16).padStart(8 , '0')}`
+    });
+
+}
+
 
 function runCode() {
     // const code = document.getElementById('editor-container').value;
@@ -29,9 +39,12 @@ function runCode() {
                 memorydic = memory
                 const baseins = response.data.is_sudo
                 const reg = response.data.registers
+                const freg = response.data.f_reg
                 reg_value = reg
+                f_reg_value = freg
                 populateDecoderTable(code,hex,baseins);
                 updateRegisterValues(reg)
+                updateFRegisterValues(freg)
                 populateMemoryTable(memory)
             })
             .catch(error => {
@@ -144,12 +157,15 @@ function stepInstruction() {
       instruction: currentInstruction,
       pc: pc,
       memory:memorydic,
-      register : reg_value
+      register : reg_value,
+      f_register : f_reg_value
     })
     .then(response => {
       const newPc = response.data.pc;
       memorydic = response.data.memory
       reg_value = response.data.register
+      f_reg_value = response.data.f_reg
+      console.log(typeof(f_reg_value))
       pc = newPc;
       console.log(pc)
       // Remove highlight from previous row
@@ -166,6 +182,7 @@ function stepInstruction() {
 
       populateMemoryTable(memorydic)
       updateRegisterValues(reg_value)
+    //   updateFRegisterValues(f_reg_value)
     })
     .catch(error => {
       console.error(error);
@@ -180,12 +197,14 @@ function reset(){
         memorydic = response.data.memory
         console.log(memorydic)
         reg_value = response.data.register
+        f_reg_value = response.data.f_register
         console.log(reg_value)
         pc = newPc;
         console.log(pc)
 
         populateMemoryTable(memorydic)
         updateRegisterValues(reg_value)
+        updateFRegisterValues(f_reg_value)
       })
 
 }

@@ -42,20 +42,24 @@ def step_code(request):
         
         memory = data.get('memory', '')
         register = data.get('register', '')
+        Fregister = data.get('f_register', '')
  
         execution.pc = pc
         if (pc != 0):
             execution.memory = memory
             execution.registers = register
+            execution.f_registers = Fregister
             
         register=execution.run(instruction)
+        Fregister=execution.f_registers
         memory = execution.memory
         pc = execution.pc
         print(pc)
         
         return JsonResponse({'memory': memory ,
                              'register' : register,
-                             'pc': pc,}, )
+                             'pc': pc,
+                             'f_reg': Fregister},)
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
@@ -71,11 +75,13 @@ def run_code(request):
         execution2 = RISCVSimulator()
         
         registers = execution2.run(hex_output)
+        f_registers = execution2.f_registers
         memory = execution2.memory
         return JsonResponse({'hex': hex_output ,
-                             'is_sudo' : sudo_or_base,
+                             'is_sudo': sudo_or_base,
                              'registers': registers,
-                             'memory': memory}, )
+                             'memory': memory,
+                             'f_reg': f_registers}, )
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 @csrf_exempt
@@ -90,5 +96,6 @@ def reset(request):
         return JsonResponse({
                              'register': execution.registers,
                              'memory': execution.memory,
-                             'pc':execution.pc}, )
+                             'pc':execution.pc,
+                             'fregister': execution.f_registers}, )
     return JsonResponse({'error': 'Invalid request'}, status=400)

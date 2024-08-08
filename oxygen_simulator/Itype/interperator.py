@@ -301,7 +301,7 @@ def replace_labels_with_immediates(instructions):
     return '\n'.join(result)
 
 def register_to_bin(register, bits):
-    """Convert register name to binary representation"""
+    """Convert regf1ister name to binary representation"""
     try:
         if register in Registers_ABI:
             x = Registers_ABI[register]
@@ -313,6 +313,14 @@ def register_to_bin(register, bits):
                 x = '{0:03b}'.format(x)
                 return x
         elif register.startswith('x'):
+            x = int(register[1:])
+            if bits == 5:
+                x = '{0:05b}'.format(x)
+                return x
+            elif bits == 3:
+                x = '{0:03b}'.format(x)
+                return x
+        elif register.startswith('f'):
             x = int(register[1:])
             if bits == 5:
                 x = '{0:05b}'.format(x)
