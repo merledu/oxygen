@@ -32,7 +32,7 @@ class RISCVSimulatorSingle:
         elif opcode == 0x43:  # Mtype
             self.execute_m_type(instruction)
             self.pc+=4
-        elif opcode == 0x67:  # Ftype
+        elif opcode == 0x7:  # Ftype
             self.execute_f_type(instruction)
             self.pc+=4
     def execute_r_type(self, instruction):
@@ -283,6 +283,7 @@ class RISCVSimulatorSingle:
             self.pc += self.sign_extend(imm, 21)  # increment after execution
         
     def execute_f_type(self, instruction):
+        print(instruction)
     # F-type instructions (e.g., ADD, SUB, MUL, DIV)
         funct7 = (instruction >> 25) & 0x7F
         rs2 = (instruction >> 20) & 0x1F
@@ -292,8 +293,16 @@ class RISCVSimulatorSingle:
         opcode = instruction & 0x7F
 
         # FLW
-        if opcode == 0x37 and funct3 == 0x2:
-            self.f_registers[rd] = self.memory[self.registers[rs1] + self.sign_extend(instruction & 0xFFF, 12)]
+        if opcode == 0x7 and funct3 == 0x2:
+            print(rd)
+            print(rs1)
+            print(self.f_registers)
+            print(instruction & 0xFFF)
+            print(self.sign_extend(instruction & 0xFFF, 12))
+            address= self.registers[rs1] + 
+            self.f_registers[rd] = self.memory.get(self.registers[rs1] + self.sign_extend(instruction>>20 & 0xFFF, 12))
+            print("check2")
+            print(self.f_registers)
         # FSW
         elif opcode == 0x3B and funct3 == 0x2:
             self.memory[self.registers[rs1] + self.sign_extend(instruction & 0xFFF, 12)] = self.f_registers[rs2]
