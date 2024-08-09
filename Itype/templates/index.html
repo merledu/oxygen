@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+{% csrf_token %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oxygen Simulator</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+
+
+</head>
+<body>
+    <div id="initial-screen" class="initial-screen">
+        <div class="initial-content">
+            <div class="container">
+                <svg viewBox="0 0 960 300">
+                  <symbol id="s-text">
+                    <text text-anchor="middle" x="50%" y="80%">Oxygen</text>
+                  </symbol>
+              
+                  <g class = "g-ants">
+                    <use xlink:href="#s-text" class="text-copy"></use>
+                    <use xlink:href="#s-text" class="text-copy"></use>
+                    <use xlink:href="#s-text" class="text-copy"></use>
+                    <use xlink:href="#s-text" class="text-copy"></use>
+                    <use xlink:href="#s-text" class="text-copy"></use>
+                  </g>
+                </svg>
+              </div>
+            <button class="btn btn-primary" onclick="loadMainContent()">Simulate</button>
+        </div>
+    </div>
+
+    <header class="bg-primary text-white text-center py-4" id="main-header" style="display: none;">
+        <h1>Oxygen Simulator</h1>
+        <nav>
+            <ul class="nav justify-content-center">
+                <li class="nav-item"><a class="nav-link text-white" href="#editor-tab" data-toggle="tab">Editor</a></li>
+                <li class="nav-item"><a class="nav-link text-white" href="#datapath-tab" data-toggle="tab">Data Path</a></li>
+                <li class="nav-item"><a class="nav-link text-white" href="#decoder-tab" data-toggle="tab">Decoder</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main id="main-content" class="container_my-5">
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="editor-tab">
+                <section id="editor" class="mb-5">
+                    <h2>Editor</h2>
+                    <div class="editor-container row">
+                        <textarea class="codeEditor col-md-7 form-control" placeholder="Write your RISC V Assembly code here..."></textarea> 
+                        
+
+                        <div class="side-box col-md-5">
+                            <div id="configBox" class="config-box p-3 mb-3 bg-white">
+                                <h3>Configuration</h3>
+                                <label for="variantSelect">Variant:</label>
+                                <select id="variantSelect" class="form-control" onchange="updateConfig('variant', this.value)">
+                                    <option value="RV32">RV32</option>
+                                    <option value="RV64">RV64</option>
+                                </select>
+                            </div>
+                            <div class="hex-dump-box p-3 bg-white">
+                                <h3>Hex Dump</h3>
+                                <textarea id="hexDump" class="form-control mb-3" readonly placeholder="Hex dump will appear here..."></textarea>
+                                <div class="hex-dump-buttons">
+                                    <button class="btn btn-primary mr-2" onclick="dump_hex()">Dump</button>
+                                    <button class="btn btn-secondary mr-2" onclick="copy_hex()">Copy</button>
+                                    <button class="btn btn-success mr-2" onclick="download_hex()">Download</button>
+                                    <button class="btn btn-danger" onclick="clear_hex()">Clear</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                     <div class="assemble-container text-center mt-4">
+                        <button class="assemble-button btn btn-primary" onclick="assemble_code()">Assemble</button>
+                    </div> 
+                </section> 
+            </div>
+            <div class="tab-pane fade" id="datapath-tab">
+                <section id="datapath" class="mb-5">
+                    <!-- Content for Data Path -->
+                    <section id="data-path">
+                        <h2>Data Path</h2>
+                        <div class="timeline-box">
+                            <h3>Timeline</h3>
+                            <table id="pipeline-table">
+                                <thead>
+                                    <tr>
+                                        <th>Fetch</th>
+                                        <th>Decode</th>
+                                        <th>Execute</th>
+                                        <th>Memory</th>
+                                        <th>Write Back</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td id="fetch-step">Step 1</td>
+                                        <td id="decode-step">Step 2</td>
+                                        <td id="execute-step">Step 3</td>
+                                        <td id="memory-step">Step 4</td>
+                                        <td id="writeback-step">Step 5</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <button onclick="advanceCycle()">Next Cycle</button>
+                        <div class="stats-box">
+                            <h3>Stats</h3>
+                             <div class="col-md-7">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>PC</th>
+                                            <th>Machine Code</th>
+                                            <th>Basic Code</th>
+                                            <th>Original Code</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="adecoderTableBody">
+                                        <!-- Rows will be populated by JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <table id = 'stats_table'>
+                                <tr>
+                                    <th>Type</th>
+                                    <th>Value</th>
+                                </tr>
+                                <tr>
+                                    <td>Total Cycles</td>
+                                    <td>0</td>
+                                </tr>
+                                <tr>
+                                    <td>Total Instructions</td>
+                                    <td>0</td>
+                                </tr>
+                                <tr>
+                                    <td>CPI</td>
+                                    <td>0</td>
+                                </tr>
+                                <tr>
+                                    <td>Data-transfer Instructions</td>
+                                    <td>0</td>
+                                </tr>
+                                <tr>
+                                    <td>ALU Instructions</td>
+                                    <td>0</td>
+                                </tr>
+                                <tr>
+                                    <td>Control Instructions</td>
+                                    <td>0</td>
+                                </tr>
+                                <tr>
+                                    <td>Data Hazards</td>
+                                    <td>0</td>
+                                </tr>
+                                <tr>
+                                    <td>Control Hazards</td>
+                                    <td>0</td>
+                                </tr>
+                                <tr>
+                                    <td>Branch Mispredictions</td>
+                                    <td>0</td>
+                                </tr>
+                                <tr>
+                                    <td>Total Stalls</td>
+                                    <td>0</td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                    </section>
+                    {% comment %} <div class="col-md-7">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>PC</th>
+                                    <th>Machine Code</th>
+                                    <th>Basic Code</th>
+                                    <th>Original Code</th>
+                                </tr>
+                            </thead>
+                            <tbody id="decoderTableBody">
+                                <!-- Rows will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div> {% endcomment %}
+                    
+                </section>
+            </div>
+            <div class="tab-pane fade" id="decoder-tab">
+                <section id="decoder" class="mb-5">
+                    <!-- Content for Decoder -->
+                    <section id="decoder">
+                        <h2>Decoder</h2>
+                        <div class="decoder-container row">
+                            <div class="col-md-7">
+                                <div class="assemble-container text-center mt-4">
+                                    <button class="assemble-button btn btn-primary" onclick="run_code()">Run</button>
+                                    <button class="assemble-button btn btn-primary" onclick="assemble_code()">Assemble</button>
+                                    <button class="assemble-button btn btn-primary" onclick="stepInstruction()">Step</button>
+                                    <button class="assemble-button btn btn-primary" onclick="reset()">Reset</button>
+                                </div>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>PC</th>
+                                            <th>Machine Code</th>
+                                            <th>Base Instruction</th>
+                                            <th>Original Instruction</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="decoderTableBody">
+                                        <!-- Rows will be populated by JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="col-md-5">
+                                <ul class="nav nav-tabs" id="myTab" role="tablist">
+                                    <li class="nav-item">
+                                        <a class="nav-link active" id="registers-tab" data-toggle="tab" href="#registers" role="tab">Registers</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" id="ftype-registers-tab" data-toggle="tab" href="#ftype-registers" role="tab">F-Type Registers</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" id="memory-tab" data-toggle="tab" href="#memory" role="tab">Memory</a>
+                                    </li>
+                                </ul>
+                                <div class="tab-content" id="myTabContent">
+                                    <div class="tab-pane fade show active" id="registers" role="tabpanel">
+                                        <!-- Registers content -->
+                                        <div id="registers-content">
+                                            <table class="registers-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Register</th>
+                                                        <th>ABI Name</th>
+                                                        <th>Value</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <!-- Dynamically populate RISC-V registers -->
+                                                    <script>
+                                                        const registers = [
+                                                            { number: 0, name: "zero" }, { number: 1, name: "ra" }, { number: 2, name: "sp" },
+                                                            { number: 3, name: "gp" }, { number: 4, name: "tp" }, { number: 5, name: "t0" },
+                                                            { number: 6, name: "t1" }, { number: 7, name: "t2" }, { number: 8, name: "s0/fp" },
+                                                            { number: 9, name: "s1" }, { number: 10, name: "a0" }, { number: 11, name: "a1" },
+                                                            { number: 12, name: "a2" }, { number: 13, name: "a3" }, { number: 14, name: "a4" },
+                                                            { number: 15, name: "a5" }, { number: 16, name: "a6" }, { number: 17, name: "a7" },
+                                                            { number: 18, name: "s2" }, { number: 19, name: "s3" }, { number: 20, name: "s4" },
+                                                            { number: 21, name: "s5" }, { number: 22, name: "s6" }, { number: 23, name: "s7" },
+                                                            { number: 24, name: "s8" }, { number: 25, name: "s9" }, { number: 26, name: "s10" },
+                                                            { number: 27, name: "s11" }, { number: 28, name: "t3" }, { number: 29, name: "t4" },
+                                                            { number: 30, name: "t5" }, { number: 31, name: "t6" }
+                                                        ];
+                                                        registers.forEach(register => {
+                                                            document.write(`
+                                                                <tr>
+                                                                    <td>x${register.number}</td>
+                                                                    <td>${register.name}</td>
+                                                                    <td id="reg-${register.number}">0x00000000</td>
+                                                                </tr>
+                                                            `);
+                                                        });
+                                                    </script>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="tab-pane fade" id="ftype-registers" role="tabpanel">
+                                        <!-- F-Type Registers content -->
+                                        <div id="ftype-registers-content">
+                                            <table class="ftype-registers-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Register</th>
+                                                        <th>Value</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <!-- Dynamically populate F-Type registers -->
+                                                    <script>
+                                                        for (let i = 0; i < 32; i++) {
+                                                            document.write(`
+                                                                <tr>
+                                                                    <td>f${i}</td>
+                                                                    <td id="freg-${i}">0.0</td>
+                                                                </tr>
+                                                            `);
+                                                        }
+                                                    </script>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="tab-pane fade" id="memory" role="tabpanel">
+                                        <!-- Memory content -->
+                                        <div id="memory-content">
+                                            <table class="memory-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Address</th>
+                                                        <th>+0</th>
+                                                        <th>+1</th>
+                                                        <th>+2</th>
+                                                        <th>+3</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="memoryTableBody">
+                                                    <!-- Rows will be populated by JavaScript -->
+                                                </tbody>
+                                            </table>
+                                            <button id="scrollUpBtn">Scroll Up</button>
+                                            <button id="scrollDownBtn">Scroll Down</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </section>
+                </section>
+            </div>            
+        </div>
+    </main>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="{% static 'script.js' %}"></script>
+    <script>
+        function loadMainContent() {
+            document.getElementById('initial-screen').style.display = 'none';
+            document.getElementById('main-header').style.display = 'block';
+            document.getElementById('main-content').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

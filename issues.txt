@@ -1,0 +1,3 @@
+1. when we change tab the assembly code disappears 
+2. decoder table is not updated 
+3. hex dump doesnt work
