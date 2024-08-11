@@ -1,13 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
+  {% load static %}
+  {% csrf_token %}
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Oxygen Simulator</title>
     <!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"> -->
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="style_test.css" />
+    <link rel="stylesheet" href="{% static 'style_test.css' %}">
   </head>
-  <body>
+  <body style = 'background-image: {% static 'p3.jpg' %}'>
     <div id="splash_screen">
       <div>
         <canvas id="c"></canvas>
@@ -336,6 +339,7 @@
         </div>
       </div>
     </div>
-    <script src="script.js"></script>
+    <script src="script_test.js"></script>
+    <script src="{% static 'script_test.js' %}"></script>
   </body>
 </html>

@@ -56,6 +56,8 @@ def step_code(request):
                              'f_reg': Fregister},)
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
+def testpage(request):
+    return render(request,'index_test.html')
 
 @csrf_exempt
 def run_code(request):

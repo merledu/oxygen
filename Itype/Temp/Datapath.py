@@ -11,6 +11,7 @@ class RISCVSimulator:
             self.instruction_memory[i * 4] = instruction
             
     def execute_instruction(self, instruction):
+        self.registers[0]=0
         
         opcode = instruction & 0x7F
         if opcode == 0x33:  # Rtype 
@@ -35,6 +36,7 @@ class RISCVSimulator:
         elif opcode == 0x67:  # Ftype
             self.execute_f_type(instruction)
             self.pc+=4
+        self.registers[0]=0
     def execute_r_type(self, instruction):
         
         funct7 = (instruction >> 25) & 0x7F
@@ -327,7 +329,6 @@ class RISCVSimulator:
         while self.pc < len(instructions) * 4:
             instruction = self.instruction_memory[self.pc]
             self.execute_instruction(instruction)
-        self.registers[0] = 0
         return self.registers
     
 
@@ -340,43 +341,3 @@ class RISCVSimulator:
         return self.memory
 
 
-simulator = RISCVSimulator()
-instructions1 = """
-00108093
-"""
-instructions2 = """
-00110113
-00102023
-00108093
-"""
-
-ins = """00510113"""
-
-instructions2 = instructions2.split('\n')
-instructions2 = list(filter(('').__ne__, instructions2))
-ins = ins.split('\n')
-ins= list(filter(('').__ne__, ins))
-
-instructions1 = instructions1.split('\n')
-instructions1= list(filter(('').__ne__, instructions1))
-
-for ins1 in instructions1:
-    print(ins1)
-    print(simulator.run(ins1))
-    print(simulator.memory)
-    print(simulator.pc)
-    
-for ins1 in instructions2:
-    print(ins1)
-    print(simulator.run(ins1))
-    print(simulator.memory)
-    print(simulator.pc)
-
-for ins1 in ins:
-    print(simulator.run(ins1))
-    print(simulator.memory)
-    print(simulator.pc)
-
-
-print(simulator.memory)
-print(simulator.pc)
