@@ -2,6 +2,13 @@ let timer;
 const tabs = document.querySelectorAll('[data-tab-target]')
 const tabContents = document.querySelectorAll('[data-tab-content]')
 
+let reg_value = []
+let f_reg_value = []
+let memorydic = {}
+let pc = 0
+let memoryAddress = 0; 
+let memoryValues = {}; 
+
 tabs.forEach(tab => {
   tab.addEventListener('click', () => {
     const target = document.querySelector(tab.dataset.tabTarget)
@@ -67,7 +74,7 @@ function init() {
 }
 
 function getColor(x) {
-    return 'hsl(hue, 80%, 50%)'.replace('hue', x / w * 360 + frame);
+    return 'hsl(hue, 50%, 50%)'.replace('hue', x / w * 360 + frame);
 }
 
 function anim() {
@@ -149,8 +156,10 @@ Line.prototype.step = function () {
     if (dead) return true;
 }
 
+
 init();
 anim();
+
 
 window.addEventListener('resize', function () {
     w = c.width = window.innerWidth;
@@ -160,12 +169,15 @@ window.addEventListener('resize', function () {
     init();
 });
 
+
 function showRestText() {
     var restText = document.getElementById('rest-text');
     restText.classList.add('show');
 }
 
+
 setTimeout(showRestText, 1000); // Show the rest of the text after 1 second
+
 
 function hideSplashScreen() {
     var splashScreen = document.getElementById('splash_screen');
@@ -173,22 +185,197 @@ function hideSplashScreen() {
     splashScreen.addEventListener('animationend', removeSplashScreen); // Remove splash screen after fade-out animation ends
 }
 
+
 function removeSplashScreen() {
     var splashScreen = document.getElementById('splash_screen');
     splashScreen.remove();
     showMainContent();
 }
 
+
 function showMainContent() {
     var mainContent = document.getElementById('main-content');
     mainContent.classList.add('show');
 }
 
+
 function assemble_code() {
     // const code = document.getElementById('editor-container').value;
     code = document.getElementById('editor-text-box').value
     console.log(code)
-    console.log(typeof(code))
+    axios.post('assemble-code', { code: code })
+            .then(response => {
+                const hex = response.data.hex;
+                const baseins = response.data.is_sudo
+                populate_Decoder_Table(code,hex,baseins);
+                document.getElementById('dump-box').value = hex;
+            })
+            .catch(error => {
+                console.error('There was an error!', error);
+            })
 }
+
+
+function reset_editor(){
+    document.getElementById('editor-text-box').value = ''
+}
+
+
+function populate_Decoder_Table(code,hex,baseins){
+    let instructions = code.split('\n').filter(line => line.trim() !== '');
+    instructions = instructions.filter((ins) => !ins.includes(':'));
+    console.log(instructions)
+    const tableBody = document.getElementById('decoderTableBody');
+    console.log("table" , tableBody);
+    tableBody.innerHTML = '';
+    let count = 0
+    instructions.forEach((instruction, index) => {
+        const pc = `0x${(index * 4).toString(16)}`;
+        let hexdumparr = hex.split('\n').filter(line => line.trim() !== '')
+        console.log((hexdumparr));
+        const machineCode = hexdumparr[count];
+        const basicCode = baseins[count]; 
+        const originalCode = instruction;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${pc}</td>
+            <td>${machineCode}</td>
+            <td>${basicCode}</td>
+            <td>${originalCode}</td>
+        `;
+        tableBody.appendChild(row);
+        count = count +1
+    });
+}
+
+
+function update_Register_Values(data) {
+    data.forEach((value, index) => {
+        document.getElementById(`reg-${index}`).innerText = `0x${(value>>>0).toString(16).padStart(8, '0')}`;
+    });
+}
+
+
+function update_FRegister_Values(data){
+    data.forEach((value, index) => {
+        document.getElementById(`freg-${index}`).innerText = `0x${(value>>>0).toString(16).padStart(8 , '0')}`
+    });
+}
+
+
+function populate_Memory_Table(data) {
+    const tableBody = document.getElementById('memoryTableBody');
+    tableBody.innerHTML = ''; // Clear existing rows
+
+    
+            memoryValues = data; 
+            for (let i = 0; i < 10; i++) { 
+                const addr1 = memoryAddress + (i * 4);
+                const addr2 = memoryAddress + (i);
+                const value = memoryValues[addr2] || 0; 
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>0x${addr1.toString(16)}</td>
+                    <td>0x${(memoryValues[addr1] || 0).toString(16)}</td>
+                    <td>0x${(memoryValues[addr1+1] || 0).toString(16)}</td>
+                    <td>0x${(memoryValues[addr1+2] || 0).toString(16)}</td>
+                    <td>0x${(memoryValues[addr1+3] || 0).toString(16)}</td>
+                `;
+                tableBody.appendChild(row);
+                
+            }
+        ;
+}
+
+
+
+function reset_Registers (){
+    axios.post('reset', {
+    })
+    .then(response => {
+        const currentInstructionRow = document.getElementById('decoderTableBody').rows[pc/4];
+        if (currentInstructionRow) {
+            currentInstructionRow.classList.remove('highlight'); // Add highlight class
+        }
+        const newPc = response.data.pc;
+        memorydic = response.data.memory
+        console.log(memorydic)
+        reg_value = response.data.register
+        f_reg_value = response.data.f_register
+        console.log(reg_value)
+        pc = newPc;
+        console.log(pc)
+        populate_Memory_Table(memorydic)
+        update_Register_Values(reg_value)
+        update_FRegister_Values(f_reg_value)
+    })
+}
+
+
+function stepInstruction() {
+    const currentInstruction = document.getElementById('decoderTableBody').rows[pc/4].cells[1].textContent;
+    console.log(currentInstruction)
+    const currentInstructionRow = document.getElementById('decoderTableBody').rows[pc/4];
+    if (currentInstructionRow) {
+        currentInstructionRow.classList.add('highlight'); // Add highlight class
+    }
+    axios.post('step', {
+      instruction: currentInstruction,
+      pc: pc,
+      memory:memorydic,
+      register : reg_value,
+      f_register : f_reg_value
+    })
+    .then(response => {
+        const newPc = response.data.pc;
+        memorydic = response.data.memory
+        reg_value = response.data.register
+        f_reg_value = response.data.f_reg
+        console.log("returned reg val",reg_value)
+        pc = newPc;
+        console.log(pc)
+        if (currentInstructionRow) {
+        currentInstructionRow.classList.remove('highlight');
+        }
+        const newInstructionRow = document.getElementById('decoderTableBody').rows[pc/4];
+        if (newInstructionRow) {
+            newInstructionRow.classList.add('highlight');
+        }
+        populate_Memory_Table(memorydic)
+        update_Register_Values(reg_value)
+    })
+    .catch(error => {
+      console.error(error);
+    });
+}
+
+
+
+
+function run_Code() {
+    // const code = document.getElementById('editor-container').value;
+    code = document.getElementById('editor-text-box').value
+    axios.post('run-code', { code: code })
+            .then(response => {
+                const hex = response.data.hex;
+                const memory = response.data.memory
+                memorydic = memory
+                const baseins = response.data.is_sudo
+                const reg = response.data.registers
+                const freg = response.data.f_reg
+                reg_value = reg
+                f_reg_value = freg
+                populate_Decoder_Table(code,hex,baseins);
+                update_Register_Values(reg)
+                update_FRegister_Values(freg)
+                populate_Memory_Table(memory)
+            })
+            .catch(error => {
+                console.error('There was an error!', error);
+            });
+    console.log(code)
+    
+}
+
 
 setTimeout(hideSplashScreen, 1); // Hide the splash screen after 3 seconds

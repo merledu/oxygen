@@ -107,7 +107,7 @@ BODY {
 #regmem {
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: flex-start;
     width: 30%;
     height: 80vh;
     -ms-overflow-style: none;  /* IE and Edge */
@@ -115,6 +115,13 @@ BODY {
     overflow-y: scroll;
     overflow-x: hidden;
 }
+
+
+
+
+.highlight {
+    background-color: rgba(107, 99, 212, 0.394);
+  }
 
 
 #header {
@@ -301,6 +308,8 @@ H4 {
     flex-direction: row;
     justify-content: space-around;
 }
+
+
 
 
 #dump-config {

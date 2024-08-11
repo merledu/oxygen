@@ -7,7 +7,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Oxygen Simulator</title>
     <!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"> -->
-    <link rel="stylesheet" href="style_test.css" />
     <link rel="stylesheet" href="{% static 'style_test.css' %}">
   </head>
   <body style = 'background-image: {% static 'p3.jpg' %}'>
@@ -60,9 +59,9 @@
       <div id="decoder">
         <div id="tablediv" class="card card--inverted">
           <div class="run-button">
-            <button class="assemble-button btn btn-primary" onclick="runCode()">Run</button>
+            <button class="assemble-button btn btn-primary" onclick="run_Code()">Run</button>
             <button class="assemble-button btn btn-primary" onclick="stepInstruction()">Step</button>
-            <button class="assemble-button btn btn-primary" onclick="reset()">Reset</button>
+            <button class="assemble-button btn btn-primary" onclick="reset_Registers()">Reset</button>
           </div>
           <table id="decodetable">
             <thead>
@@ -81,126 +80,12 @@
                 </th>
               </tr>
             </thead>
-  
             <tbody id="decoderTableBody">
-              <tr>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-              </tr>
-  
             </tbody>
           </table>
         </div>
         <div id="regmem" class="card card--inverted">
-          <div>
+          <div id= 'regmem-buttons'>
             <div class="notation-select">
               <label for="notation">Notation:</label>
               <select id="notation" onchange="changeNotation(this.value)">
@@ -339,7 +224,7 @@
         </div>
       </div>
     </div>
-    <script src="script_test.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="{% static 'script_test.js' %}"></script>
   </body>
 </html>
