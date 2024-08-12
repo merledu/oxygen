@@ -124,55 +124,60 @@ class RISCVSimulatorSingle:
         
  
         # ADDI
-        if funct3 == 0x0:
+        if funct3 == 0x0 and opcode == 0x13:
             self.registers[rd] = self.registers[rs1] + self.sign_extend(imm, 12)
         # SLLI
-        elif funct3 == 0x1:
+        elif funct3 == 0x1 and opcode == 0x13:
             self.registers[rd] = self.registers[rs1] << self.sign_extend(imm, 12)
         # SLTI
         elif funct3 == 0x2 and opcode == 0x13:
             self.registers[rd] = 1 if self.registers[rs1] < self.sign_extend(imm, 12) else 0
         # SLTIU
-        elif funct3 == 0x3:
+        elif funct3 == 0x3 and opcode == 0x13:
             self.registers[rd] = 1 if self.registers[rs1] < self.sign_extend(imm, 12) else 0
         # XORI
-        elif funct3 == 0x4:
+        elif funct3 == 0x4 and opcode == 0x13:
             self.registers[rd] = self.registers[rs1] ^ self.sign_extend(imm, 12)
         # SRLI
-        elif funct3 == 0x5:
+        elif funct3 == 0x5 and opcode == 0x13:
             self.registers[rd] = self.registers[rs1] >> self.sign_extend(imm, 12)
         # SRAI
         elif funct3 == 0x5 and imm & 0x400 == 0x400:
             self.registers[rd] = self.registers[rs1] >> self.sign_extend(imm, 12)
         # ORI
-        elif funct3 == 0x6:
+        elif funct3 == 0x6 and opcode == 0x13:
             self.registers[rd] = self.registers[rs1] | self.sign_extend(imm, 12)
         # ANDI
-        elif funct3 == 0x7:
+        elif funct3 == 0x7 and opcode == 0x13:
             self.registers[rd] = self.registers[rs1] & self.sign_extend(imm, 12)
         # JALR
-        elif opcode == 0x67:
+        elif opcode == 0x67 and opcode == 0x67:
             self.registers[rd] = self.pc + 4
             self.pc = (self.registers[rs1] + self.sign_extend(imm, 12)) & 0xFFFFFFFE
         # LB
         # LB
         elif funct3 == 0x0 and opcode == 0x3:
+            print("hello")
             address = self.registers[rs1] + self.sign_extend(imm, 12)
-            self.registers[rd] = self.sign_extend(self.memory.get(address, 0), 8)
+            self.registers[rd] = self.sign_extend(self.memory.get(str(address), 0), 8)
 
         # LH
         elif funct3 == 0x1 and opcode == 0x3:
             address = self.registers[rs1] + self.sign_extend(imm, 12)
-            self.registers[rd] = self.sign_extend((self.memory.get(address, 0) << 8 | self.memory.get(address + 1, 0)), 16)
+            self.registers[rd] = self.sign_extend((self.memory.get(str(address), 0) | self.memory.get(str(address + 1), 0)<<8),16)
 
         # LW
         elif funct3 == 0x2 and opcode == 0x3:
             address = self.registers[rs1] + self.sign_extend(imm, 12)
+            print(rd)
+            print(self.sign_extend(imm, 12))
+            print(self.memory)
+            print(self.memory.get(address, 0) << 24 )
             self.registers[rd] = (
-                self.memory.get(address, 0) << 24 |
-                self.memory.get(address + 1, 0) << 16 |
-                self.memory.get(address + 2, 0) << 8 |
-                self.memory.get(address + 3, 0)
+                self.memory.get(str(address), 0) |
+                self.memory.get(str(address+ 1), 0) << 8 |
+                self.memory.get(str(address + 2), 0) << 16 |
+                self.memory.get(str(address + 3), 0) << 24
             )
 
         # LBU

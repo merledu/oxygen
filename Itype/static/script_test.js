@@ -8,7 +8,7 @@ let memorydic = {};
 let pc = 0;
 let memoryAddress = 0; 
 let memoryValues = {}; 
-let isHex = 'true'
+let isHex = 'true';
 
 tabs.forEach(tab => {
   tab.addEventListener('click', () => {
@@ -199,18 +199,8 @@ function showMainContent() {
     mainContent.classList.add('show');
 }
 
+setTimeout(hideSplashScreen, 1000);
 // Function to create a .txt file from a string input
-function createTxtFile(fileName, content, destinationFolder) {
-    const filePath = path.join(destinationFolder, `${fileName}.txt`);
-
-    fs.writeFile(filePath, content, (err) => {
-        if (err) {
-            console.error('Error writing file:', err);
-            return;
-        }
-        console.log(`File created at ${filePath}`);
-    });
-}
 
 
 function assemble_code() {
@@ -452,4 +442,4 @@ document.getElementById('scrollDownBtn').addEventListener('click', () => {
 });
 
 
-setTimeout(hideSplashScreen, 1000); // Hide the splash screen after 3 seconds
+ // Hide the splash screen after 3 seconds
