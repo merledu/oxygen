@@ -2,12 +2,13 @@ let timer;
 const tabs = document.querySelectorAll('[data-tab-target]')
 const tabContents = document.querySelectorAll('[data-tab-content]')
 
-let reg_value = []
-let f_reg_value = []
-let memorydic = {}
-let pc = 0
+let reg_value = [];
+let f_reg_value = [];
+let memorydic = {};
+let pc = 0;
 let memoryAddress = 0; 
 let memoryValues = {}; 
+let isHex = 'true'
 
 tabs.forEach(tab => {
   tab.addEventListener('click', () => {
@@ -218,10 +219,14 @@ function assemble_code() {
     console.log(code)
     axios.post('assemble-code', { code: code })
             .then(response => {
-                const hex = response.data.hex;
-                const baseins = response.data.is_sudo
-                populate_Decoder_Table(code,hex,baseins);
-                document.getElementById('dump-box').value = hex;
+                if(response.data.success){
+                    const hex = response.data.hex;
+                    const baseins = response.data.is_sudo
+                    populate_Decoder_Table(code,hex,baseins);
+                    document.getElementById('dump-box').value = hex;
+                }else{
+                    alert("Error: " + response.data.error);
+                }
             })
             .catch(error => {
                 console.error('There was an error!', error);
@@ -262,21 +267,30 @@ function populate_Decoder_Table(code,hex,baseins){
 }
 
 
-function update_Register_Values(data) {
+function update_Register_Values(data, isHex='true') {
     data.forEach((value, index) => {
-        document.getElementById(`reg-${index}`).innerText = `0x${(value>>>0).toString(16).padStart(8, '0')}`;
+        const formattedValue = isHex ? `0x${(value >>> 0).toString(16).padStart(8, '0')}` : value.toString(10);
+        document.getElementById(`reg-${index}`).innerText = formattedValue;
+    });
+}
+
+function update_FRegister_Values(data, isHex='true') {
+    data.forEach((value, index) => {
+        const formattedValue = isHex ? `0x${(value >>> 0).toString(16).padStart(8, '0')}` : value.toString(10);
+        document.getElementById(`freg-${index}`).innerText = formattedValue;
     });
 }
 
 
-function update_FRegister_Values(data){
-    data.forEach((value, index) => {
-        document.getElementById(`freg-${index}`).innerText = `0x${(value>>>0).toString(16).padStart(8 , '0')}`
-    });
+function changeNotation(notation) {
+    isHex = notation === 'hex';
+    populate_Memory_Table(memorydic, isHex);
+    update_Register_Values(reg_value, isHex);
+    update_FRegister_Values(f_reg_value, isHex);
 }
 
 
-function populate_Memory_Table(data) {
+function populate_Memory_Table(data,isHex='true') {
     const tableBody = document.getElementById('memoryTableBody');
     tableBody.innerHTML = ''; // Clear existing rows
 
@@ -287,15 +301,16 @@ function populate_Memory_Table(data) {
                 const addr2 = memoryAddress + (i);
                 const value = memoryValues[addr2] || 0; 
                 const row = document.createElement('tr');
+                const formatValue = (value) => isHex ? `0x${value.toString(16)}` : value.toString(10);
+
                 row.innerHTML = `
-                    <td>0x${addr1.toString(16)}</td>
-                    <td>0x${(memoryValues[addr1] || 0).toString(16)}</td>
-                    <td>0x${(memoryValues[addr1+1] || 0).toString(16)}</td>
-                    <td>0x${(memoryValues[addr1+2] || 0).toString(16)}</td>
-                    <td>0x${(memoryValues[addr1+3] || 0).toString(16)}</td>
+                    <td>${formatValue(addr1)}</td>
+                    <td>${formatValue(memoryValues[addr1] || 0)}</td>
+                    <td>${formatValue(memoryValues[addr1+1] || 0)}</td>
+                    <td>${formatValue(memoryValues[addr1+2] || 0)}</td>
+                    <td>${formatValue(memoryValues[addr1+3] || 0)}</td>
                 `;
                 tableBody.appendChild(row);
-                
             }
         ;
 }
@@ -318,9 +333,9 @@ function reset_Registers (){
         console.log(reg_value)
         pc = newPc;
         console.log(pc)
-        populate_Memory_Table(memorydic)
-        update_Register_Values(reg_value)
-        update_FRegister_Values(f_reg_value)
+        populate_Memory_Table(memorydic,isHex)
+        update_Register_Values(reg_value,isHex)
+        update_FRegister_Values(f_reg_value,isHex)
     })
 }
 
@@ -354,8 +369,8 @@ function stepInstruction() {
         if (newInstructionRow) {
             newInstructionRow.classList.add('highlight');
         }
-        populate_Memory_Table(memorydic)
-        update_Register_Values(reg_value)
+        populate_Memory_Table(memorydic,isHex)
+        update_Register_Values(reg_value,isHex)
     })
     .catch(error => {
       console.error(error);
@@ -379,9 +394,9 @@ function run_Code() {
                 reg_value = reg
                 f_reg_value = freg
                 populate_Decoder_Table(code,hex,baseins);
-                update_Register_Values(reg)
-                update_FRegister_Values(freg)
-                populate_Memory_Table(memory)
+                update_Register_Values(reg,isHex)
+                update_FRegister_Values(freg,isHex)
+                populate_Memory_Table(memory,isHex)
             })
             .catch(error => {
                 console.error('There was an error!', error);
@@ -389,6 +404,29 @@ function run_Code() {
     console.log(code)
     
 }
+document.getElementById('scrollUpBtn').addEventListener('click', () => {
+    const scrollUpBtn = document.getElementById('scrollUpBtn');
+    if (memoryAddress <= 0) {
+        scrollUpBtn.disabled = true; // Disable scroll up button
+        scrollUpBtn.classList.add('disabled');
+    } else {
+        memoryAddress -= 16; // Decrement memory address by 16
+        populate_Memory_Table(memorydic,isHex);
+        scrollUpBtn.disabled = false; // Enable scroll up button
+        scrollUpBtn.classList.remove('disabled');
+    }
+});
+
+
+document.getElementById('scrollDownBtn').addEventListener('click', () => {
+    memoryAddress += 16; // Increment memory address by 16
+    populate_Memory_Table(memorydic,isHex);
+    const scrollUpBtn = document.getElementById('scrollUpBtn');
+    if (memoryAddress > 0) {
+        scrollUpBtn.disabled = false; // Enable scroll up button
+        scrollUpBtn.classList.remove('disabled');
+    }
+});
 
 
 setTimeout(hideSplashScreen, 1); // Hide the splash screen after 3 seconds

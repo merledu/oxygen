@@ -1,5 +1,8 @@
 import re
 
+class InstructionError(Exception):
+    pass
+
 # Define the formats for each type of instruction
 FORMATS = {
     'R': '{funct7:07}{rs2:05}{rs1:05}{funct3:03}{rd:05}{opcode:07}',
@@ -313,13 +316,16 @@ def register_to_bin(register, bits):
                 x = '{0:03b}'.format(x)
                 return x
         elif register.startswith('x'):
-            x = int(register[1:])
-            if bits == 5:
-                x = '{0:05b}'.format(x)
-                return x
-            elif bits == 3:
-                x = '{0:03b}'.format(x)
-                return x
+            if(int(register[1:])>31 or int(register[1:]) <0):
+                return "ERROR"
+            else:
+                x = int(register[1:])
+                if bits == 5:
+                    x = '{0:05b}'.format(x)
+                    return x
+                elif bits == 3:
+                    x = '{0:03b}'.format(x)
+                    return x
         elif register.startswith('f'):
             x = int(register[1:])
             if bits == 5:
@@ -329,13 +335,9 @@ def register_to_bin(register, bits):
                 x = '{0:03b}'.format(x)
                 return x
         else:
-            raise ValueError(f"Unknown register: {register}")
-    except ValueError as e:
-        print(f"Error: wrong input")
-        return None
+            return 'ERROR'
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-        return None
+        return "ERROR"
 
 def imm_to_bin(imm, length):
     """Convert immediate value to binary representation of given length"""
@@ -348,288 +350,320 @@ def imm_to_bin(imm, length):
 
 def parse_instruction(instruction):
     """Parse the instruction into its binary components"""
-    parts = re.split(r'\s|,', instruction.strip())
-    while('' in parts):
-        parts.remove('')
-    # print("after remove : " ,parts)
-    inst_name = parts[0]
-    print(parts)
-    # print (inst_name)
-    if inst_name in PSEUDO_INSTRUCTION_SET:
-        
-        base_inst = PSEUDO_INSTRUCTION_SET[inst_name]
-        # print(base_inst)
-        # print(inst_name[0])
-        
-        if (inst_name == 'nop'):
-            return parse_instruction(base_inst)
-        elif(inst_name[0] == 'b'):
-            return parse_instruction(base_inst.format(rs=parts[1], offset=parts[2]))
-        elif(inst_name[0] == 'j'):
-            return parse_instruction(base_inst.format(a=parts[1]))
-        elif(inst_name == 'ret'):
-            return parse_instruction(base_inst)
-        elif (inst_name == 'li'):
-            return parse_instruction(base_inst.format(rd=parts[1], imm=parts[2]))
-        elif (inst_name == 'mv'):
-            return parse_instruction(base_inst.format(rd=parts[1], rs=parts[2]))
-    elif inst_name in C_INST_SET:
-        opcode, funct3_2, funct4_2_6, inst_type = C_INST_SET[inst_name]
-        if inst_type == 'CR':
-            rd_rs1=register_to_bin(parts[1],5)
-            rs2=register_to_bin(parts[2],5)
-            return FORMATS['CR'].format(funct4=funct4_2_6,rd_rs1=rd_rs1,rs2=rs2,opcode=opcode)
-        elif inst_type=='CR(1)':
-            rd_rs1=register_to_bin(parts[1],3)
-            rs2=register_to_bin(parts[2],3)
-            return FORMATS['CR(1)'].format(funct6=funct4_2_6,rd_rs1=rd_rs1,funct2=funct3_2,rs2=rs2,opcode=opcode)
-        elif inst_type== 'CR(2)':
-            imm=0
-            return FORMATS['CR(2)'].format(funct4=funct4_2_6,imm=imm,opcode=opcode)
-        elif inst_type=='CR(3)':
-            rd_rs1=register_to_bin(parts[1],5)
-            rs2=register_to_bin('x0',5)
-            return FORMATS['CR(3)'].format(funct4=funct4_2_6,rd_rs1=rd_rs1,rs2=rs2,opcode=opcode)
-        elif inst_type == 'CI':
-            rd_rs1=register_to_bin(parts[1],5)
-            imm=imm_to_bin(parts[2],6)
-            imm4_0=imm[1:5]
-            imm5=imm[0]
-            return FORMATS['CI'].format(funct3=funct3_2,imm2=imm5,rd_rs1=rd_rs1,imm=imm4_0,opcode=opcode)
-        elif inst_type == 'CI(1)':
-            rd=register_to_bin(parts[1],5)
-            imm=imm_to_bin(parts[2],8)
-            imm7_6= imm[0:2]
-            imm4_2 = imm[3:6]
-            imm2=imm[2]
-            return FORMATS['CI(1)'].format(funct3=funct3_2,imm2=imm2,rd=rd,imm4_2=imm4_2,imm7_6=imm7_6,opcode=opcode)
-        elif inst_type == 'CI(2)':
-            rd=register_to_bin(parts[1],5)
-            imm = imm_to_bin(parts[2],9)
-            imm8_6=imm[0:3]
-            imm4_3=imm[4:6]
-            imm2=imm[3]
-            return FORMATS['CI(2)'].format(funct3=funct3_2,imm2=imm2,rd=rd,imm4_3=imm4_3,imm8_6=imm8_6,opcode=opcode)
-        elif inst_type=='CI(3)':
-            rd=register_to_bin(parts[1],5)
-            imm=imm_to_bin(parts[2],10)
-            imm9_6=imm[0:4]
-            imm4=imm[5]
-            imm2=imm[4]
-            return FORMATS['CI(3)'].format(funct3=funct3_2,imm2=imm2,rd=rd,imm4=imm4,imm9_6=imm9_6,opcode=opcode)
-        elif inst_type=='CI(4)':
-            rd=register_to_bin(parts[1],5)
-            imm=imm_to_bin(parts[2],6)
-            imm1=imm[1:6]
-            imm2=imm[0]
-            return FORMATS['CI(4)'].format(funct3=funct3_2,imm2=imm2,rd=rd,imm=imm1,opcode=opcode)
-        elif inst_type=='CI(5)':
-            rd=register_to_bin(parts[1],5)
-            imm=imm_to_bin(parts[2],6)
-            imm1=imm[1:6]
-            imm2=imm[0]
-            return FORMATS['CI(5)'].format(funct3=funct3_2,imm2=imm2,rd=rd,imm=imm1,opcode=opcode)
-        elif inst_type=='CI(6)':
-            rd=register_to_bin(parts[1],5)
-            imm=imm_to_bin(parts[2],10)
-            imm5=imm[4]
-            imm8_7=imm[1:3]
-            imm6=imm[3]
-            imm4=imm[5]
-            imm2=imm[0]
-            return FORMATS['CI(6)'].format(funct3=funct3_2,imm2=imm2,rd=rd,imm4=imm4,imm6=imm6,imm8_7=imm8_7,imm5=imm5,opcode=opcode)
-        elif inst_type=='CSS(1)':
-            rs2=register_to_bin(parts[1],5)
-            imm=imm_to_bin(parts[2],8)
-            imm7_6=imm[0:2]
-            imm5_2=imm[2:6]
-            return FORMATS['CSS(1)'].format(funct3=funct3_2,imm5_2=imm5_2,imm7_6=imm7_6,rs2=rs2,opcode=opcode)
-        elif inst_type=='CSS(2)':
-            rs2=register_to_bin(parts[1],5)
-            imm=imm_to_bin(parts[2],9)
-            imm8_6=imm[0:3]
-            imm5_3=imm[3:6]
-            return FORMATS['CSS(2)'].format(funct3=funct3_2,imm5_3=imm5_3,imm8_6=imm8_6,rs2=rs2,opcode=opcode)
-        elif inst_type=='CSS(3)':
-            rs2=register_to_bin(parts[1],5)
-            imm=imm_to_bin(parts[2],6)
-            imm9_6=imm[0:4]
-            imm5_4=imm[4:6]
-            return FORMATS['CSS(3)'].format(funct3=funct3_2,imm5_4=imm5_4,imm9_6=imm9_6,rs2=rs2,opcode=opcode)
-        elif inst_type=='CIW':
-            rd=register_to_bin(parts[1],3)
-            imm=imm_to_bin(parts[2],10)
-            imm3=imm[6]
-            imm2=imm[7]
-            imm9_6=imm[0:4]
-            imm5_4=imm[4:6]
-            return FORMATS['CIW'].format(funct3=funct3_2,imm5_4=imm5_4,imm9_6=imm9_6,imm2=imm2,imm3=imm3,rd=rd,opcode=opcode)
-        elif inst_type=='CL(1)':
-            rd=register_to_bin(parts[1],3)
-            imm = imm_to_bin(parts[2],7)
-            rs1 = register_to_bin(parts[3],3)
-            imm6=imm[0]
-            imm2=imm[4]
-            imm5_3=imm[1:4]
-            return FORMATS['CL(1)'].format(funct3=funct3_2,imm5_3=imm5_3,rs1=rs1,imm2=imm2,imm6=imm6,rd=rd,opcode=opcode)
-        elif inst_type=='CL(2)':
-            rd=register_to_bin(parts[1],3)
-            imm = imm_to_bin(parts[2],8)
-            rs1 = register_to_bin(parts[3],3)
-            imm1=imm[0:2]
-            imm2=imm[2:5]
-            return FORMATS['CL(2)'].format(funct3=funct3_2,imm2=imm2,rs1=rs1,imm=imm1,rd=rd,opcode=opcode)
-        elif inst_type=='CL(3)':
-            rd=register_to_bin(parts[1],3)
-            imm=imm_to_bin(parts[2],9)
-            rs1=register_to_bin(parts[3],3)
-            imm1=imm[1:3]
-            imm8=imm[0]
-            imm5_4=imm[3:5]
-            return FORMATS['CL(3)'].format(funct3=funct3_2,imm5_4=imm5_4,rs1=rs1,imm=imm1,rd=rd,opcode=opcode)
-        elif inst_type=='CS(1)':
-            rs2=register_to_bin(parts[1],3)
-            imm=imm_to_bin(parts[2],5)
-            rs1=register_to_bin(parts[3],3)
-            imm6=imm[0]
-            imm2=imm[4]
-            imm5_3=imm[1:4]
-            return FORMATS['CS(1)'].format(funct3=funct3_2,imm2=imm5_3,rd_rs1=rs1,imm5_3=imm2,imm6=imm6,rs2=rs2,opcode=opcode)
-        elif inst_type=='CS(2)':
-            rs2=register_to_bin(parts[1],3)
-            imm=imm_to_bin(parts[2],8)
-            rs1=register_to_bin(parts[3],3)
-            imm7_6=imm[0:2]
-            imm2=imm[2:5]
-            return FORMATS['CS(2)'].format(funct3=funct3_2,imm2=imm2,rd_rs1=rs1,imm=imm7_6,rs2=rs2,opcode=opcode)
-        elif inst_type=='CS(3)':
-            rs2=register_to_bin(parts[1],3)
-            imm=imm_to_bin(parts[2],9)
-            rs1=register_to_bin(parts[3],3)
-            imm7_6=imm[1:3]
-            imm8=imm[0]
-            imm5_4=imm[3:5]
-            return FORMATS['CS(3)'].format(funct3=funct3_2,imm2=imm2,rd_rs1=rs1,imm=imm1,rs2=rs2,opcode=opcode)
-        elif inst_type=='CB(1)':
-            rs1=register_to_bin(parts[1],3)
-            imm=imm_to_bin(parts[2],9)
-            imm5=imm[3]
-            imm2_1=imm[6:8]
-            imm7_6=imm[1:3]
-            imm4_3=imm[4:6]
-            imm8=imm[0]
-            return FORMATS['CB(1)'].format(funct3=funct3_2,offset8=imm8,offset4_3=imm4_3,rs1=rs1,offset7_6=imm7_6,offset2_1=imm2_1,offset5=imm5,opcode=opcode)
-        elif inst_type=='CB(2)':
-            rs1=register_to_bin(parts[1],3)
-            imm=imm_to_bin(parts[2],6)
-            imm1=imm[1:6]
-            imm2=imm[0]
-            return FORMATS['CB(2)'].format(funct3=funct3_2,offset2=imm2,funct2=funct4_2_6,rs1=rs1,offset=imm1,opcode=opcode)
-        elif inst_type=='CJ':
-            imm=imm_to_bin(parts[1],12)
-            imm5=imm[6]
-            imm3_1=imm[8:11]
-            imm7=imm[4]
-            imm6=imm[5]
-            imm10=imm[1]
-            imm9_8=imm[2:4]
-            imm4=imm[7]
-            imm11=imm[0]
-            return FORMATS['CJ'].format(funct3=funct3_2,jump_target11=imm11,jump_target4=imm4,jump_target9_8=imm9_8,jump_target10=imm10,jump_target6=imm6,jump_target7=imm7,jump_target3_1=imm3_1,jump_target5=imm5,opcode=opcode)
-    # print(inst_name)
-    opcode, funct3, funct7, inst_type = INSTRUCTION_SET[inst_name]
-    
-    if inst_type == 'R':
-        rd = register_to_bin(parts[1],5)
-        rs1 = register_to_bin(parts[2],5)
-        rs2 = register_to_bin(parts[3],5)
-        return FORMATS['R'].format(funct7=funct7, rs2=rs2, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
-    
-    elif inst_type == 'I':
-        # print(parts)
-        rd = register_to_bin(parts[1],5)
-        # print(parts[2])
-        rs1 = register_to_bin(parts[2],5)
-        imm = imm_to_bin(parts[3], 12)
-        # return '{imm:012}{rs1:05}{funct3:03}{rd:05}{opcode:07}'.format(imm=imm, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
-        # print (FORMATS['I'].format(imm=imm, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode))
-        return FORMATS['I'].format(imm=imm, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
-    
-    
-    elif inst_type == 'S':
-        rs1 = register_to_bin(parts[3],5)
-        rs2 = register_to_bin(parts[1],5)
-        imm = imm_to_bin(parts[2], 12)
-        imm_11_5 = imm[:7]
-        imm_4_0 = imm[7:]
-        return FORMATS['S'].format(imm_11_5=imm_11_5, rs2=rs2, rs1=rs1, funct3=funct3, imm_4_0=imm_4_0, opcode=opcode)
-    
-    elif inst_type == 'B':
-        rs1 = register_to_bin(parts[1],5)
-        rs2 = register_to_bin(parts[2],5)
-        
-        # imm_bin = format(int(imm), '013b')
-        # imm_bin2 = ''.join(reversed(str(imm_bin)))
-        # imm12 = imm_bin2[12]
-        # imm10_5 = imm_bin2[5:11]
-        # imm4_1 = imm_bin2[1:5]
-        # imm11 = imm_bin2[11]
-        # binary_str = f"{imm12}{imm10_5}{rs2_bin}{rs1_bin}{funct3}{imm4_1}{imm11}{opcode}"
-        
-        
-        imm = imm_to_bin(parts[3], 13)
-        
-        
-        # imm_bin2 = ''.join(reversed(str(imm_bin)))
-        # imm_12 = imm_bin2[12]
-        # imm_10_5 = imm_bin2[5:11]
-        # imm_4_1 = imm_bin2[1:5]
-        # imm_11 = imm_bin2[11]
-        imm_12 = imm[0]
-        imm_10_5 = imm[2:8]
-        imm_4_1 = imm[8:12]
-        imm_11 = imm[1]
-        print (FORMATS['B'].format(imm_12=imm_12, imm_10_5=imm_10_5, rs2=rs2, rs1=rs1, funct3=funct3, imm_4_1=imm_4_1, imm_11=imm_11, opcode=opcode))
-        return FORMATS['B'].format(imm_12=imm_12, imm_10_5=imm_10_5, rs2=rs2, rs1=rs1, funct3=funct3, imm_4_1=imm_4_1, imm_11=imm_11, opcode=opcode)
-    
-    elif inst_type == 'U':
-        rd = register_to_bin(parts[1],5)
-        imm = imm_to_bin(parts[2], 20)
-        return FORMATS['U'].format(imm=imm, rd=rd, opcode=opcode)
-    
-    elif inst_type == 'J':
-        rd = register_to_bin(parts[1],5)
-        imm = imm_to_bin(parts[2], 21)
-        imm_20 = imm[0]
-        imm_10_1 = imm[10:20]
-        imm_11 = imm[9]
-        imm_19_12 = imm[1:9]
-        return FORMATS['J'].format(imm_20=imm_20, imm_10_1=imm_10_1, imm_11=imm_11, imm_19_12=imm_19_12, rd=rd, opcode=opcode)
-    
-    elif inst_type == 'LI':
-        rd = register_to_bin(parts[1],5)
-        if (len(parts) == 3):
-            offset_base_str = parts[2]
-            # print(offset_base_str)
-            match_brackets = re.match(r'^([^(]+)\(([^)]+)\)$', offset_base_str)
-            if match_brackets:
-                imm = imm_to_bin(int(match_brackets.group(1),16),12)
-                rs1 = register_to_bin(match_brackets.group(2))
+    try:
+        parts = re.split(r'\s|,', instruction.strip())
+        while('' in parts):
+            parts.remove('')
+        # print("after remove : " ,parts)
+        inst_name = parts[0]
+        print(parts)
+        # print (inst_name)
+        if inst_name in PSEUDO_INSTRUCTION_SET:
+            
+            base_inst = PSEUDO_INSTRUCTION_SET[inst_name]
+            # print(base_inst)
+            # print(inst_name[0])
+            
+            if (inst_name == 'nop'):
+                return parse_instruction(base_inst)
+            elif(inst_name[0] == 'b'):
+                return parse_instruction(base_inst.format(rs=parts[1], offset=parts[2]))
+            elif(inst_name[0] == 'j'):
+                return parse_instruction(base_inst.format(a=parts[1]))
+            elif(inst_name == 'ret'):
+                return parse_instruction(base_inst)
+            elif (inst_name == 'li'):
+                return parse_instruction(base_inst.format(rd=parts[1], imm=parts[2]))
+            elif (inst_name == 'mv'):
+                return parse_instruction(base_inst.format(rd=parts[1], rs=parts[2]))
             else:
-                imm = imm_to_bin(str(imm_value),12)
-                rs1 = register_to_bin(offset_base_str)
-        else:
+                raise InstructionError("Unknown pseudo-instruction format.")
+        elif inst_name in C_INST_SET:
+            opcode, funct3_2, funct4_2_6, inst_type = C_INST_SET[inst_name]
+            if inst_type == 'CR':
+                rd_rs1=register_to_bin(parts[1],5)
+                rs2=register_to_bin(parts[2],5)
+                return FORMATS['CR'].format(funct4=funct4_2_6,rd_rs1=rd_rs1,rs2=rs2,opcode=opcode)
+            elif inst_type=='CR(1)':
+                rd_rs1=register_to_bin(parts[1],3)
+                rs2=register_to_bin(parts[2],3)
+                return FORMATS['CR(1)'].format(funct6=funct4_2_6,rd_rs1=rd_rs1,funct2=funct3_2,rs2=rs2,opcode=opcode)
+            elif inst_type== 'CR(2)':
+                imm=0
+                return FORMATS['CR(2)'].format(funct4=funct4_2_6,imm=imm,opcode=opcode)
+            elif inst_type=='CR(3)':
+                rd_rs1=register_to_bin(parts[1],5)
+                rs2=register_to_bin('x0',5)
+                return FORMATS['CR(3)'].format(funct4=funct4_2_6,rd_rs1=rd_rs1,rs2=rs2,opcode=opcode)
+            elif inst_type == 'CI':
+                rd_rs1=register_to_bin(parts[1],5)
+                imm=imm_to_bin(parts[2],6)
+                imm4_0=imm[1:5]
+                imm5=imm[0]
+                return FORMATS['CI'].format(funct3=funct3_2,imm2=imm5,rd_rs1=rd_rs1,imm=imm4_0,opcode=opcode)
+            elif inst_type == 'CI(1)':
+                rd=register_to_bin(parts[1],5)
+                imm=imm_to_bin(parts[2],8)
+                imm7_6= imm[0:2]
+                imm4_2 = imm[3:6]
+                imm2=imm[2]
+                return FORMATS['CI(1)'].format(funct3=funct3_2,imm2=imm2,rd=rd,imm4_2=imm4_2,imm7_6=imm7_6,opcode=opcode)
+            elif inst_type == 'CI(2)':
+                rd=register_to_bin(parts[1],5)
+                imm = imm_to_bin(parts[2],9)
+                imm8_6=imm[0:3]
+                imm4_3=imm[4:6]
+                imm2=imm[3]
+                return FORMATS['CI(2)'].format(funct3=funct3_2,imm2=imm2,rd=rd,imm4_3=imm4_3,imm8_6=imm8_6,opcode=opcode)
+            elif inst_type=='CI(3)':
+                rd=register_to_bin(parts[1],5)
+                imm=imm_to_bin(parts[2],10)
+                imm9_6=imm[0:4]
+                imm4=imm[5]
+                imm2=imm[4]
+                return FORMATS['CI(3)'].format(funct3=funct3_2,imm2=imm2,rd=rd,imm4=imm4,imm9_6=imm9_6,opcode=opcode)
+            elif inst_type=='CI(4)':
+                rd=register_to_bin(parts[1],5)
+                imm=imm_to_bin(parts[2],6)
+                imm1=imm[1:6]
+                imm2=imm[0]
+                return FORMATS['CI(4)'].format(funct3=funct3_2,imm2=imm2,rd=rd,imm=imm1,opcode=opcode)
+            elif inst_type=='CI(5)':
+                rd=register_to_bin(parts[1],5)
+                imm=imm_to_bin(parts[2],6)
+                imm1=imm[1:6]
+                imm2=imm[0]
+                return FORMATS['CI(5)'].format(funct3=funct3_2,imm2=imm2,rd=rd,imm=imm1,opcode=opcode)
+            elif inst_type=='CI(6)':
+                rd=register_to_bin(parts[1],5)
+                imm=imm_to_bin(parts[2],10)
+                imm5=imm[4]
+                imm8_7=imm[1:3]
+                imm6=imm[3]
+                imm4=imm[5]
+                imm2=imm[0]
+                return FORMATS['CI(6)'].format(funct3=funct3_2,imm2=imm2,rd=rd,imm4=imm4,imm6=imm6,imm8_7=imm8_7,imm5=imm5,opcode=opcode)
+            elif inst_type=='CSS(1)':
+                rs2=register_to_bin(parts[1],5)
+                imm=imm_to_bin(parts[2],8)
+                imm7_6=imm[0:2]
+                imm5_2=imm[2:6]
+                return FORMATS['CSS(1)'].format(funct3=funct3_2,imm5_2=imm5_2,imm7_6=imm7_6,rs2=rs2,opcode=opcode)
+            elif inst_type=='CSS(2)':
+                rs2=register_to_bin(parts[1],5)
+                imm=imm_to_bin(parts[2],9)
+                imm8_6=imm[0:3]
+                imm5_3=imm[3:6]
+                return FORMATS['CSS(2)'].format(funct3=funct3_2,imm5_3=imm5_3,imm8_6=imm8_6,rs2=rs2,opcode=opcode)
+            elif inst_type=='CSS(3)':
+                rs2=register_to_bin(parts[1],5)
+                imm=imm_to_bin(parts[2],6)
+                imm9_6=imm[0:4]
+                imm5_4=imm[4:6]
+                return FORMATS['CSS(3)'].format(funct3=funct3_2,imm5_4=imm5_4,imm9_6=imm9_6,rs2=rs2,opcode=opcode)
+            elif inst_type=='CIW':
+                rd=register_to_bin(parts[1],3)
+                imm=imm_to_bin(parts[2],10)
+                imm3=imm[6]
+                imm2=imm[7]
+                imm9_6=imm[0:4]
+                imm5_4=imm[4:6]
+                return FORMATS['CIW'].format(funct3=funct3_2,imm5_4=imm5_4,imm9_6=imm9_6,imm2=imm2,imm3=imm3,rd=rd,opcode=opcode)
+            elif inst_type=='CL(1)':
+                rd=register_to_bin(parts[1],3)
+                imm = imm_to_bin(parts[2],7)
+                rs1 = register_to_bin(parts[3],3)
+                imm6=imm[0]
+                imm2=imm[4]
+                imm5_3=imm[1:4]
+                return FORMATS['CL(1)'].format(funct3=funct3_2,imm5_3=imm5_3,rs1=rs1,imm2=imm2,imm6=imm6,rd=rd,opcode=opcode)
+            elif inst_type=='CL(2)':
+                rd=register_to_bin(parts[1],3)
+                imm = imm_to_bin(parts[2],8)
+                rs1 = register_to_bin(parts[3],3)
+                imm1=imm[0:2]
+                imm2=imm[2:5]
+                return FORMATS['CL(2)'].format(funct3=funct3_2,imm2=imm2,rs1=rs1,imm=imm1,rd=rd,opcode=opcode)
+            elif inst_type=='CL(3)':
+                rd=register_to_bin(parts[1],3)
+                imm=imm_to_bin(parts[2],9)
+                rs1=register_to_bin(parts[3],3)
+                imm1=imm[1:3]
+                imm8=imm[0]
+                imm5_4=imm[3:5]
+                return FORMATS['CL(3)'].format(funct3=funct3_2,imm5_4=imm5_4,rs1=rs1,imm=imm1,rd=rd,opcode=opcode)
+            elif inst_type=='CS(1)':
+                rs2=register_to_bin(parts[1],3)
+                imm=imm_to_bin(parts[2],5)
+                rs1=register_to_bin(parts[3],3)
+                imm6=imm[0]
+                imm2=imm[4]
+                imm5_3=imm[1:4]
+                return FORMATS['CS(1)'].format(funct3=funct3_2,imm2=imm5_3,rd_rs1=rs1,imm5_3=imm2,imm6=imm6,rs2=rs2,opcode=opcode)
+            elif inst_type=='CS(2)':
+                rs2=register_to_bin(parts[1],3)
+                imm=imm_to_bin(parts[2],8)
+                rs1=register_to_bin(parts[3],3)
+                imm7_6=imm[0:2]
+                imm2=imm[2:5]
+                return FORMATS['CS(2)'].format(funct3=funct3_2,imm2=imm2,rd_rs1=rs1,imm=imm7_6,rs2=rs2,opcode=opcode)
+            elif inst_type=='CS(3)':
+                rs2=register_to_bin(parts[1],3)
+                imm=imm_to_bin(parts[2],9)
+                rs1=register_to_bin(parts[3],3)
+                imm7_6=imm[1:3]
+                imm8=imm[0]
+                imm5_4=imm[3:5]
+                return FORMATS['CS(3)'].format(funct3=funct3_2,imm2=imm2,rd_rs1=rs1,imm=imm1,rs2=rs2,opcode=opcode)
+            elif inst_type=='CB(1)':
+                rs1=register_to_bin(parts[1],3)
+                imm=imm_to_bin(parts[2],9)
+                imm5=imm[3]
+                imm2_1=imm[6:8]
+                imm7_6=imm[1:3]
+                imm4_3=imm[4:6]
+                imm8=imm[0]
+                return FORMATS['CB(1)'].format(funct3=funct3_2,offset8=imm8,offset4_3=imm4_3,rs1=rs1,offset7_6=imm7_6,offset2_1=imm2_1,offset5=imm5,opcode=opcode)
+            elif inst_type=='CB(2)':
+                rs1=register_to_bin(parts[1],3)
+                imm=imm_to_bin(parts[2],6)
+                imm1=imm[1:6]
+                imm2=imm[0]
+                return FORMATS['CB(2)'].format(funct3=funct3_2,offset2=imm2,funct2=funct4_2_6,rs1=rs1,offset=imm1,opcode=opcode)
+            elif inst_type=='CJ':
+                imm=imm_to_bin(parts[1],12)
+                imm5=imm[6]
+                imm3_1=imm[8:11]
+                imm7=imm[4]
+                imm6=imm[5]
+                imm10=imm[1]
+                imm9_8=imm[2:4]
+                imm4=imm[7]
+                imm11=imm[0]
+                return FORMATS['CJ'].format(funct3=funct3_2,jump_target11=imm11,jump_target4=imm4,jump_target9_8=imm9_8,jump_target10=imm10,jump_target6=imm6,jump_target7=imm7,jump_target3_1=imm3_1,jump_target5=imm5,opcode=opcode)
+        # print(inst_name)
+        opcode, funct3, funct7, inst_type = INSTRUCTION_SET[inst_name]
+        
+        if inst_type == 'R':
+            rd = register_to_bin(parts[1],5)
+            rs1 = register_to_bin(parts[2],5)
+            rs2 = register_to_bin(parts[3],5)
+            if rd == "ERROR" or rs1 == "ERROR" or rs2 == "ERROR":
+                print("Error: Invalid register value provided.")
+                raise ValueError(f"Unknown register")
+            
+            return FORMATS['R'].format(funct7=funct7, rs2=rs2, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
+        
+        elif inst_type == 'I':
+            # print(parts)
+            rd = register_to_bin(parts[1],5)
+            # print(parts[2])
+            rs1 = register_to_bin(parts[2],5)
+            imm = imm_to_bin(parts[3], 12)
+            if rd == "ERROR" or rs1 == "ERROR" or rs2 == "ERROR":
+                print("Error: Invalid register value provided.")
+                raise ValueError(f"Unknown register")
+            # return '{imm:012}{rs1:05}{funct3:03}{rd:05}{opcode:07}'.format(imm=imm, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
+            # print (FORMATS['I'].format(imm=imm, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode))
+            return FORMATS['I'].format(imm=imm, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
+        
+        
+        elif inst_type == 'S':
             rs1 = register_to_bin(parts[3],5)
-            immediate = parts[2]
-            if immediate.startswith('0x') or immediate.startswith('-0x'):
-                imm_value = int(immediate, 16)
-                imm = imm_to_bin(str(imm_value),12)
+            rs2 = register_to_bin(parts[1],5)
+            imm = imm_to_bin(parts[2], 12)
+            imm_11_5 = imm[:7]
+            imm_4_0 = imm[7:]
+            if rd == "ERROR" or rs1 == "ERROR" or rs2 == "ERROR":
+                print("Error: Invalid register value provided.")
+                raise ValueError(f"Unknown register")
+            return FORMATS['S'].format(imm_11_5=imm_11_5, rs2=rs2, rs1=rs1, funct3=funct3, imm_4_0=imm_4_0, opcode=opcode)
+        
+        elif inst_type == 'B':
+            rs1 = register_to_bin(parts[1],5)
+            rs2 = register_to_bin(parts[2],5)
+            if rd == "ERROR" or rs1 == "ERROR" or rs2 == "ERROR":
+                print("Error: Invalid register value provided.")
+                raise ValueError(f"Unknown register")
+            
+            # imm_bin = format(int(imm), '013b')
+            # imm_bin2 = ''.join(reversed(str(imm_bin)))
+            # imm12 = imm_bin2[12]
+            # imm10_5 = imm_bin2[5:11]
+            # imm4_1 = imm_bin2[1:5]
+            # imm11 = imm_bin2[11]
+            # binary_str = f"{imm12}{imm10_5}{rs2_bin}{rs1_bin}{funct3}{imm4_1}{imm11}{opcode}"
+            
+            
+            imm = imm_to_bin(parts[3], 13)
+            
+            
+            # imm_bin2 = ''.join(reversed(str(imm_bin)))
+            # imm_12 = imm_bin2[12]
+            # imm_10_5 = imm_bin2[5:11]
+            # imm_4_1 = imm_bin2[1:5]
+            # imm_11 = imm_bin2[11]
+            imm_12 = imm[0]
+            imm_10_5 = imm[2:8]
+            imm_4_1 = imm[8:12]
+            imm_11 = imm[1]
+            print (FORMATS['B'].format(imm_12=imm_12, imm_10_5=imm_10_5, rs2=rs2, rs1=rs1, funct3=funct3, imm_4_1=imm_4_1, imm_11=imm_11, opcode=opcode))
+            return FORMATS['B'].format(imm_12=imm_12, imm_10_5=imm_10_5, rs2=rs2, rs1=rs1, funct3=funct3, imm_4_1=imm_4_1, imm_11=imm_11, opcode=opcode)
+        
+        elif inst_type == 'U':
+            rd = register_to_bin(parts[1],5)
+            imm = imm_to_bin(parts[2], 20)
+            if rd == "ERROR" or rs1 == "ERROR" or rs2 == "ERROR":
+                print("Error: Invalid register value provided.")
+                raise ValueError(f"Unknown register")
+            return FORMATS['U'].format(imm=imm, rd=rd, opcode=opcode)
+        
+        elif inst_type == 'J':
+            rd = register_to_bin(parts[1],5)
+            imm = imm_to_bin(parts[2], 21)
+            imm_20 = imm[0]
+            imm_10_1 = imm[10:20]
+            imm_11 = imm[9]
+            imm_19_12 = imm[1:9]
+            if rd == "ERROR" or rs1 == "ERROR" or rs2 == "ERROR":
+                print("Error: Invalid register value provided.")
+                raise ValueError(f"Unknown register")
+            return FORMATS['J'].format(imm_20=imm_20, imm_10_1=imm_10_1, imm_11=imm_11, imm_19_12=imm_19_12, rd=rd, opcode=opcode)
+        
+        elif inst_type == 'LI':
+            rd = register_to_bin(parts[1],5)
+            
+            if (len(parts) == 3):
+                offset_base_str = parts[2]
+                # print(offset_base_str)
+                match_brackets = re.match(r'^([^(]+)\(([^)]+)\)$', offset_base_str)
+                if match_brackets:
+                    imm = imm_to_bin(int(match_brackets.group(1),16),12)
+                    rs1 = register_to_bin(match_brackets.group(2))
+                else:
+                    imm = imm_to_bin(str(imm_value),12)
+                    rs1 = register_to_bin(offset_base_str)
             else:
-                imm_value = int(immediate)
-                imm = imm_to_bin(str(imm_value),12)
+                rs1 = register_to_bin(parts[3],5)
+                immediate = parts[2]
+                if immediate.startswith('0x') or immediate.startswith('-0x'):
+                    imm_value = int(immediate, 16)
+                    imm = imm_to_bin(str(imm_value),12)
+                else:
+                    imm_value = int(immediate)
+                    imm = imm_to_bin(str(imm_value),12)
+            if rd == "ERROR" or rs1 == "ERROR" or rs2 == "ERROR":
+                print("Error: Invalid register value provided.")
+                raise ValueError(f"Unknown register")
+            
+            return FORMATS['I'].format(imm=imm, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
+        else:
+            raise InstructionError("Unknown instruction name.")
         
-        return FORMATS['I'].format(imm=imm, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
-        
+    except (ValueError,KeyError) as e:
+        raise InstructionError(f"Instruction format error: {str(e)}")
+    
+    raise InstructionError("Invalid instruction format.")
 
 def convert_to_hex(bin_str):
     """Convert binary string to hexadecimal"""

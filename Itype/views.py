@@ -15,7 +15,6 @@ execution = DPS.RISCVSimulatorSingle()
 
 @csrf_exempt
 def editor(request):
-    print("xx")
     return render(request,'index.html')
 
 def create_txt_file(file_name, content, destination_folder):
@@ -39,15 +38,23 @@ def assemble_code(request):
     if request.method == "POST":
         data = json.loads(request.body)
         code = data.get('code', '')
-        hex_output = IP.main(code)
-        sudo_or_base  = IP.checkpsudo(code)
-        file_name = "ins"
-        destination_folder = "Itype/riscv_32/bin/"
-        create_txt_file(file_name, code, destination_folder)
-        file_name = 'ins.txt'
-        subprocess.run(f"./Itype/riscv_32/bin/bash.sh {file_name}", shell=True)
-        pc_hex = extract_pc_hex('Itype/riscv_32/bin/ins_disassembly.S')
-        print(pc_hex)
+        try:
+            hex_output = IP.main(code)
+            sudo_or_base  = IP.checkpsudo(code)
+            return JsonResponse({'hex': hex_output ,
+                             'is_sudo' : sudo_or_base,
+                             'success': True}, )
+        except IP.InstructionError as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+        except ValueError as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+            # file_name = "ins"
+            # destination_folder = "Itype/riscv_32/bin/"
+            # create_txt_file(file_name, code, destination_folder)
+            # file_name = 'ins.txt'
+            # subprocess.run(f"./Itype/riscv_32/bin/bash.sh {file_name}", shell=True)
+            # pc_hex = extract_pc_hex('Itype/riscv_32/bin/ins_disassembly.S')
+            # print(pc_hex)
         
         
         # print(subprocess.Popen(["Itype/static/bash.sh",'inst.txt'], shell=True))
