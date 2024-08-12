@@ -29,7 +29,7 @@
                 type="text" placeholder="Enter your Instructions" value="Valuable value" style="height: 80%"></textarea>
             </label>
             <div class="button-group">
-              <button onclick="assemble_code()" >Assemble</button>
+              <button class="button glow-button" onclick="assemble_code()" >Assemble</button>
               <button onclick="reset_editor()" type="reset" style="background-color: #AB0000">Clear</button>
             </div>
           </div>
@@ -49,9 +49,9 @@
             <textarea readonly id="dump-box" class="input__field" type="text" placeholder="Hex dump will appear here"
               value="" style="height: 150px"></textarea>
             <div class="button-group">
-              <button>Copy</button>
-              <button style="background-color: green">Download</button>
-              <button type="reset" style="background-color: #AB0000">clear</button>
+              <button onclick="copy_hex()">Copy</button>
+              <button style="background-color: green" onclick="download_hex()">Download</button>
+              <button type="reset" style="background-color: #AB0000" onclick="clear_hex()">clear</button>
             </div>
           </div>
         </div>

@@ -234,6 +234,29 @@ function assemble_code() {
 }
 
 
+function copy_hex() {
+    const hexDump = document.getElementById('dump-box').value;
+    navigator.clipboard.writeText(hexDump).then(() => {
+        alert("Hex dump copied to clipboard!");
+    });
+}
+
+
+function download_hex() {
+    const hexDump = document.getElementById('dump-box').value;
+    const blob = new Blob([hexDump], { type: 'text/plain' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'hex_dump.txt';
+    link.click();
+}
+
+
+function clear_hex() {
+    document.getElementById('dump-box').value = '';
+}
+
+
 function reset_editor(){
     document.getElementById('editor-text-box').value = ''
 }

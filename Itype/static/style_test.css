@@ -465,8 +465,12 @@ BUTTON {
     border: none;
     border-radius: var(--size-radius);
     font-weight: 900;
+    transition: all 0.2s ease-in-out;
 }
-
+BUTTON:hover {
+    color: rgba(255, 255, 255, 1);
+    box-shadow: 0 5px 15px rgb(117, 191, 252);
+  }
 
 BUTTON[type=reset] {
     background: var(--color-background);
