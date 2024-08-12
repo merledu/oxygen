@@ -429,4 +429,4 @@ document.getElementById('scrollDownBtn').addEventListener('click', () => {
 });
 
 
-setTimeout(hideSplashScreen, 1); // Hide the splash screen after 3 seconds
+setTimeout(hideSplashScreen, 1000); // Hide the splash screen after 3 seconds

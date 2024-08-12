@@ -560,7 +560,7 @@ def parse_instruction(instruction):
             # print(parts[2])
             rs1 = register_to_bin(parts[2],5)
             imm = imm_to_bin(parts[3], 12)
-            if rd == "ERROR" or rs1 == "ERROR" or rs2 == "ERROR":
+            if rd == "ERROR" or rs1 == "ERROR":
                 print("Error: Invalid register value provided.")
                 raise ValueError(f"Unknown register")
             # return '{imm:012}{rs1:05}{funct3:03}{rd:05}{opcode:07}'.format(imm=imm, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
@@ -574,7 +574,7 @@ def parse_instruction(instruction):
             imm = imm_to_bin(parts[2], 12)
             imm_11_5 = imm[:7]
             imm_4_0 = imm[7:]
-            if rd == "ERROR" or rs1 == "ERROR" or rs2 == "ERROR":
+            if rs1 == "ERROR" or rs2 == "ERROR":
                 print("Error: Invalid register value provided.")
                 raise ValueError(f"Unknown register")
             return FORMATS['S'].format(imm_11_5=imm_11_5, rs2=rs2, rs1=rs1, funct3=funct3, imm_4_0=imm_4_0, opcode=opcode)
@@ -582,7 +582,7 @@ def parse_instruction(instruction):
         elif inst_type == 'B':
             rs1 = register_to_bin(parts[1],5)
             rs2 = register_to_bin(parts[2],5)
-            if rd == "ERROR" or rs1 == "ERROR" or rs2 == "ERROR":
+            if rs1 == "ERROR" or rs2 == "ERROR":
                 print("Error: Invalid register value provided.")
                 raise ValueError(f"Unknown register")
             
@@ -607,13 +607,12 @@ def parse_instruction(instruction):
             imm_10_5 = imm[2:8]
             imm_4_1 = imm[8:12]
             imm_11 = imm[1]
-            print (FORMATS['B'].format(imm_12=imm_12, imm_10_5=imm_10_5, rs2=rs2, rs1=rs1, funct3=funct3, imm_4_1=imm_4_1, imm_11=imm_11, opcode=opcode))
             return FORMATS['B'].format(imm_12=imm_12, imm_10_5=imm_10_5, rs2=rs2, rs1=rs1, funct3=funct3, imm_4_1=imm_4_1, imm_11=imm_11, opcode=opcode)
         
         elif inst_type == 'U':
             rd = register_to_bin(parts[1],5)
             imm = imm_to_bin(parts[2], 20)
-            if rd == "ERROR" or rs1 == "ERROR" or rs2 == "ERROR":
+            if rd == "ERROR" :
                 print("Error: Invalid register value provided.")
                 raise ValueError(f"Unknown register")
             return FORMATS['U'].format(imm=imm, rd=rd, opcode=opcode)
@@ -625,7 +624,7 @@ def parse_instruction(instruction):
             imm_10_1 = imm[10:20]
             imm_11 = imm[9]
             imm_19_12 = imm[1:9]
-            if rd == "ERROR" or rs1 == "ERROR" or rs2 == "ERROR":
+            if rd == "ERROR" :
                 print("Error: Invalid register value provided.")
                 raise ValueError(f"Unknown register")
             return FORMATS['J'].format(imm_20=imm_20, imm_10_1=imm_10_1, imm_11=imm_11, imm_19_12=imm_19_12, rd=rd, opcode=opcode)
@@ -652,7 +651,7 @@ def parse_instruction(instruction):
                 else:
                     imm_value = int(immediate)
                     imm = imm_to_bin(str(imm_value),12)
-            if rd == "ERROR" or rs1 == "ERROR" or rs2 == "ERROR":
+            if rd == "ERROR" or rs1 == "ERROR":
                 print("Error: Invalid register value provided.")
                 raise ValueError(f"Unknown register")
             
