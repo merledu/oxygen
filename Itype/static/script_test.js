@@ -198,6 +198,19 @@ function showMainContent() {
     mainContent.classList.add('show');
 }
 
+// Function to create a .txt file from a string input
+function createTxtFile(fileName, content, destinationFolder) {
+    const filePath = path.join(destinationFolder, `${fileName}.txt`);
+
+    fs.writeFile(filePath, content, (err) => {
+        if (err) {
+            console.error('Error writing file:', err);
+            return;
+        }
+        console.log(`File created at ${filePath}`);
+    });
+}
+
 
 function assemble_code() {
     // const code = document.getElementById('editor-container').value;

@@ -74,19 +74,11 @@ class RISCVSimulatorSingle:
         # AND 
         elif funct3 == 0x7 and funct7 == 0x00:
             self.registers[rd] = self.registers[rs1] & self.registers[rs2]
-
-    def execute_m_type(self, instruction):
-    # M-type instructions (e.g., MUL, DIV, REM)
-        funct7 = (instruction >> 25) & 0x7F
-        rs2 = (instruction >> 20) & 0x1F
-        rs1 = (instruction >> 15) & 0x1F
-        funct3 = (instruction >> 12) & 0x7
-        rd = (instruction >> 7) & 0x1F
-        opcode = instruction & 0x7F
-
-        # MUL
         if funct3 == 0x0 and funct7 == 0x01:
             self.registers[rd] = self.registers[rs1] * self.registers[rs2]
+            
+        #MUL
+        
         # MULH
         elif funct3 == 0x1 and funct7 == 0x01:
             self.registers[rd] = (self.registers[rs1] * self.registers[rs2]) >> 32
@@ -108,6 +100,19 @@ class RISCVSimulatorSingle:
         # REMU
         elif funct3 == 0x7 and funct7 == 0x01:
             self.registers[rd] = self.registers[rs1] % self.registers[rs2]
+
+    def execute_m_type(self, instruction):
+        print("i am m type")
+    # M-type instructions (e.g., MUL, DIV, REM)
+        funct7 = (instruction >> 25) & 0x7F
+        rs2 = (instruction >> 20) & 0x1F
+        rs1 = (instruction >> 15) & 0x1F
+        funct3 = (instruction >> 12) & 0x7
+        rd = (instruction >> 7) & 0x1F
+        opcode = instruction & 0x7F
+
+        # MUL
+        
             
     def execute_i_type(self, instruction):
         
