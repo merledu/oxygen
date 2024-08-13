@@ -619,7 +619,10 @@ def parse_instruction(instruction):
         
         elif inst_type == 'J':
             rd = register_to_bin('x1',5)
+            # rd = register_to_bin(parts[1],5)
+            # print("hi")
             imm = imm_to_bin(parts[1], 21)
+            # print("hi")
             imm_20 = imm[0]
             imm_10_1 = imm[10:20]
             imm_11 = imm[9]
