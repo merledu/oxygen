@@ -281,20 +281,33 @@ def replace_labels_with_immediates(instructions):
             if not line:
                 continue
         if line[0].lower()=='b':
-            parts = line.split(',')
+            parts = re.split(r'\s|,', line.strip())
+            while('' in parts):
+                parts.remove('')
+            print("in branch",parts)
             label = parts[-1].strip()
             if label in labels:
                 immediate = labels[label] - address
-                new_line = f"{parts[0]},{parts[1]},{immediate}"
+                new_line = f"{parts[0]},{parts[1]},{parts[2]},{immediate}"
                 result.append(new_line)
-        elif line[0].lower()=='j':
-            parts = line.split(' ')
+        elif line[0:3]=='jal':
+            parts = re.split(r'\s|,', line.strip())
+            while('' in parts):
+                parts.remove('')
+            label = parts[-1].strip()
+            if (label in labels):
+                immediate = labels[label]-address
+                new_line = f"{parts[0]} {parts[1]} {immediate}"
+                result.append(new_line)
+        elif line[0]=='j':
+            parts = re.split(r'\s|,', line.strip())
+            while('' in parts):
+                parts.remove('')
             label = parts[-1].strip()
             if (label in labels):
                 immediate = labels[label]-address
                 new_line = f"{parts[0]} {immediate}"
                 result.append(new_line)
-                
             else:
                 result.append(line)
         else:
@@ -618,6 +631,7 @@ def parse_instruction(instruction):
             return FORMATS['U'].format(imm=imm, rd=rd, opcode=opcode)
         
         elif inst_type == 'J':
+            print(parts)
             # rd = register_to_bin('x1',5)
             rd = register_to_bin(parts[1],5)
             # print("hi")
