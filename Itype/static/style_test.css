@@ -63,6 +63,27 @@ BODY {
 }
 
 
+#varient{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+
+#varient-drop{
+    margin-bottom: 14.859px;
+    margin-left: 3px;
+    border-radius: 5px;
+    width: 50%;
+}
+
+
+#assemble-btn{
+    color: white;
+}
+
+
 #splash-screen{
     position: relative;
     width: 100%;
@@ -593,9 +614,28 @@ BUTTON + BUTTON {
 }
 
 
+.notation-select{
+    display: flex;
+    flex-direction: row;
+}
+
+
+#scrollUpBtn{
+    margin-top: 20px;
+}
+
+
+#notation{
+    width: 30%;
+    margin-left: 3px;
+    height: 25px;
+    border-radius: 5px;
+}
+
+
 /* Add a grey background color to dropdown links on hover */
 .dropdown-content a:hover {
-    background-color: #ddd;
+    background-color: #576ae53d;
 }
 
 

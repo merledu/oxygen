@@ -2,7 +2,7 @@ let timer;
 const tabs = document.querySelectorAll('[data-tab-target]')
 const tabContents = document.querySelectorAll('[data-tab-content]')
 
-let reg_value = [];
+let reg_value = new Array(32).fill(0)
 let f_reg_value = [];
 let memorydic = {};
 let pc = 0;
@@ -281,6 +281,7 @@ function populate_Decoder_Table(code,hex,baseins){
 
 
 function update_Register_Values(data, isHex='true') {
+    console.log(data);
     data.forEach((value, index) => {
         const formattedValue = isHex ? `0x${(value >>> 0).toString(16).padStart(8, '0')}` : value.toString(10);
         document.getElementById(`reg-${index}`).innerText = formattedValue;
@@ -297,6 +298,7 @@ function update_FRegister_Values(data, isHex='true') {
 
 function changeNotation(notation) {
     isHex = notation === 'hex';
+    console.log("check reg",reg_value);
     populate_Memory_Table(memorydic, isHex);
     update_Register_Values(reg_value, isHex);
     update_FRegister_Values(f_reg_value, isHex);

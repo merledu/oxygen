@@ -29,7 +29,7 @@
                 type="text" placeholder="Enter your Instructions" value="Valuable value" style="height: 80%"></textarea>
             </label>
             <div class="button-group">
-              <a href="#decoder"><button class="button glow-button" onclick="assemble_code()" >Assemble</button></a>
+              <a href="#decoder"><button id = 'assemble-btn' class="button glow-button" onclick="assemble_code()" >Assemble</button></a>
               <button onclick="reset_editor()" class="reset-button">Clear</button>
             </div>
           </div>
@@ -38,11 +38,13 @@
         <div id="dump-config">
           <div id="config" class="card card--inverted">
             <h2>Configration</h2>
-            <label for="dog-names">Varient : </label>
-            <select name="dog-names" id="dog-names">
-              <option value="rigatoni">RV32</option>
-              <option value="dave">RV64</option>
-            </select>
+            <div id = 'varient'>
+              <label for="Variant"><h3>Varient : </h3></label>
+              <select name="Choose Varient" id="varient-drop">
+                <option value="RV32">RV32</option>
+                <option value="RV64">RV64</option>
+              </select>
+            </div>
           </div>
           <div id="Dump-div" class="card card--inverted">
             <h2>Hex Dump</h2>
@@ -87,7 +89,7 @@
         <div id="regmem" class="card card--inverted">
           <div id= 'regmem-buttons'>
             <div class="notation-select">
-              <label for="notation">Notation:</label>
+              <label for="notation"><h3>Notation  : </h3></label>
               <select id="notation" onchange="changeNotation(this.value)">
                 <option value="hex">Hex</option>
                 <option value="decimal">Decimal</option>
@@ -100,7 +102,7 @@
                 </button>
                 <div class="dropdown-content">
                   <li class="nav-item" data-tab-target="#ftype-registers"><a href='#ftype-registers'>F-type Registers</a></li>
-                  <li data-tab-target="#registers" class="nav-item">itype-registers</li>
+                  <li data-tab-target="#registers" class="nav-item"><a href='#registers'>I-type Registers</a></li>
                 </div>
               </div>
               <div class="dropdown">
