@@ -249,8 +249,6 @@ PSEUDO_INSTRUCTION_SET = {
 def replace_labels_with_immediates(instructions):
     # Split the instructions into a list of lines
     lines = instructions.split('\n')
-    # print(lines)
-    # First pass: Identify labels and their addresses
     labels = {}
     address = 0
     for line in lines:
@@ -260,11 +258,8 @@ def replace_labels_with_immediates(instructions):
         if ':' in line:
             label = line.split(':')[0].strip()
             labels[label] = address
-            print(label)
         else:
-            print(address , " " , line)
             address += 4
-            print(labels)
             
             
 
@@ -284,7 +279,6 @@ def replace_labels_with_immediates(instructions):
             parts = re.split(r'\s|,', line.strip())
             while('' in parts):
                 parts.remove('')
-            print("in branch",parts)
             label = parts[-1].strip()
             if label in labels:
                 immediate = labels[label] - address
@@ -354,11 +348,15 @@ def register_to_bin(register, bits):
 
 def imm_to_bin(imm, length):
     """Convert immediate value to binary representation of given length"""
-    x = eval(imm)
-    value = int(x)
-    if value < 0:
-        value = (1 << length) + value
-    return format(value, f'0{length}b')
+    try:
+        x = eval(imm)
+        value = int(x)
+        if value < 0:
+            value = (1 << length) + value
+        return format(value, f'0{length}b')
+
+    except Exception as e:
+        raise InstructionError("Invalid Immidiate provided")
 
 
 def parse_instruction(instruction):
@@ -367,16 +365,12 @@ def parse_instruction(instruction):
         parts = re.split(r'\s|,', instruction.strip())
         while('' in parts):
             parts.remove('')
-        # print("after remove : " ,parts)
+        
         inst_name = parts[0]
         print(parts)
-        # print (inst_name)
+        
         if inst_name in PSEUDO_INSTRUCTION_SET:
-            
             base_inst = PSEUDO_INSTRUCTION_SET[inst_name]
-            # print(base_inst)
-            # print(inst_name[0])
-            
             if (inst_name == 'nop'):
                 return parse_instruction(base_inst)
             elif(inst_name[0] == 'b'):
@@ -554,7 +548,7 @@ def parse_instruction(instruction):
                 imm4=imm[7]
                 imm11=imm[0]
                 return FORMATS['CJ'].format(funct3=funct3_2,jump_target11=imm11,jump_target4=imm4,jump_target9_8=imm9_8,jump_target10=imm10,jump_target6=imm6,jump_target7=imm7,jump_target3_1=imm3_1,jump_target5=imm5,opcode=opcode)
-        # print(inst_name)
+        
         opcode, funct3, funct7, inst_type = INSTRUCTION_SET[inst_name]
         
         if inst_type == 'R':
@@ -568,16 +562,12 @@ def parse_instruction(instruction):
             return FORMATS['R'].format(funct7=funct7, rs2=rs2, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
         
         elif inst_type == 'I':
-            # print(parts)
             rd = register_to_bin(parts[1],5)
-            # print(parts[2])
             rs1 = register_to_bin(parts[2],5)
             imm = imm_to_bin(parts[3], 12)
             if rd == "ERROR" or rs1 == "ERROR":
                 print("Error: Invalid register value provided.")
                 raise ValueError(f"Unknown register")
-            # return '{imm:012}{rs1:05}{funct3:03}{rd:05}{opcode:07}'.format(imm=imm, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
-            # print (FORMATS['I'].format(imm=imm, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode))
             return FORMATS['I'].format(imm=imm, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
         
         
@@ -631,12 +621,8 @@ def parse_instruction(instruction):
             return FORMATS['U'].format(imm=imm, rd=rd, opcode=opcode)
         
         elif inst_type == 'J':
-            print(parts)
-            # rd = register_to_bin('x1',5)
             rd = register_to_bin(parts[1],5)
-            # print("hi")
             imm = imm_to_bin(parts[2], 21)
-            # print("hi")
             imm_20 = imm[0]
             imm_10_1 = imm[10:20]
             imm_11 = imm[9]
@@ -651,7 +637,6 @@ def parse_instruction(instruction):
             
             if (len(parts) == 3):
                 offset_base_str = parts[2]
-                # print(offset_base_str)
                 match_brackets = re.match(r'^([^(]+)\(([^)]+)\)$', offset_base_str)
                 if match_brackets:
                     imm = imm_to_bin(int(match_brackets.group(1),16),12)
@@ -683,7 +668,6 @@ def parse_instruction(instruction):
 
 def convert_to_hex(bin_str):
     """Convert binary string to hexadecimal"""
-    # print(bin_str)
     hex_str = hex(int(bin_str, 2))[2:].zfill(8)
     return hex_str
 
@@ -697,12 +681,6 @@ def main(instructions_str):
     instructions = instructions_str.lower().splitlines()
     while '' in instructions:
         instructions.remove('')
-    
-    # if ('(' or ')' in instructions):
-    #     print(instructions)
-    #     instructions.replace('(', ' ')
-    #     instructions.replace(')', ' ')
-    
     hex_lines = []
     for instruction in instructions:
         
@@ -726,14 +704,8 @@ def checkpsudo (instructions_str):
         while('' in parts):
             parts.remove('')
         inst_name = parts[0]
-        # print("parts in check " ,parts)
-        # print (inst_name)
         if inst_name in PSEUDO_INSTRUCTION_SET:
-            
             base_inst = PSEUDO_INSTRUCTION_SET[inst_name]
-            # print(base_inst)
-            # print(inst_name[0])
-            
             if (inst_name == 'nop'):
                 retinstructions.append(base_inst)
             elif(inst_name[0] == 'b'):

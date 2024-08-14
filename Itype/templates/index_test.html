@@ -29,8 +29,8 @@
                 type="text" placeholder="Enter your Instructions" value="Valuable value" style="height: 80%"></textarea>
             </label>
             <div class="button-group">
-              <button class="button glow-button" onclick="assemble_code()" >Assemble</button>
-              <button onclick="reset_editor()" type="reset" style="background-color: #AB0000">Clear</button>
+              <a href="#decoder"><button class="button glow-button" onclick="assemble_code()" >Assemble</button></a>
+              <button onclick="reset_editor()" class="reset-button">Clear</button>
             </div>
           </div>
         </div>
@@ -50,8 +50,8 @@
               value="" style="height: 150px"></textarea>
             <div class="button-group">
               <button onclick="copy_hex()">Copy</button>
-              <button style="background-color: green" onclick="download_hex()">Download</button>
-              <button type="reset" style="background-color: #AB0000" onclick="clear_hex()">clear</button>
+              <button class="run-run-button" onclick="download_hex()">Download</button>
+              <button class="reset-button" onclick="clear_hex()">clear</button>
             </div>
           </div>
         </div>
@@ -59,9 +59,9 @@
       <div id="decoder">
         <div id="tablediv" class="card card--inverted">
           <div class="run-button">
-            <button class="assemble-button btn btn-primary" onclick="run_Code()">Run</button>
-            <button class="assemble-button btn btn-primary" onclick="stepInstruction()">Step</button>
-            <button class="assemble-button btn btn-primary" onclick="reset_Registers()">Reset</button>
+            <button class="run-run-button" onclick="run_Code()">Run</button>
+            <button class="step-button" onclick="stepInstruction()">Step</button>
+            <button class="reset-button" onclick="reset_Registers()">Reset</button>
           </div>
           <table id="decodetable">
             <thead>
@@ -99,7 +99,7 @@
                   <i class="fa fa-caret-down"></i>
                 </button>
                 <div class="dropdown-content">
-                  <li class="nav-item" data-tab-target="#ftype-registers">ftype-registers</li>
+                  <li class="nav-item" data-tab-target="#ftype-registers"><a href='#ftype-registers'>F-type Registers</a></li>
                   <li data-tab-target="#registers" class="nav-item">itype-registers</li>
                 </div>
               </div>

@@ -151,38 +151,67 @@ class RISCVSimulator:
         elif opcode == 0x67:
             self.registers[rd] = self.pc + 4
             self.pc = (self.registers[rs1] + self.sign_extend(imm, 12)) & 0xFFFFFFFE
-        # LB
+        #old 
+        # # LB
+        # elif funct3 == 0x0 and opcode == 0x3:
+        #     address = self.registers[rs1] + self.sign_extend(imm, 12)
+        #     self.registers[rd] = self.sign_extend(self.memory.get(address, 0), 8)
+
+        # # LH
+        # elif funct3 == 0x1 and opcode == 0x3:
+        #     address = self.registers[rs1] + self.sign_extend(imm, 12)
+        #     self.registers[rd] = self.sign_extend((self.memory.get(address, 0) << 8 | self.memory.get(address + 1, 0)), 16)
+
+        # # LW
+        # elif funct3 == 0x2 and opcode == 0x3:
+        #     address = self.registers[rs1] + self.sign_extend(imm, 12)
+        #     self.registers[rd] = (
+        #         self.memory.get(address, 0) << 24 |
+        #         self.memory.get(address + 1, 0) << 16 |
+        #         self.memory.get(address + 2, 0) << 8 |
+        #         self.memory.get(address + 3, 0)
+        #     )
+
+        # # LBU
+        # elif funct3 == 0x4 and opcode == 0x3:
+        #     address = self.registers[rs1] + self.sign_extend(imm, 12)
+        #     self.registers[rd] = self.memory.get(address, 0)
+
+        # # LHU
+        # elif funct3 == 0x5 and opcode == 0x3:
+        #     address = self.registers[rs1] + self.sign_extend(imm, 12)
+        #     self.registers[rd] = self.memory.get(address, 0) << 8 | self.memory.get(address + 1, 0)
         # LB
         elif funct3 == 0x0 and opcode == 0x3:
+            print("hello")
             address = self.registers[rs1] + self.sign_extend(imm, 12)
-            self.registers[rd] = self.sign_extend(self.memory.get(address, 0), 8)
+            self.registers[rd] = self.sign_extend(self.memory.get((address), 0), 8)
 
         # LH
         elif funct3 == 0x1 and opcode == 0x3:
             address = self.registers[rs1] + self.sign_extend(imm, 12)
-            self.registers[rd] = self.sign_extend((self.memory.get(address, 0) << 8 | self.memory.get(address + 1, 0)), 16)
+            self.registers[rd] = self.sign_extend((self.memory.get((address), 0) | self.memory.get((address + 1), 0)<<8),16)
 
         # LW
         elif funct3 == 0x2 and opcode == 0x3:
             address = self.registers[rs1] + self.sign_extend(imm, 12)
+            print("check mem",self.memory.get((address), 0))
             self.registers[rd] = (
-                self.memory.get(address, 0) << 24 |
-                self.memory.get(address + 1, 0) << 16 |
-                self.memory.get(address + 2, 0) << 8 |
-                self.memory.get(address + 3, 0)
+                self.memory.get((address), 0) |
+                self.memory.get((address+ 1), 0) << 8 |
+                self.memory.get((address + 2), 0) << 16 |
+                self.memory.get((address + 3), 0) << 24
             )
-
+            
         # LBU
         elif funct3 == 0x4 and opcode == 0x3:
             address = self.registers[rs1] + self.sign_extend(imm, 12)
-            self.registers[rd] = self.memory.get(address, 0)
+            self.registers[rd] = self.memory.get((address, 0))
 
         # LHU
         elif funct3 == 0x5 and opcode == 0x3:
             address = self.registers[rs1] + self.sign_extend(imm, 12)
-            self.registers[rd] = self.memory.get(address, 0) << 8 | self.memory.get(address + 1, 0)
-            
-            
+            self.registers[rd] = self.sign_extend(self.memory.get((address, 0))| self.memory.get((address + 1) << 8, 0),16)
             
     def execute_s_type(self, instruction):
                 

@@ -7,7 +7,11 @@ BODY, HTML {
     overflow: auto;
     overflow-x: hidden;
     font-family: Arial, sans-serif;
+    scroll-behavior: smooth;
     /* background-color: #212121; */
+}
+.run-run-button{
+    background-color: green;
 }
 
 
@@ -87,7 +91,10 @@ BODY {
     -ms-overflow-style: none;  /* IE and Edge */
     scrollbar-width: none;  /* Firefox */
 }
-
+a{
+    color: rgba(255, 255, 255, 0);
+    background-color: rgba(255, 255, 255, 0);
+}
 
 .run-button {
     display: flex;
@@ -117,11 +124,9 @@ BODY {
 }
 
 
-
-
 .highlight {
     background-color: rgba(107, 99, 212, 0.394);
-  }
+}
 
 
 #header {
@@ -467,10 +472,30 @@ BUTTON {
     font-weight: 900;
     transition: all 0.2s ease-in-out;
 }
-BUTTON:hover {
-    color: rgba(255, 255, 255, 1);
-    box-shadow: 0 5px 15px rgb(117, 191, 252);
-  }
+
+button:hover{
+    box-shadow: 0px 0px 15px rgb(102, 102, 214)
+}
+
+.run-run-button:hover {
+    --bg-button : green;
+    box-shadow: 0px 0px 15px var(--bg-button)
+    /* rgb(117, 191, 252); */
+}
+
+
+
+.reset-button{
+    background-color: #AB0000;
+}
+
+
+.reset-button:hover{
+    --bg-button : red;
+    box-shadow: 0px 0px 15px var(--bg-button)
+
+}
+
 
 BUTTON[type=reset] {
     background: var(--color-background);
@@ -560,7 +585,7 @@ BUTTON + BUTTON {
 /* Links inside the dropdown */
 .dropdown-content a {
     float: none;
-    color: black;
+    color: rgb(255, 255, 255);
     padding: 12px 16px;
     text-decoration: none;
     display: block;

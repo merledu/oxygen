@@ -155,7 +155,6 @@ class RISCVSimulatorSingle:
             self.registers[rd] = self.pc + 4
             self.pc = (self.registers[rs1] + self.sign_extend(imm, 12)) & 0xFFFFFFFE
         # LB
-        # LB
         elif funct3 == 0x0 and opcode == 0x3:
             print("hello")
             address = self.registers[rs1] + self.sign_extend(imm, 12)
@@ -169,26 +168,22 @@ class RISCVSimulatorSingle:
         # LW
         elif funct3 == 0x2 and opcode == 0x3:
             address = self.registers[rs1] + self.sign_extend(imm, 12)
-            print(rd)
-            print(self.sign_extend(imm, 12))
-            print(self.memory)
-            print(self.memory.get(address, 0) << 24 )
             self.registers[rd] = (
                 self.memory.get(str(address), 0) |
                 self.memory.get(str(address+ 1), 0) << 8 |
                 self.memory.get(str(address + 2), 0) << 16 |
                 self.memory.get(str(address + 3), 0) << 24
             )
-
+            
         # LBU
         elif funct3 == 0x4 and opcode == 0x3:
             address = self.registers[rs1] + self.sign_extend(imm, 12)
-            self.registers[rd] = self.memory.get(address, 0)
+            self.registers[rd] = self.memory.get(str(address, 0))
 
         # LHU
         elif funct3 == 0x5 and opcode == 0x3:
             address = self.registers[rs1] + self.sign_extend(imm, 12)
-            self.registers[rd] = self.memory.get(address, 0) << 8 | self.memory.get(address + 1, 0)
+            self.registers[rd] = self.sign_extend(self.memory.get(str(address, 0))| self.memory.get(str(address + 1) << 8, 0),16)
             
             
             
