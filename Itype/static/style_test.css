@@ -84,7 +84,7 @@ BODY {
 }
 
 
-#splash-screen{
+#splash_screen{
     position: relative;
     width: 100%;
     height: 100vh;
@@ -92,6 +92,20 @@ BODY {
     justify-content: center;
     align-items: center;
     background-color: black;
+}
+
+
+
+#splash_screen.fade-out {
+    animation: fade-out 1s forwards;
+}
+
+
+@keyframes fade-out {
+    to {
+        opacity: 0;
+        visibility: hidden;
+    }
 }
 
 
@@ -253,19 +267,6 @@ CANVAS {
 .show {
     opacity: 1;
     visibility: visible;
-}
-
-
-#splash-screen.fade-out {
-    animation: fade-out 1s forwards;
-}
-
-
-@keyframes fade-out {
-    to {
-        opacity: 0;
-        visibility: hidden;
-    }
 }
 
 

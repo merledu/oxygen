@@ -1,26 +1,25 @@
 let timer;
-const tabs = document.querySelectorAll('[data-tab-target]')
-const tabContents = document.querySelectorAll('[data-tab-content]')
-
-let reg_value = new Array(32).fill(0)
+let reg_value = new Array(32).fill(0);
 let f_reg_value = [];
 let memorydic = {};
 let pc = 0;
 let memoryAddress = 0; 
 let memoryValues = {}; 
 let isHex = 'true';
+const tabs = document.querySelectorAll('[data-tab-target]');
+const tabContents = document.querySelectorAll('[data-tab-content]');
 
 tabs.forEach(tab => {
   tab.addEventListener('click', () => {
-    const target = document.querySelector(tab.dataset.tabTarget)
+    const target = document.querySelector(tab.dataset.tabTarget);
     tabContents.forEach(tabContent => {
-      tabContent.classList.remove('active')
+      tabContent.classList.remove('active');
     })
     tabs.forEach(tab => {
-      tab.classList.remove('active')
+      tab.classList.remove('active');
     })
-    tab.classList.add('active')
-    target.classList.add('active')
+    tab.classList.add('active');
+    target.classList.add('active');
   })
 })
 
@@ -199,8 +198,7 @@ function showMainContent() {
     mainContent.classList.add('show');
 }
 
-setTimeout(hideSplashScreen, 1000);
-// Function to create a .txt file from a string input
+setTimeout(hideSplashScreen, 3000);
 
 
 function assemble_code() {
@@ -275,7 +273,7 @@ function populate_Decoder_Table(code,hex,baseins){
             <td>${originalCode}</td>
         `;
         tableBody.appendChild(row);
-        count = count +1
+        count = count +1;
     });
 }
 
