@@ -32,7 +32,13 @@ class RISCVSimulatorSingle:
         elif opcode == 0x43:  # Mtype
             self.execute_m_type(instruction)
             self.pc+=4
-        elif opcode == 0x7:  # Ftype
+        elif opcode == 0x7:  # Flw
+            self.execute_f_type(instruction)
+            self.pc+=4
+        elif opcode == 0x27:  # Fsw
+            self.execute_f_type(instruction)
+            self.pc+=4
+        elif opcode == 0x53:  # Ftype
             self.execute_f_type(instruction)
             self.pc+=4
     def execute_r_type(self, instruction):
@@ -309,19 +315,19 @@ class RISCVSimulatorSingle:
             print("check2")
             print(self.f_registers)
         # FSW
-        elif opcode == 0x3B and funct3 == 0x2:
+        elif opcode == 0x27 and funct3 == 0x2:
             self.memory[self.registers[rs1] + self.sign_extend(instruction & 0xFFF, 12)] = self.f_registers[rs2]
         # FADD
-        elif opcode == 0x67 and funct7 == 0x00 and funct3 == 0x0:
+        elif opcode == 0x53 and funct7 == 0x00 and funct3 == 0x0:
             self.f_registers[rd] = self.f_registers[rs1] + self.f_registers[rs2]
         # FSUB
-        elif opcode == 0x67 and funct7 == 0x20 and funct3 == 0x0:
+        elif opcode == 0x53 and funct7 == 0x4 and funct3 == 0x0:
             self.f_registers[rd] = self.f_registers[rs1] - self.f_registers[rs2]
         # FMUL
-        elif opcode == 0x67 and funct7 == 0x00 and funct3 == 0x1:
+        elif opcode == 0x53 and funct7 == 0x8 and funct3 == 0x0:
             self.f_registers[rd] = self.f_registers[rs1] * self.f_registers[rs2]
         # FDIV
-        elif opcode == 0x67 and funct7 == 0x00 and funct3 == 0x2:
+        elif opcode == 0x53 and funct7 == 0xc and funct3 == 0x0:
             self.f_registers[rd] = self.f_registers[rs1] / self.f_registers[rs2]
 
     def sign_extend(self, value, bits):
