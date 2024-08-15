@@ -7,7 +7,7 @@ __pycache__/
 *.so
 
 #GCC tool chain
-riscv_32
+tools
 
 # Distribution / packaging
 .Python
