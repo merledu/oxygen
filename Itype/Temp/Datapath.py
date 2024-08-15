@@ -76,27 +76,17 @@ class RISCVSimulator:
         # AND 
         elif funct3 == 0x7 and funct7 == 0x00:
             self.registers[rd] = self.registers[rs1] & self.registers[rs2]
-
-    def execute_m_type(self, instruction):
-    # M-type instructions (e.g., MUL, DIV, REM)
-        funct7 = (instruction >> 25) & 0x7F
-        rs2 = (instruction >> 20) & 0x1F
-        rs1 = (instruction >> 15) & 0x1F
-        funct3 = (instruction >> 12) & 0x7
-        rd = (instruction >> 7) & 0x1F
-        opcode = instruction & 0x7F
-
         # MUL
-        if funct3 == 0x0 and funct7 == 0x01:
+        elif funct3 == 0x0 and funct7 == 0x01:
             self.registers[rd] = self.registers[rs1] * self.registers[rs2]
         # MULH
         elif funct3 == 0x1 and funct7 == 0x01:
             self.registers[rd] = (self.registers[rs1] * self.registers[rs2]) >> 32
         # MULHU
-        elif funct3 == 0x2 and funct7 == 0x01:
-            self.registers[rd] = (self.registers[rs1] * self.registers[rs2]) & 0xFFFFFFFF
-        # MULHSU
         elif funct3 == 0x3 and funct7 == 0x01:
+            self.registers[rd] = (self.registers[rs1] * self.registers[rs2]) & 0xFFFFFFFF >> 32
+        # MULHSU
+        elif funct3 == 0x2 and funct7 == 0x01:
             self.registers[rd] = (self.registers[rs1] * self.sign_extend(self.registers[rs2], 32)) >> 32
         # DIV
         elif funct3 == 0x4 and funct7 == 0x01:
@@ -110,6 +100,16 @@ class RISCVSimulator:
         # REMU
         elif funct3 == 0x7 and funct7 == 0x01:
             self.registers[rd] = self.registers[rs1] % self.registers[rs2]
+
+    # def execute_m_type(self, instruction):
+    # # M-type instructions (e.g., MUL, DIV, REM)
+    #     funct7 = (instruction >> 25) & 0x7F
+    #     rs2 = (instruction >> 20) & 0x1F
+    #     rs1 = (instruction >> 15) & 0x1F
+    #     funct3 = (instruction >> 12) & 0x7
+    #     rd = (instruction >> 7) & 0x1F
+    #     opcode = instruction & 0x7F
+
             
     def execute_i_type(self, instruction):
         
