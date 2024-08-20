@@ -6,10 +6,40 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Oxygen Simulator</title>
-    <!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"> -->
+    {% comment %} <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"> {% endcomment %}
     <link rel="stylesheet" href="{% static 'style_test.css' %}">
   </head>
-  <body style = 'background-image: {% static 'p3.jpg' %}'>
+  <body>
+    {% comment %} <section>
+      <div class="square_box box_three"></div>
+      <div class="square_box box_four"></div>
+      <div class="container mt-5">
+        <div class="row">
+          <div class="col-sm-12">
+            <div class="alert fade alert-simple alert-warning alert-dismissible text-left font__family-montserrat font__size-16 font__weight-light brk-library-rendered rendered show" role="alert" data-brk-library="component__alert">
+              <button type="button" class="close font__size-18" data-dismiss="alert">
+                      <span aria-hidden="true">
+                        <i class="fa fa-times warning"></i>
+                      </span>
+                      <span class="sr-only">Close</span>
+                    </button>
+              <i class="start-icon fa fa-exclamation-triangle faa-flash animated"></i>
+              <strong class="font__weight-semibold">Warning!</strong> Better check yourself, you're not looking too good.
+            </div>
+          </div>
+          <div class="col-sm-12">
+            <div class="alert fade alert-simple alert-primary alert-dismissible text-left font__family-montserrat font__size-16 font__weight-light brk-library-rendered rendered show" role="alert" data-brk-library="component__alert">
+              <button type="button" class="close font__size-18" data-dismiss="alert">
+                      <span  aria-hidden="true"><i class="fa fa-times alertprimary"></i></span>
+                      <span class="sr-only">Close</span>
+                    </button>
+              <i class="start-icon fa fa-thumbs-up faa-bounce animated"></i>
+              <strong class="font__weight-semibold">Well done!</strong> You successfullyread this important.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section> {% endcomment %}
     <div id="splash_screen">
       <div>
         <canvas id="c"></canvas>
