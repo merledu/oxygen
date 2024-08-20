@@ -1,5 +1,5 @@
 # Dependencies
-sudo apt install device-tree-compiler libboost-regex-dev libboost-system-dev
+sudo apt install device-tree-compiler libboost-regex-dev libboost-system-dev python3.10
 
 
 # PATHS
