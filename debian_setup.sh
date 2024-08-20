@@ -31,7 +31,7 @@ mv riscv $OXYGEN_TOOLS/riscv64-gnu-toolchain
 cd "$OXYGEN_SUBMODULES/riscv-isa-sim"
 mkdir build
 cd build
-../configure --prefix=$SPIKE --enable-commitlog
+../configure --prefix=$SPIKE
 make -j `nproc`
 make install
 cd $OXYGEN_ROOT
