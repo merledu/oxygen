@@ -5,9 +5,9 @@ from pathlib import Path
 import sys
 from django.http import JsonResponse
 from django.shortcuts import render
-from .Temp import Datapath as DP
-from .Temp import Datapath_single as DPS  
-from .Temp import interperator as IP
+from Temp import Datapath as DP
+from Temp import Datapath_single as DPS  
+from Temp import interperator as IP
 from django.views.decorators.csrf import csrf_exempt
 import subprocess
 
@@ -16,11 +16,10 @@ class Wrong_input_Error(Exception):
     pass
 
 
-@csrf_exempt
 def editor(request):
     return render(request,'index.html')
 
-@csrf_exempt
+
 def testpage(request):
     return render(request,'index_test.html')
 
@@ -37,7 +36,6 @@ def create_txt_file(file_name, content, destination_folder):
         print(f"Error writing file: {e}")
 
 
-@csrf_exempt
 def assemble_code(request):
     if request.method == "POST":
         data = json.loads(request.body)
@@ -63,7 +61,6 @@ def extract_first_error_line(output):
     lines = output.splitlines()
     for line in lines:
         if error_pattern.match(line):
-            
             print(line.split(':', 1)[1].strip())
             return line.split(':', 1)[1].strip()
     return None  
@@ -78,7 +75,6 @@ def get_hex_gcc(code):
     result = subprocess.run(["Itype/tools/riscv_32/bin/bash.sh",'ins.txt'], capture_output=True, text=True)
     if ('Error' in result.stderr):
         raise Wrong_input_Error(extract_first_error_line(result.stderr))
-        
     pc_hex = extract_pc_hex('Itype/tools/riscv_32/bin/ins_disassembly.S')
     for i in pc_hex:
         hex_lines.append('0x'+pc_hex[i])
@@ -86,20 +82,20 @@ def get_hex_gcc(code):
     return hex_output
     
 
-
 def extract_pc_hex(filename):
+    file = None
     pc_hex_dict = {}
-    with open(filename, 'r') as file:
-        for line in file:
-            parts = line.split(':')
-            if len(parts) > 1 and parts[1].strip(): 
-                pc, hex_value = parts[0].strip(), parts[1].split()[0]
-                if (pc!='ins'):
-                    pc_hex_dict[pc] = hex_value    
+    with open(filename, 'r') as file_opn:
+        file = file_opn
+    for line in file:
+        parts = line.split(':')
+        if len(parts) > 1 and parts[1].strip(): 
+            pc, hex_value = parts[0].strip(), parts[1].split()[0]
+            if (pc!='ins'):
+                pc_hex_dict[pc] = hex_value    
     return pc_hex_dict
 
 
-@csrf_exempt
 def step_code(request):
     if request.method == "POST":
         print("check")
@@ -126,7 +122,6 @@ def step_code(request):
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
-@csrf_exempt
 def run_code(request):
     if request.method == "POST":
         data = json.loads(request.body)
@@ -145,7 +140,6 @@ def run_code(request):
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
-@csrf_exempt
 def reset(request):
     if request.method == "POST":
         execution.memory={}

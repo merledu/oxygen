@@ -205,7 +205,7 @@ function assemble_code() {
     // const code = document.getElementById('editor-container').value;
     code = document.getElementById('editor-text-box').value
     console.log(code)
-    axios.post('assemble-code', { code: code })
+    axios.post('gen-hex/assemble-code', { code: code })
             .then(response => {
                 if(response.data.success){
                     const hex = response.data.hex;
