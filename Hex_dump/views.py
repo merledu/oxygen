@@ -2,21 +2,21 @@ import json
 import re
 import json
 import os
-from pathlib import Path
-import sys
 from django.http import JsonResponse
-from django.shortcuts import render
 from Temp import Datapath as DP
 from Temp import Datapath_single as DPS  
 from Temp import interperator as IP
-from django.views.decorators.csrf import csrf_exempt
 import subprocess
 
-execution = DPS.RISCVSimulatorSingle()
+
 
 
 class Wrong_input_Error(Exception):
     pass
+
+
+execution = DPS.RISCVSimulatorSingle()
+
 
 def assemble_code(request):
     if request.method == "POST":
@@ -48,6 +48,7 @@ def create_txt_file(file_name, content, destination_folder):
         print(f"File created at {file_path}")
     except Exception as e:
         print(f"Error writing file: {e}")
+
 
 def get_hex_gcc(code):
     hex_lines = []
