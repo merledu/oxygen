@@ -9,8 +9,6 @@ from Temp import interperator as IP
 import subprocess
 
 
-
-
 class Wrong_input_Error(Exception):
     pass
 
