@@ -2,30 +2,32 @@ import re
 import json
 import os
 from pathlib import Path
+import sys
 from django.http import JsonResponse
 from django.shortcuts import render
-from .Temp import Datapath as DP
-from .Temp import Datapath_single as DPS  
-from .Temp import interperator as IP
+from Temp import Datapath as DP
+from Temp import Datapath_single as DPS  
+from Temp import interperator as IP
 from django.views.decorators.csrf import csrf_exempt
 import subprocess
 
 execution = DPS.RISCVSimulatorSingle()
+class Wrong_input_Error(Exception):
+    pass
 
 
-@csrf_exempt
 def editor(request):
     return render(request,'index.html')
 
+
+def testpage(request):
+    return render(request,'index_test.html')
+
+
 def create_txt_file(file_name, content, destination_folder):
-    # Ensure the destination folder exists
     if not os.path.exists(destination_folder):
         os.makedirs(destination_folder)
-    
-    # Construct the full file path
     file_path = os.path.join(destination_folder, f"{file_name}.txt")
-    
-    # Write the content to the file
     try:
         with open(file_path, 'w') as file:
             file.write(content)
@@ -33,14 +35,15 @@ def create_txt_file(file_name, content, destination_folder):
     except Exception as e:
         print(f"Error writing file: {e}")
 
-@csrf_exempt
+
 def assemble_code(request):
     if request.method == "POST":
         data = json.loads(request.body)
         code = data.get('code', '')
         try:
-            hex_output = IP.main(code)
+            # hex_output = IP.main(code)
             sudo_or_base  = IP.checkpsudo(code)
+            hex_output = get_hex_gcc(code)
             return JsonResponse({'hex': hex_output ,
                              'is_sudo' : sudo_or_base,
                              'success': True}, )
@@ -48,23 +51,36 @@ def assemble_code(request):
             return JsonResponse({'success': False, 'error': str(e)})
         except ValueError as e:
             return JsonResponse({'success': False, 'error': str(e)})
-            # file_name = "ins"
-            # destination_folder = "Itype/riscv_32/bin/"
-            # create_txt_file(file_name, code, destination_folder)
-            # file_name = 'ins.txt'
-            # subprocess.run(f"./Itype/riscv_32/bin/bash.sh {file_name}", shell=True)
-            # pc_hex = extract_pc_hex('Itype/riscv_32/bin/ins_disassembly.S')
-            # print(pc_hex)
-        
-        
-        # print(subprocess.Popen(["Itype/static/bash.sh",'inst.txt'], shell=True))
-        
-        return JsonResponse({'hex': hex_output ,
-                             'is_sudo' : sudo_or_base,
-                             }, )
+        except Wrong_input_Error as e:
+            return JsonResponse({'success': False, 'error': str(e)})
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
+def extract_first_error_line(output):
+    error_pattern = re.compile(r"^(.*?Error:.*)$")
+    lines = output.splitlines()
+    for line in lines:
+        if error_pattern.match(line):
+            print(line.split(':', 1)[1].strip())
+            return line.split(':', 1)[1].strip()
+    return None  
+
+
+def get_hex_gcc(code):
+    hex_lines = []
+    file_name = "ins"
+    destination_folder = "Itype/tools/riscv_32/bin/"
+    create_txt_file(file_name, code, destination_folder)
+    file_name = 'ins.txt'
+    result = subprocess.run(["Itype/tools/riscv_32/bin/bash.sh",'ins.txt'], capture_output=True, text=True)
+    if ('Error' in result.stderr):
+        raise Wrong_input_Error(extract_first_error_line(result.stderr))
+    pc_hex = extract_pc_hex('Itype/tools/riscv_32/bin/ins_disassembly.S')
+    for i in pc_hex:
+        hex_lines.append('0x'+pc_hex[i])
+    hex_output = '\n'.join(hex_lines)
+    return hex_output
+    
 
 def extract_pc_hex(filename):
     pc_hex_dict = {}
@@ -77,7 +93,7 @@ def extract_pc_hex(filename):
                     pc_hex_dict[pc] = hex_value    
     return pc_hex_dict
 
-@csrf_exempt
+
 def step_code(request):
     if request.method == "POST":
         print("check")
@@ -103,15 +119,12 @@ def step_code(request):
                              'f_reg': Fregister},)
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
-def testpage(request):
-    return render(request,'index_test.html')
 
-@csrf_exempt
 def run_code(request):
     if request.method == "POST":
         data = json.loads(request.body)
         code = data.get('code', '')
-        hex_output = IP.main(code)
+        hex_output = get_hex_gcc(code)
         sudo_or_base  = IP.checkpsudo(code)
         execution2 = DP.RISCVSimulator()
         registers = execution2.run(hex_output)
@@ -125,7 +138,6 @@ def run_code(request):
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
-@csrf_exempt
 def reset(request):
     if request.method == "POST":
         execution.memory={}

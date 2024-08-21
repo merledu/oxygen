@@ -1,26 +1,25 @@
 let timer;
-const tabs = document.querySelectorAll('[data-tab-target]')
-const tabContents = document.querySelectorAll('[data-tab-content]')
-
-let reg_value = [];
+let reg_value = new Array(32).fill(0);
 let f_reg_value = [];
 let memorydic = {};
 let pc = 0;
 let memoryAddress = 0; 
 let memoryValues = {}; 
 let isHex = 'true';
+const tabs = document.querySelectorAll('[data-tab-target]');
+const tabContents = document.querySelectorAll('[data-tab-content]');
 
 tabs.forEach(tab => {
   tab.addEventListener('click', () => {
-    const target = document.querySelector(tab.dataset.tabTarget)
+    const target = document.querySelector(tab.dataset.tabTarget);
     tabContents.forEach(tabContent => {
-      tabContent.classList.remove('active')
+      tabContent.classList.remove('active');
     })
     tabs.forEach(tab => {
-      tab.classList.remove('active')
+      tab.classList.remove('active');
     })
-    tab.classList.add('active')
-    target.classList.add('active')
+    tab.classList.add('active');
+    target.classList.add('active');
   })
 })
 
@@ -199,15 +198,14 @@ function showMainContent() {
     mainContent.classList.add('show');
 }
 
-setTimeout(hideSplashScreen, 1000);
-// Function to create a .txt file from a string input
+setTimeout(hideSplashScreen, 3000);
 
 
 function assemble_code() {
     // const code = document.getElementById('editor-container').value;
     code = document.getElementById('editor-text-box').value
     console.log(code)
-    axios.post('assemble-code', { code: code })
+    axios.post('gen-hex/assemble-code', { code: code })
             .then(response => {
                 if(response.data.success){
                     const hex = response.data.hex;
@@ -275,12 +273,13 @@ function populate_Decoder_Table(code,hex,baseins){
             <td>${originalCode}</td>
         `;
         tableBody.appendChild(row);
-        count = count +1
+        count = count +1;
     });
 }
 
 
 function update_Register_Values(data, isHex='true') {
+    console.log(data);
     data.forEach((value, index) => {
         const formattedValue = isHex ? `0x${(value >>> 0).toString(16).padStart(8, '0')}` : value.toString(10);
         document.getElementById(`reg-${index}`).innerText = formattedValue;
@@ -297,6 +296,7 @@ function update_FRegister_Values(data, isHex='true') {
 
 function changeNotation(notation) {
     isHex = notation === 'hex';
+    console.log("check reg",reg_value);
     populate_Memory_Table(memorydic, isHex);
     update_Register_Values(reg_value, isHex);
     update_FRegister_Values(f_reg_value, isHex);

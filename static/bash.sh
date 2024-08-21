@@ -14,10 +14,10 @@ cd Itype/riscv_32/bin
 mv "$1" "${filename}.S"
 
 # Assemble the .S file to produce an object file using RISC-V assembler
-./riscv64-unknown-elf-as -o "${filename}" "${filename}.S"
+riscv32-unknown-elf-as -o "${filename}" "${filename}.S"
 
 # Disassemble the object file to produce a .S disassembly file
-./riscv64-unknown-elf-objdump -d "${filename}" > "${filename}_disassembly.S"
+riscv32-unknown-elf-objdump -d "${filename}" > "${filename}_disassembly.S"
 
 # Return the disassembly file
 echo "Disassembly file created: ${filename}_disassembly.S"

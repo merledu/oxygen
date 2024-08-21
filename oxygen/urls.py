@@ -23,5 +23,6 @@ from Itype.views import *
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('' , include('Itype.urls')),
+    path('gen-hex/' , include(('Hex_dump.urls','Hex_dump'),namespace = 'Hex_dump')),
     
 ]+ static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
