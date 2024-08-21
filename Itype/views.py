@@ -83,16 +83,14 @@ def get_hex_gcc(code):
     
 
 def extract_pc_hex(filename):
-    file = None
     pc_hex_dict = {}
-    with open(filename, 'r') as file_opn:
-        file = file_opn
-    for line in file:
-        parts = line.split(':')
-        if len(parts) > 1 and parts[1].strip(): 
-            pc, hex_value = parts[0].strip(), parts[1].split()[0]
-            if (pc!='ins'):
-                pc_hex_dict[pc] = hex_value    
+    with open(filename, 'r') as file:
+        for line in file:
+            parts = line.split(':')
+            if len(parts) > 1 and parts[1].strip(): 
+                pc, hex_value = parts[0].strip(), parts[1].split()[0]
+                if (pc!='ins'):
+                    pc_hex_dict[pc] = hex_value    
     return pc_hex_dict
 
 
