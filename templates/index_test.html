@@ -255,6 +255,70 @@
           </div>
         </div>
       </div>
+      <div id='datapath'>
+        <div id='stage_table' class="card card--inverted">
+          <table>
+            <thead>
+              <tr>
+                <th>Fetch</th>
+                <th>Decode</th>
+                <th>Execute</th>
+                <th>Memory</th>
+                <th>Write Back</th>
+              </tr>
+            </thead>
+            <tbody id="stageTableBody">
+            </tbody>
+          </table>
+          <div id="stage_Buttons">
+            <button class="run-run-button" onclick="run_Code()">Run</button>
+          </div>
+        </div>
+        <div id="datapath-content">
+          <div id='stats_table' class="card card--inverted">
+            <table>
+              <tbody id="statsTableBody">
+                <tr>
+                  <td>Total instructions</td>
+                  <td id="total_instructions">0</td>
+                </tr>
+                <tr>
+                  <td>Total cycles</td>
+                  <td id="Total_cycles">0</td>
+                </tr>
+                <tr>
+                  <td>ALU Instructions</td>
+                  <td id="ALU_instructions">0</td>
+                </tr>
+                <tr>
+                  <td>Jump Instructions</td>
+                  <td id="Jump_instructions">0</td>
+                </tr>
+                <tr>
+                  <td>Data Transfer Instructions</td>
+                  <td id="Data_transfer">0</td>
+                </tr>
+                <tr>
+                  <td>Data Hazards</td>
+                  <td id="Data_hazards">0</td>
+                </tr>
+                <tr>
+                  <td>Control Hazards</td>
+                  <td id="Control_hazards">0</td>
+                </tr>
+                <tr>
+                  <td>Structural Hazards</td>
+                  <td id="Structural_hazards">0</td>
+                </tr>
+                <tr>
+                  <td>Stalls</td>
+                  <td id="Stalls">0</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="{% static 'script_test.js' %}"></script>

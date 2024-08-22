@@ -3,15 +3,53 @@ BODY, HTML {
     margin: 0;
     padding: 0;
     width: 100%;
-    height: 100%;
+    height: 100vh;
     overflow: auto;
     overflow-x: hidden;
     font-family: Arial, sans-serif;
     scroll-behavior: smooth;
     /* background-color: #212121; */
 }
+
+
 .run-run-button{
     background-color: green;
+}
+
+
+#stats_table{
+    align-self: flex-end;
+    width: 30%;
+}
+
+
+#datapath{
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100%;
+    justify-content: space-around;
+}
+
+
+#datapath-content{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+}
+
+
+#stage_Buttons{
+    margin-top: 16px;
+    align-self: center;
+}
+
+
+#stage_table{
+    align-self: center;
+    width: 50%;
+    display: flex;
+    flex-direction: column;
 }
 
 
@@ -272,7 +310,6 @@ CANVAS {
 
 #main-content {
     width: 100%;
-    height: 200vh;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
