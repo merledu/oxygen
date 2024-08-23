@@ -1,4 +1,4 @@
-class RISCVSimulator:
+class RISCVSimulatorSingle:
     def __init__(self):
         self.registers = [0] * 32
         self.pc = 0
@@ -32,7 +32,13 @@ class RISCVSimulator:
         elif opcode == 0x43:  # Mtype
             self.execute_m_type(instruction)
             self.pc+=4
-        elif opcode == 0x67:  # Ftype
+        elif opcode == 0x7:  # Flw
+            self.execute_f_type(instruction)
+            self.pc+=4
+        elif opcode == 0x27:  # Fsw
+            self.execute_f_type(instruction)
+            self.pc+=4
+        elif opcode == 0x53:  # Ftype
             self.execute_f_type(instruction)
             self.pc+=4
     def execute_r_type(self, instruction):
@@ -73,28 +79,20 @@ class RISCVSimulator:
             self.registers[rd] = self.registers[rs1] | self.registers[rs2]
         # AND 
         elif funct3 == 0x7 and funct7 == 0x00:
-            self.registers[rd] = self.registers[rs1] & self.registers[rs2]
-
-    def execute_m_type(self, instruction):
-    # M-type instructions (e.g., MUL, DIV, REM)
-        funct7 = (instruction >> 25) & 0x7F
-        rs2 = (instruction >> 20) & 0x1F
-        rs1 = (instruction >> 15) & 0x1F
-        funct3 = (instruction >> 12) & 0x7
-        rd = (instruction >> 7) & 0x1F
-        opcode = instruction & 0x7F
-
-        # MUL
-        if funct3 == 0x0 and funct7 == 0x01:
+            self.registers[rd] = self.registers[rs1] & self.registers[rs2]  
+        #MUL
+        elif funct3 == 0x0 and funct7 == 0x01:
+            # print("i am running")
             self.registers[rd] = self.registers[rs1] * self.registers[rs2]
         # MULH
         elif funct3 == 0x1 and funct7 == 0x01:
             self.registers[rd] = (self.registers[rs1] * self.registers[rs2]) >> 32
         # MULHU
-        elif funct3 == 0x2 and funct7 == 0x01:
-            self.registers[rd] = (self.registers[rs1] * self.registers[rs2]) & 0xFFFFFFFF
-        # MULHSU
         elif funct3 == 0x3 and funct7 == 0x01:
+            self.registers[rd] = (self.registers[rs1] * self.registers[rs2]) & 0xFFFFFFFF >> 32
+        # MULHSU
+        elif funct3 == 0x2 and funct7 == 0x01:
+            # print("i am running")
             self.registers[rd] = (self.registers[rs1] * self.sign_extend(self.registers[rs2], 32)) >> 32
         # DIV
         elif funct3 == 0x4 and funct7 == 0x01:
@@ -108,6 +106,19 @@ class RISCVSimulator:
         # REMU
         elif funct3 == 0x7 and funct7 == 0x01:
             self.registers[rd] = self.registers[rs1] % self.registers[rs2]
+
+    # def execute_m_type(self, instruction):
+    #     print("i am m type")
+    # # M-type instructions (e.g., MUL, DIV, REM)
+    #     funct7 = (instruction >> 25) & 0x7F
+    #     rs2 = (instruction >> 20) & 0x1F
+    #     rs1 = (instruction >> 15) & 0x1F
+    #     funct3 = (instruction >> 12) & 0x7
+    #     rd = (instruction >> 7) & 0x1F
+    #     opcode = instruction & 0x7F
+
+    #     # MUL
+        
             
     def execute_i_type(self, instruction):
         
@@ -119,66 +130,66 @@ class RISCVSimulator:
         
  
         # ADDI
-        if funct3 == 0x0:
+        if funct3 == 0x0 and opcode == 0x13:
             self.registers[rd] = self.registers[rs1] + self.sign_extend(imm, 12)
         # SLLI
-        elif funct3 == 0x1:
+        elif funct3 == 0x1 and opcode == 0x13:
             self.registers[rd] = self.registers[rs1] << self.sign_extend(imm, 12)
         # SLTI
         elif funct3 == 0x2 and opcode == 0x13:
             self.registers[rd] = 1 if self.registers[rs1] < self.sign_extend(imm, 12) else 0
         # SLTIU
-        elif funct3 == 0x3:
+        elif funct3 == 0x3 and opcode == 0x13:
             self.registers[rd] = 1 if self.registers[rs1] < self.sign_extend(imm, 12) else 0
         # XORI
-        elif funct3 == 0x4:
+        elif funct3 == 0x4 and opcode == 0x13:
             self.registers[rd] = self.registers[rs1] ^ self.sign_extend(imm, 12)
         # SRLI
-        elif funct3 == 0x5:
+        elif funct3 == 0x5 and opcode == 0x13:
             self.registers[rd] = self.registers[rs1] >> self.sign_extend(imm, 12)
         # SRAI
         elif funct3 == 0x5 and imm & 0x400 == 0x400:
             self.registers[rd] = self.registers[rs1] >> self.sign_extend(imm, 12)
         # ORI
-        elif funct3 == 0x6:
+        elif funct3 == 0x6 and opcode == 0x13:
             self.registers[rd] = self.registers[rs1] | self.sign_extend(imm, 12)
         # ANDI
-        elif funct3 == 0x7:
+        elif funct3 == 0x7 and opcode == 0x13:
             self.registers[rd] = self.registers[rs1] & self.sign_extend(imm, 12)
         # JALR
-        elif opcode == 0x67:
+        elif opcode == 0x67 and opcode == 0x67:
             self.registers[rd] = self.pc + 4
             self.pc = (self.registers[rs1] + self.sign_extend(imm, 12)) & 0xFFFFFFFE
         # LB
-        # LB
         elif funct3 == 0x0 and opcode == 0x3:
+            print("hello")
             address = self.registers[rs1] + self.sign_extend(imm, 12)
-            self.registers[rd] = self.sign_extend(self.memory.get(address, 0), 8)
+            self.registers[rd] = self.sign_extend(self.memory.get(str(address), 0), 8)
 
         # LH
         elif funct3 == 0x1 and opcode == 0x3:
             address = self.registers[rs1] + self.sign_extend(imm, 12)
-            self.registers[rd] = self.sign_extend((self.memory.get(address, 0) << 8 | self.memory.get(address + 1, 0)), 16)
+            self.registers[rd] = self.sign_extend((self.memory.get(str(address), 0) | self.memory.get(str(address + 1), 0)<<8),16)
 
         # LW
         elif funct3 == 0x2 and opcode == 0x3:
             address = self.registers[rs1] + self.sign_extend(imm, 12)
             self.registers[rd] = (
-                self.memory.get(address, 0) << 24 |
-                self.memory.get(address + 1, 0) << 16 |
-                self.memory.get(address + 2, 0) << 8 |
-                self.memory.get(address + 3, 0)
+                self.memory.get(str(address), 0) |
+                self.memory.get(str(address+ 1), 0) << 8 |
+                self.memory.get(str(address + 2), 0) << 16 |
+                self.memory.get(str(address + 3), 0) << 24
             )
-
+            
         # LBU
         elif funct3 == 0x4 and opcode == 0x3:
             address = self.registers[rs1] + self.sign_extend(imm, 12)
-            self.registers[rd] = self.memory.get(address, 0)
+            self.registers[rd] = self.memory.get(str(address, 0))
 
         # LHU
         elif funct3 == 0x5 and opcode == 0x3:
             address = self.registers[rs1] + self.sign_extend(imm, 12)
-            self.registers[rd] = self.memory.get(address, 0) << 8 | self.memory.get(address + 1, 0)
+            self.registers[rd] = self.sign_extend(self.memory.get(str(address, 0))| self.memory.get(str(address + 1) << 8, 0),16)
             
             
             
@@ -283,6 +294,7 @@ class RISCVSimulator:
             self.pc += self.sign_extend(imm, 21)  # increment after execution
         
     def execute_f_type(self, instruction):
+        print(instruction)
     # F-type instructions (e.g., ADD, SUB, MUL, DIV)
         funct7 = (instruction >> 25) & 0x7F
         rs2 = (instruction >> 20) & 0x1F
@@ -292,22 +304,30 @@ class RISCVSimulator:
         opcode = instruction & 0x7F
 
         # FLW
-        if opcode == 0x37 and funct3 == 0x2:
-            self.f_registers[rd] = self.memory[self.registers[rs1] + self.sign_extend(instruction & 0xFFF, 12)]
+        if opcode == 0x7 and funct3 == 0x2:
+            print(rd)
+            print(rs1)
+            print(self.f_registers)
+            print(instruction & 0xFFF)
+            print(self.sign_extend(instruction & 0xFFF, 12))
+            address= self.registers[rs1] + self.sign_extend(instruction>>20 & 0xFFF, 12)
+            self.f_registers[rd] = self.memory.get(address)
+            print("check2")
+            print(self.f_registers)
         # FSW
-        elif opcode == 0x3B and funct3 == 0x2:
+        elif opcode == 0x27 and funct3 == 0x2:
             self.memory[self.registers[rs1] + self.sign_extend(instruction & 0xFFF, 12)] = self.f_registers[rs2]
         # FADD
-        elif opcode == 0x67 and funct7 == 0x00 and funct3 == 0x0:
+        elif opcode == 0x53 and funct7 == 0x00 and funct3 == 0x0:
             self.f_registers[rd] = self.f_registers[rs1] + self.f_registers[rs2]
         # FSUB
-        elif opcode == 0x67 and funct7 == 0x20 and funct3 == 0x0:
+        elif opcode == 0x53 and funct7 == 0x4 and funct3 == 0x0:
             self.f_registers[rd] = self.f_registers[rs1] - self.f_registers[rs2]
         # FMUL
-        elif opcode == 0x67 and funct7 == 0x00 and funct3 == 0x1:
+        elif opcode == 0x53 and funct7 == 0x8 and funct3 == 0x0:
             self.f_registers[rd] = self.f_registers[rs1] * self.f_registers[rs2]
         # FDIV
-        elif opcode == 0x67 and funct7 == 0x00 and funct3 == 0x2:
+        elif opcode == 0x53 and funct7 == 0xc and funct3 == 0x0:
             self.f_registers[rd] = self.f_registers[rs1] / self.f_registers[rs2]
 
     def sign_extend(self, value, bits):
@@ -316,18 +336,18 @@ class RISCVSimulator:
             value -= 1 << bits
         return value
 
-    def run(self, instructions):
-        instructions = instructions.split('\n')
-        instructions = list(filter(('').__ne__, instructions))
-        for i in range(len(instructions)):
-            hex_int = int(instructions[i], 16)
-            instructions[i]=hex_int
-            
-        self.load_instructions(instructions)
-        while self.pc < len(instructions) * 4:
-            instruction = self.instruction_memory[self.pc]
-            self.execute_instruction(instruction)
-        self.registers[0] = 0
+    def run(self, instruction):
+        # instructions = instructions.split('\n')
+        # instructions = list(filter(('').__ne__, instructions))
+        
+        hex_int = int(instruction, 16)
+        instruction=hex_int
+        self.execute_instruction(instruction)
+        # self.load_instructions(instruction)
+        # while self.pc < len(instructions) * 4:
+            # instruction = self.instruction_memory[self.pc]
+            # self.execute_instruction(instruction)
+        self.registers[0]=0
         return self.registers
     
 
@@ -340,43 +360,4 @@ class RISCVSimulator:
         return self.memory
 
 
-simulator = RISCVSimulator()
-instructions1 = """
-00108093
-"""
-instructions2 = """
-00110113
-00102023
-00108093
-"""
 
-ins = """00510113"""
-
-instructions2 = instructions2.split('\n')
-instructions2 = list(filter(('').__ne__, instructions2))
-ins = ins.split('\n')
-ins= list(filter(('').__ne__, ins))
-
-instructions1 = instructions1.split('\n')
-instructions1= list(filter(('').__ne__, instructions1))
-
-for ins1 in instructions1:
-    print(ins1)
-    print(simulator.run(ins1))
-    print(simulator.memory)
-    print(simulator.pc)
-    
-for ins1 in instructions2:
-    print(ins1)
-    print(simulator.run(ins1))
-    print(simulator.memory)
-    print(simulator.pc)
-
-for ins1 in ins:
-    print(simulator.run(ins1))
-    print(simulator.memory)
-    print(simulator.pc)
-
-
-print(simulator.memory)
-print(simulator.pc)

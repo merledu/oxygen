@@ -184,6 +184,11 @@ function showMainContent() {
     mainContent.classList.add('show');
 }
 
-
+function assemble_code() {
+    // const code = document.getElementById('editor-container').value;
+    code = document.getElementById('editor-text-box').value
+    console.log(code)
+    console.log(typeof(code))
+}
 
 setTimeout(hideSplashScreen, 1); // Hide the splash screen after 3 seconds

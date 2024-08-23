@@ -1,13 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
+  {% load static %}
+  {% csrf_token %}
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Oxygen Simulator</title>
-    <!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"> -->
-    <link rel="stylesheet" href="style.css" />
+    {% comment %} <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"> {% endcomment %}
+    <link rel="stylesheet" href="{% static 'style_test.css' %}">
   </head>
   <body>
+    {% comment %} <section>
+      <div class="square_box box_three"></div>
+      <div class="square_box box_four"></div>
+      <div class="container mt-5">
+        <div class="row">
+          <div class="col-sm-12">
+            <div class="alert fade alert-simple alert-warning alert-dismissible text-left font__family-montserrat font__size-16 font__weight-light brk-library-rendered rendered show" role="alert" data-brk-library="component__alert">
+              <button type="button" class="close font__size-18" data-dismiss="alert">
+                      <span aria-hidden="true">
+                        <i class="fa fa-times warning"></i>
+                      </span>
+                      <span class="sr-only">Close</span>
+                    </button>
+              <i class="start-icon fa fa-exclamation-triangle faa-flash animated"></i>
+              <strong class="font__weight-semibold">Warning!</strong> Better check yourself, you're not looking too good.
+            </div>
+          </div>
+          <div class="col-sm-12">
+            <div class="alert fade alert-simple alert-primary alert-dismissible text-left font__family-montserrat font__size-16 font__weight-light brk-library-rendered rendered show" role="alert" data-brk-library="component__alert">
+              <button type="button" class="close font__size-18" data-dismiss="alert">
+                      <span  aria-hidden="true"><i class="fa fa-times alertprimary"></i></span>
+                      <span class="sr-only">Close</span>
+                    </button>
+              <i class="start-icon fa fa-thumbs-up faa-bounce animated"></i>
+              <strong class="font__weight-semibold">Well done!</strong> You successfullyread this important.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section> {% endcomment %}
     <div id="splash_screen">
       <div>
         <canvas id="c"></canvas>
@@ -27,8 +59,8 @@
                 type="text" placeholder="Enter your Instructions" value="Valuable value" style="height: 80%"></textarea>
             </label>
             <div class="button-group">
-              <button onclick="assemble_code()" >Assemble</button>
-              <button onclick="reset_editor()" type="reset" style="background-color: #AB0000">Clear</button>
+              <a href="#decoder"><button id = 'assemble-btn' class="button glow-button" onclick="assemble_code()" >Assemble</button></a>
+              <button onclick="reset_editor()" class="reset-button">Clear</button>
             </div>
           </div>
         </div>
@@ -36,20 +68,22 @@
         <div id="dump-config">
           <div id="config" class="card card--inverted">
             <h2>Configration</h2>
-            <label for="dog-names">Varient : </label>
-            <select name="dog-names" id="dog-names">
-              <option value="rigatoni">RV32</option>
-              <option value="dave">RV64</option>
-            </select>
+            <div id = 'varient'>
+              <label for="Variant"><h3>Varient : </h3></label>
+              <select name="Choose Varient" id="varient-drop">
+                <option value="RV32">RV32</option>
+                <option value="RV64">RV64</option>
+              </select>
+            </div>
           </div>
           <div id="Dump-div" class="card card--inverted">
             <h2>Hex Dump</h2>
             <textarea readonly id="dump-box" class="input__field" type="text" placeholder="Hex dump will appear here"
               value="" style="height: 150px"></textarea>
             <div class="button-group">
-              <button>Copy</button>
-              <button style="background-color: green">Download</button>
-              <button type="reset" style="background-color: #AB0000">clear</button>
+              <button onclick="copy_hex()">Copy</button>
+              <button class="run-run-button" onclick="download_hex()">Download</button>
+              <button class="reset-button" onclick="clear_hex()">clear</button>
             </div>
           </div>
         </div>
@@ -57,9 +91,9 @@
       <div id="decoder">
         <div id="tablediv" class="card card--inverted">
           <div class="run-button">
-            <button class="assemble-button btn btn-primary" onclick="runCode()">Run</button>
-            <button class="assemble-button btn btn-primary" onclick="stepInstruction()">Step</button>
-            <button class="assemble-button btn btn-primary" onclick="reset()">Reset</button>
+            <button class="run-run-button" onclick="run_Code()">Run</button>
+            <button class="step-button" onclick="stepInstruction()">Step</button>
+            <button class="reset-button" onclick="reset_Registers()">Reset</button>
           </div>
           <table id="decodetable">
             <thead>
@@ -78,128 +112,14 @@
                 </th>
               </tr>
             </thead>
-  
             <tbody id="decoderTableBody">
-              <tr>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-                <td>
-                  <h4>check</h4>
-                </td>
-              </tr>
-  
             </tbody>
           </table>
         </div>
         <div id="regmem" class="card card--inverted">
-          <div>
+          <div id= 'regmem-buttons'>
             <div class="notation-select">
-              <label for="notation">Notation:</label>
+              <label for="notation"><h3>Notation  : </h3></label>
               <select id="notation" onchange="changeNotation(this.value)">
                 <option value="hex">Hex</option>
                 <option value="decimal">Decimal</option>
@@ -211,8 +131,8 @@
                   <i class="fa fa-caret-down"></i>
                 </button>
                 <div class="dropdown-content">
-                  <li class="nav-item" data-tab-target="#ftype-registers">ftype-registers</li>
-                  <li data-tab-target="#registers" class="nav-item">itype-registers</li>
+                  <li class="nav-item" data-tab-target="#ftype-registers"><a href='#ftype-registers'>F-type Registers</a></li>
+                  <li data-tab-target="#registers" class="nav-item"><a href='#registers'>I-type Registers</a></li>
                 </div>
               </div>
               <div class="dropdown">
@@ -335,7 +255,72 @@
           </div>
         </div>
       </div>
+      <div id='datapath'>
+        <div id='stage_table' class="card card--inverted">
+          <table>
+            <thead>
+              <tr>
+                <th>Fetch</th>
+                <th>Decode</th>
+                <th>Execute</th>
+                <th>Memory</th>
+                <th>Write Back</th>
+              </tr>
+            </thead>
+            <tbody id="stageTableBody">
+            </tbody>
+          </table>
+          <div id="stage_Buttons">
+            <button class="run-run-button" onclick="run_Code()">Run</button>
+          </div>
+        </div>
+        <div id="datapath-content">
+          <div id='stats_table' class="card card--inverted">
+            <table>
+              <tbody id="statsTableBody">
+                <tr>
+                  <td>Total instructions</td>
+                  <td id="total_instructions">0</td>
+                </tr>
+                <tr>
+                  <td>Total cycles</td>
+                  <td id="Total_cycles">0</td>
+                </tr>
+                <tr>
+                  <td>ALU Instructions</td>
+                  <td id="ALU_instructions">0</td>
+                </tr>
+                <tr>
+                  <td>Jump Instructions</td>
+                  <td id="Jump_instructions">0</td>
+                </tr>
+                <tr>
+                  <td>Data Transfer Instructions</td>
+                  <td id="Data_transfer">0</td>
+                </tr>
+                <tr>
+                  <td>Data Hazards</td>
+                  <td id="Data_hazards">0</td>
+                </tr>
+                <tr>
+                  <td>Control Hazards</td>
+                  <td id="Control_hazards">0</td>
+                </tr>
+                <tr>
+                  <td>Structural Hazards</td>
+                  <td id="Structural_hazards">0</td>
+                </tr>
+                <tr>
+                  <td>Stalls</td>
+                  <td id="Stalls">0</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
-    <script src="script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="{% static 'script_test.js' %}"></script>
   </body>
 </html>
