@@ -221,7 +221,7 @@ function showMainContent() {
     mainContent.classList.add('show');
 }
 
-setTimeout(hideSplashScreen, 3000);
+setTimeout(hideSplashScreen,   3000);
 
 
 function assemble_code() {

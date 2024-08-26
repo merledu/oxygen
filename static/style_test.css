@@ -155,17 +155,17 @@ BODY, HTML {
 
 
 #decoder {
-    width: 100%;
+    width: 100vw;
     height: 100vh;
     display: flex;
-    justify-content: space-evenly;
+    justify-content: space-around;
     align-items: flex-start;
     scroll-snap-align: start;
 }
 
 
 #tablediv {
-    width: 40%;
+    width: 55vw;
     height: 80vh;
     overflow-x: hidden;
     overflow-y: scroll;
@@ -192,6 +192,13 @@ a{
 }
 
 
+#rest-text{
+    position: relative;
+    font-size: 100px;
+    left: 12%;
+}
+
+
 #regmem-buttons{
     display: flex;
     flex-direction: column;
@@ -204,7 +211,7 @@ a{
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
-    width: 30%;
+    width: 20vw;
     height: 80vh;
     -ms-overflow-style: none;  /* IE and Edge */
     scrollbar-width: none;  /* Firefox */
@@ -227,8 +234,6 @@ a{
 
 #letter-o {
     position: absolute;
-    top: 5%;
-    left: 40%;
     transform: translate(-50%, -50%);
     color: rgb(255, 255, 255);
     font-size: 100px;
@@ -236,6 +241,7 @@ a{
     white-space: nowrap;
     border: 1px;
     border-color: azure;
+    
 }
 
 
@@ -253,13 +259,13 @@ a{
 
 
     100% {
-        transform: translateX(-200px);
+        transform: translateX(-150px);
     }
 }
 
 
 .slide-in {
-    animation: slide-in 2s forwards;
+    animation: slide-in 1s forwards;
 }
 
 
@@ -297,10 +303,12 @@ CANVAS {
 }
 
 
-#text {
+#text { 
     position: absolute;
-    top: 50%;
-    left: 50%;
+    justify-content: center ;
+    align-items: center;
+    display: flex;
+    flex-direction: row;
     transform: translate(-50%, -50%);
     color: rgb(255, 255, 255);
     font-size: 100px;
@@ -329,6 +337,7 @@ CANVAS {
     height: 100%;
     scroll-snap-type: y mandatory;
     overflow-y: scroll;
+    overflow-x: hidden;
     scroll-behavior: smooth;
 }
 
@@ -344,7 +353,7 @@ CANVAS {
 }
 
 #editor-text-box{
-    height: 60vh;
+    height: 68vh;
 }
 
 
@@ -436,8 +445,8 @@ MARK {
 
 #textbox {
     align-self: center;
-    height: 70vh;
-    width: 55vh;
+    height: 80vh;
+    width: 55vw;
     backdrop-filter: blur(10px);
 }
 
