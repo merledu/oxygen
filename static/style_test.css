@@ -166,7 +166,7 @@ BODY, HTML {
 
 #tablediv {
     width: 55vw;
-    height: 80vh;
+    height: 70vh;
     overflow-x: hidden;
     overflow-y: scroll;
     -ms-overflow-style: none;  /* IE and Edge */
@@ -212,7 +212,7 @@ a{
     flex-direction: column;
     justify-content: flex-start;
     width: 20vw;
-    height: 80vh;
+    height: 70vh;
     -ms-overflow-style: none;  /* IE and Edge */
     scrollbar-width: none;  /* Firefox */
     overflow-y: scroll;
@@ -353,7 +353,7 @@ CANVAS {
 }
 
 #editor-text-box{
-    height: 68vh;
+    height: 58vh;
 }
 
 
@@ -445,7 +445,7 @@ MARK {
 
 #textbox {
     align-self: center;
-    height: 80vh;
+    height: 70vh;
     width: 55vw;
     backdrop-filter: blur(10px);
 }
@@ -524,7 +524,7 @@ MARK {
 #config {
     backdrop-filter: blur(8px);
     align-self: stretch;
-    height: 20vh;
+    height: 15vh;
 }
 
 

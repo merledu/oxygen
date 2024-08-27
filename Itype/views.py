@@ -69,13 +69,13 @@ def extract_first_error_line(output):
 def get_hex_gcc(code):
     hex_lines = []
     file_name = "ins"
-    destination_folder = "Itype/tools/riscv_32/bin/"
+    destination_folder = "tools/riscv32-gnu-toolchain/bin"
     create_txt_file(file_name, code, destination_folder)
     file_name = 'ins.txt'
-    result = subprocess.run(["Itype/tools/riscv_32/bin/bash.sh",'ins.txt'], capture_output=True, text=True)
+    result = subprocess.run(["tools/riscv32-gnu-toolchain/bin/bash.sh",'ins.txt'], capture_output=True, text=True)
     if ('Error' in result.stderr):
         raise Wrong_input_Error(extract_first_error_line(result.stderr))
-    pc_hex = extract_pc_hex('Itype/tools/riscv_32/bin/ins_disassembly.S')
+    pc_hex = extract_pc_hex('tools/riscv32-gnu-toolchain/bin/ins_disassembly.S')
     for i in pc_hex:
         hex_lines.append('0x'+pc_hex[i])
     hex_output = '\n'.join(hex_lines)
