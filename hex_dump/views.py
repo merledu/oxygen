@@ -52,13 +52,16 @@ def create_txt_file(file_name, content, destination_folder):
 def get_hex_gcc(code):
     hex_lines = []
     file_name = "ins"
-    destination_folder = "tools/riscv32-gnu-toolchain/bin"
+    destination_folder = globals.RISCV32_GNU_TOOLCHAIN
     create_txt_file(file_name, code, destination_folder)
     file_name = 'ins.txt'
-    result = subprocess.run(["tools/riscv32-gnu-toolchain/bin/bash.sh",'ins.txt'], capture_output=True, text=True)
-    if ('Error' in result.stderr):
-        raise Wrong_input_Error(extract_first_error_line(result.stderr))
-    pc_hex = extract_pc_hex('tools/riscv32-gnu-toolchain/bin/ins_disassembly.S')
+    
+    try:
+        disassembly_file = simulate_bash_script(file_name)
+    except Exception as e:
+        raise Wrong_input_Error(str(e))
+    
+    pc_hex = extract_pc_hex(disassembly_file)
     for i in pc_hex:
         hex_lines.append('0x'+pc_hex[i])
     hex_output = '\n'.join(hex_lines)
@@ -85,3 +88,32 @@ def extract_pc_hex(filename):
                 if (pc!='ins'):
                     pc_hex_dict[pc] = hex_value    
     return pc_hex_dict
+
+
+def simulate_bash_script(file_name):
+    # Extract the filename without the extension
+    filename = os.path.splitext(file_name)[0]
+
+    # Change directory
+    os.chdir(globals.RISCV32_GNU_TOOLCHAIN)
+    
+    # Convert the .txt file to .S
+    new_file_name = f"{filename}.S"
+    os.rename(file_name, new_file_name)
+
+    # Assemble the .S file to produce an object file using RISC-V assembler
+    assemble_cmd = ["./riscv32-unknown-elf-as", "-o", filename, new_file_name]
+    assemble_result = subprocess.run(assemble_cmd, capture_output=True, text=True)
+    if assemble_result.returncode != 0:
+        raise Exception(f"Error in assembly: {assemble_result.stderr}")
+
+    # Disassemble the object file to produce a .S disassembly file
+    disassembly_file = f"{filename}_disassembly.S"
+    disassemble_cmd = ["./riscv32-unknown-elf-objdump", "-d", filename]
+    with open(disassembly_file, 'w') as disassemble_output:
+        disassemble_result = subprocess.run(disassemble_cmd, stdout=disassemble_output, text=True)
+    if disassemble_result.returncode != 0:
+        raise Exception(f"Error in disassembly: {disassemble_result.stderr}")
+
+    print(f"Disassembly file created: {disassembly_file}")
+    return disassembly_file
