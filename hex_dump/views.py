@@ -2,6 +2,7 @@ import json
 import re
 import json
 import os
+import globals
 from django.http import JsonResponse
 from Temp import Datapath as DP
 from Temp import Datapath_single as DPS  
