@@ -39,7 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'Itype',
-    'hex_dump'
+    'hex_dump',
+    'stats',
 ]
 
 MIDDLEWARE = [
