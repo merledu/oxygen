@@ -27,3 +27,4 @@ windows = {}
 configs = {}
 stderr = {}
 testlist = []
+code = ''

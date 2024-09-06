@@ -24,5 +24,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('' , include('Itype.urls')),
     path('gen-hex/' , include(('hex_dump.urls','hex_dump'),namespace = 'hex_dump')),
+    path('gen-stats/' , include(('stats.urls','stats'),namespace = 'stats')),
     
 ]+ static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

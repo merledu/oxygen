@@ -228,21 +228,90 @@ function assemble_code() {
     // const code = document.getElementById('editor-container').value;
     code = document.getElementById('editor-text-box').value
     console.log(code)
-    axios.post('gen-hex/assemble-code', { code: code })
-            .then(response => {
-                if(response.data.success){
-                    const hex = response.data.hex;
-                    const baseins = response.data.is_sudo
-                    populate_Decoder_Table(code,hex,baseins);
-                    document.getElementById('dump-box').value = hex;
-                }else{
-                    alert("Error: " + response.data.error);
-                }
-            })
-            .catch(error => {
-                console.error('There was an error!', error);
-            })
+    axios.all([
+        axios.post('gen-hex/assemble-code', { code: code }),
+        axios.post('gen-stats/assemble-code', { code: code })
+        
+    ])
+    .then(axios.spread((data1, data2) => {
+        if(data1.success){
+            const hex = data1.hex;
+            const baseins = data1.is_sudo
+            populate_Decoder_Table(code,hex,baseins);
+            document.getElementById('dump-box').value = hex;
+        }else{
+            alert("Error: " + response.data.error);
+        }
+        if(data2.stats){
+            const stats = data2.stats;
+            populate_Stats(stats);
+        }
+    }))
+    .catch(error => {
+        console.error('There was an error!', error);
+    })
 }
+
+function populate_Stats(stats) {
+    const tableBody = document.getElementById('statsTableBody');
+    const tableHTML = `
+              <tbody id="statsTableBody">
+                <tr>
+                  <td>Total instructions</td>
+                  <td id="total_instructions">${stats['total_ins']}</td>
+                </tr>
+                <tr>
+                  <td>Total cycles</td>
+                  <td id="Total_cycles">${0}</td>
+                </tr>
+                <tr>
+                  <td>ALU Instructions</td>
+                  <td id="ALU_instructions">${stats['alu_ins']}</td>
+                </tr>
+                <tr>
+                  <td>Jump Instructions</td>
+                  <td id="Jump_instructions">${stats['jump_ins']}</td>
+                </tr>
+                <tr>
+                  <td>Data Transfer Instructions</td>
+                  <td id="Data_transfer">${0}</td>
+                </tr>
+                <tr>
+                  <td>Data Hazards</td>
+                  <td id="Data_hazards">${0}</td>
+                </tr>
+                <tr>
+                  <td>Control Hazards</td>
+                  <td id="Control_hazards">${0}</td>
+                </tr>
+                <tr>
+                  <td>Structural Hazards</td>
+                  <td id="Structural_hazards">${0}</td>
+                </tr>
+                <tr>
+                  <td>Stalls</td>
+                  <td id="Stalls">${0}</td>
+                </tr>
+              </tbody>
+            </table>
+    `
+    tableBody.innerHTML = tableHTML;
+}
+//     axios.post('gen-hex/assemble-code', { code: code })
+//             .then(response => {
+//                 if(response.data.success){
+//                     const hex = response.data.hex;
+//                     const baseins = response.data.is_sudo
+//                     populate_Decoder_Table(code,hex,baseins);
+//                     document.getElementById('dump-box').value = hex;
+//                 }else{
+//                     alert("Error: " + response.data.error);
+//                 }
+//             })
+//             .catch(error => {
+//                 console.error('There was an error!', error);
+//             })
+// }
 
 
 function copy_hex() {

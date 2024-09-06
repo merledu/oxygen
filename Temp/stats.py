@@ -1,3 +1,4 @@
+
 def count_instructions(file_path):
     try:
         with open(file_path, 'r') as file:
@@ -59,29 +60,26 @@ def count_alu_instructions(file_path):
         "auipc", "mulhsu", "mulhu", "div", "divu", "rem", "remu"
     ]
     
-    try:
-        with open(file_path, 'r') as file:
-            lines = file.readlines()
-            alu_instructions = 0
+    lines = file_path.split('\n')
+    alu_instructions = 0
 
-            for line in lines:
-                stripped_line = line.strip()
-                if any(op in stripped_line for op in alu_ops):
-                    alu_instructions += 1
+    for line in lines:
+        stripped_line = line.strip()
+        if any(op in stripped_line for op in alu_ops):
+            alu_instructions += 1
 
-            return f"total ALU instructions are {alu_instructions}"
-    except FileNotFoundError:
-        return "File not found. Please check the file path."
+    return alu_instructions
 
 
+def get_instruction_stats(file_path):
+    instruction_result = count_instructions(file_path)
+    jump_instruction_result = count_jump_instructions(file_path)
+    data_transfer_instruction_result = count_data_transfer_instructions(file_path)
+    alu_instruction_result = count_alu_instructions(file_path)
+    
+    return {'total_ins' : instruction_result, 'jump_ins' : jump_instruction_result, 'data_transfer_ins' : data_transfer_instruction_result, 'alu_ins' : alu_instruction_result}
 
-file_path = "ins.txt"  # Replace with your file path
-instruction_result = count_instructions(file_path)
-jump_instruction_result = count_jump_instructions(file_path)
-data_transfer_instruction_result = count_data_transfer_instructions(file_path)
-alu_instruction_result = count_alu_instructions(file_path)
-
-print(instruction_result)
-print(jump_instruction_result)
-print(data_transfer_instruction_result)
-print(alu_instruction_result)
+# print(instruction_result)
+# print(jump_instruction_result)
+# print(data_transfer_instruction_result)
+# print(alu_instruction_result)
