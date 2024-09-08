@@ -26,8 +26,6 @@ def assemble_code(request):
             # hex_output = IP.main(code)
             sudo_or_base  = IP.checkpsudo(code)
             hex_output = get_hex_gcc(code)
-            print('i am hex',hex_output)
-            print('is sudo',sudo_or_base)
             return JsonResponse({'hex': hex_output ,
                              'is_sudo' : sudo_or_base,
                              'success': True}, )

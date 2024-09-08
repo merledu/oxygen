@@ -234,7 +234,6 @@ function assemble_code() {
         
     ])
     .then(axios.spread((data1, data2) => {
-        console.log(data1.data.hex)
         if(data1){
             const hex = data1.data.hex;
             console.log(hex)
