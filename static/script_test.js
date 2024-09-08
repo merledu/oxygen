@@ -234,17 +234,22 @@ function assemble_code() {
         
     ])
     .then(axios.spread((data1, data2) => {
-        if(data1.success){
-            const hex = data1.hex;
-            const baseins = data1.is_sudo
+        console.log(data1.data.hex)
+        if(data1){
+            const hex = data1.data.hex;
+            console.log(hex)
+            const baseins = data1.data.is_sudo
             populate_Decoder_Table(code,hex,baseins);
             document.getElementById('dump-box').value = hex;
         }else{
-            alert("Error: " + response.data.error);
+            alert("Error: " + data1.error);
         }
-        if(data2.stats){
-            const stats = data2.stats;
-            populate_Stats(stats);
+        if(data2){
+            const total_ins = data2.data.total_ins;
+            const alu_ins = data2.data.alu_ins;
+            const jump_ins = data2.data.jump_ins;
+            const data_transfer_ins = data2.data.data_transfer_ins;
+            populate_Stats(total_ins,alu_ins,jump_ins,data_transfer_ins);
         }
     }))
     .catch(error => {
@@ -252,13 +257,13 @@ function assemble_code() {
     })
 }
 
-function populate_Stats(stats) {
+function populate_Stats(total_ins,alu_ins,jump_ins,data_transfer_ins) {
     const tableBody = document.getElementById('statsTableBody');
     const tableHTML = `
               <tbody id="statsTableBody">
                 <tr>
                   <td>Total instructions</td>
-                  <td id="total_instructions">${stats['total_ins']}</td>
+                  <td id="total_instructions">${total_ins}</td>
                 </tr>
                 <tr>
                   <td>Total cycles</td>
@@ -266,11 +271,11 @@ function populate_Stats(stats) {
                 </tr>
                 <tr>
                   <td>ALU Instructions</td>
-                  <td id="ALU_instructions">${stats['alu_ins']}</td>
+                  <td id="ALU_instructions">${alu_ins}</td>
                 </tr>
                 <tr>
                   <td>Jump Instructions</td>
-                  <td id="Jump_instructions">${stats['jump_ins']}</td>
+                  <td id="Jump_instructions">${jump_ins}</td>
                 </tr>
                 <tr>
                   <td>Data Transfer Instructions</td>

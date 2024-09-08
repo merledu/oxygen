@@ -6,7 +6,7 @@ def count_instructions(instruction_string):
         if stripped_line.endswith(":") and len(stripped_line.split(":")[1].strip()) == 0:
             continue
         total_instructions += 1
-    return {total_instructions}
+    return total_instructions
 
 
 
@@ -17,7 +17,7 @@ def count_jump_instructions(instruction_string):
         stripped_line = line.strip()
         if ":" in stripped_line:
             jump_instructions += 1
-    return {jump_instructions}
+    return jump_instructions
 
 
 
@@ -29,7 +29,7 @@ def count_data_transfer_instructions(instruction_string):
         stripped_line = line.strip()
         if any(op in stripped_line for op in data_transfer_ops):
             data_transfer_instructions += 1
-    return {data_transfer_instructions}
+    return data_transfer_instructions
 
 
 def count_alu_instructions(instruction_string):
@@ -57,7 +57,7 @@ def get_instruction_stats(instruction_string):
     print(jump_instruction_result)
     print(data_transfer_instruction_result)
     print(alu_instruction_result)
-    
-    return {'total_ins' : instruction_result, 'jump_ins' : jump_instruction_result, 'data_transfer_ins' : data_transfer_instruction_result, 'alu_ins' : alu_instruction_result}
+
+    return instruction_result,jump_instruction_result, data_transfer_instruction_result, alu_instruction_result
 
     
