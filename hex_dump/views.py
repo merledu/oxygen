@@ -2,12 +2,13 @@ import json
 import re
 import json
 import os
-import globals
+import subprocess
+from globals import RISCV32_GNU_TOOLCHAIN, RISCV64_GNU_TOOLCHAIN, TMP_ASM, TMP_DISASM, TMP_ELF
 from django.http import JsonResponse
 from Temp import Datapath as DP
 from Temp import Datapath_single as DPS  
 from Temp import interperator as IP
-import subprocess
+
 
 
 class Wrong_input_Error(Exception):
@@ -21,10 +22,10 @@ def assemble_code(request):
     if request.method == "POST":
         data = json.loads(request.body)
         code = data.get('code', '')
-        globals.code = code
         try:
             # hex_output = IP.main(code)
             sudo_or_base  = IP.checkpsudo(code)
+            get_hex_gcc(code)
             hex_output = get_hex_gcc(code)
             return JsonResponse({'hex': hex_output ,
                              'is_sudo' : sudo_or_base,
@@ -38,10 +39,10 @@ def assemble_code(request):
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
-def create_txt_file(file_name, content, destination_folder):
+def create_ass_file(file_name, content, destination_folder):
     if not os.path.exists(destination_folder):
         os.makedirs(destination_folder)
-    file_path = os.path.join(destination_folder, f"{file_name}.txt")
+    file_path = os.path.join(destination_folder, f"{file_name}.S")
     try:
         with open(file_path, 'w') as file:
             file.write(content)
@@ -52,13 +53,11 @@ def create_txt_file(file_name, content, destination_folder):
 
 def get_hex_gcc(code):
     hex_lines = []
-    file_name = "ins"
-    destination_folder = globals.RISCV32_GNU_TOOLCHAIN
-    create_txt_file(file_name, code, destination_folder)
-    file_name = 'ins.txt'
-    
+    with open(TMP_ASM, 'w') as file:
+        file.write(code)
+        print("here")
     try:
-        disassembly_file = simulate_bash_script(file_name)
+        disassembly_file = simulate_bash_script(TMP_ASM)
     except Exception as e:
         raise Wrong_input_Error(str(e))
     
@@ -86,35 +85,23 @@ def extract_pc_hex(filename):
             parts = line.split(':')
             if len(parts) > 1 and parts[1].strip(): 
                 pc, hex_value = parts[0].strip(), parts[1].split()[0]
-                if (pc!='ins'):
+                if (pc!=TMP_ELF):
                     pc_hex_dict[pc] = hex_value    
     return pc_hex_dict
 
 
 def simulate_bash_script(file_name):
-    # Extract the filename without the extension
-    filename = os.path.splitext(file_name)[0]
 
-    # Change directory
-    os.chdir(globals.RISCV32_GNU_TOOLCHAIN)
-    
-    # Convert the .txt file to .S
-    new_file_name = f"{filename}.S"
-    os.rename(file_name, new_file_name)
-
-    # Assemble the .S file to produce an object file using RISC-V assembler
-    assemble_cmd = ["./riscv32-unknown-elf-as", "-o", filename, new_file_name]
+    assemble_cmd = ["riscv32-unknown-elf-as", "-o", TMP_ELF, file_name]
     assemble_result = subprocess.run(assemble_cmd, capture_output=True, text=True)
     if assemble_result.returncode != 0:
         raise Exception(f"Error in assembly: {assemble_result.stderr}")
 
-    # Disassemble the object file to produce a .S disassembly file
-    disassembly_file = f"{filename}_disassembly.S"
-    disassemble_cmd = ["./riscv32-unknown-elf-objdump", "-d", filename]
-    with open(disassembly_file, 'w') as disassemble_output:
+    disassemble_cmd = ["riscv32-unknown-elf-objdump", "-d", TMP_ELF]
+    with open(TMP_DISASM, 'w') as disassemble_output:
         disassemble_result = subprocess.run(disassemble_cmd, stdout=disassemble_output, text=True)
     if disassemble_result.returncode != 0:
         raise Exception(f"Error in disassembly: {disassemble_result.stderr}")
 
-    print(f"Disassembly file created: {disassembly_file}")
-    return disassembly_file
+    print(f"Disassembly file created: {TMP_DISASM}")
+    return TMP_DISASM

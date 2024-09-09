@@ -278,7 +278,7 @@ function populate_Stats(total_ins,alu_ins,jump_ins,data_transfer_ins) {
                 </tr>
                 <tr>
                   <td>Data Transfer Instructions</td>
-                  <td id="Data_transfer">${0}</td>
+                  <td id="Data_transfer">${data_transfer_ins}</td>
                 </tr>
                 <tr>
                   <td>Data Hazards</td>

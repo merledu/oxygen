@@ -18,4 +18,4 @@ def gen_stats(request):
                             )
     else:
         
-        return JsonResponse({'error': 'Invalid request'}, status=400)
+        return JsonResponse({'error': 'Invalid request'}, status=400) 
