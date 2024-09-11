@@ -14,6 +14,7 @@ TMP = os.path.join(OXYGEN_ROOT, 'tmp')
 TMP_ASM = os.path.join(TMP, 'asm.S')
 TMP_DISASM = os.path.join(TMP, 'disasm.S')
 TMP_ELF = os.path.join(TMP, 'elf')
+LINKER_SCRIPT = os.path.join(RISCV32_GNU_TOOLCHAIN, 'link.ld')
 
 
 os.environ['PATH'] = SPIKE \

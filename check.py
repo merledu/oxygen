@@ -8,7 +8,6 @@ import re
 
 from globals import SPIKE,TMP_ELF
 # Define the command
-cmd1 = "which bash; export PATH=/home/saad/Desktop/oxygen/tools/spike/bin:$PATH;"
 cmd = f"./spike -d --isa=rv32im {TMP_ELF}"
 subprocess.call('cd tools/spike/bin', shell=True) 
 pattern = r"warning: tohost and fromhost symbols not in ELF; can't communicate with target\s*\(spike\)"

@@ -379,7 +379,7 @@ function populate_Decoder_Table(code,hex,baseins){
 function update_Register_Values(data, isHex='true') {
     console.log(data);
     data.forEach((value, index) => {
-        const formattedValue = isHex ? `${value}` : value.toString(10);
+        const formattedValue = isHex ? `0x${(value >>> 0).toString(16).padStart(8, '0')}` : value.toString(10);
         document.getElementById(`reg-${index}`).innerText = formattedValue;
     });
 }
