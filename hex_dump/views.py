@@ -92,12 +92,13 @@ def extract_pc_hex(filename):
 
 def simulate_bash_script(file_name):
 
-    assemble_cmd = ["riscv32-unknown-elf-as", "-o", TMP_ELF, file_name]
+    assemble_cmd = ["riscv32-unknown-elf-gcc","-march=rv32im", "-mabi=ilp32", "-T", "/home/saad/Desktop/oxygen/tools/riscv32-gnu-toolchain/bin/link.ld", "-static", "-mcmodel=medany", "-fvisibility=hidden", "-nostdlib", "-nostartfiles", "-g", "-o", TMP_ELF, file_name]
     assemble_result = subprocess.run(assemble_cmd, capture_output=True, text=True)
+    print(assemble_result.stderr)
     if assemble_result.returncode != 0:
         raise Exception(f"Error in assembly: {assemble_result.stderr}")
 
-    disassemble_cmd = ["riscv32-unknown-elf-objdump", "-d", TMP_ELF]
+    disassemble_cmd = ["riscv32-unknown-elf-objdump","-M","no-aliases", "-d", TMP_ELF]
     with open(TMP_DISASM, 'w') as disassemble_output:
         disassemble_result = subprocess.run(disassemble_cmd, stdout=disassemble_output, text=True)
     if disassemble_result.returncode != 0:
