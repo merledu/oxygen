@@ -5,4 +5,4 @@
 Disassembly of section .text:
 
 80000000 <_end-0x4>:
-80000000:	00108093          	addi	ra,ra,1
+80000000:	00b08093          	addi	ra,ra,11

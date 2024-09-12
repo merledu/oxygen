@@ -45,29 +45,27 @@ def assemble_code(request):
                 
                 # if re.search(stop_pattern, x.before):
                 if ('c.unimp' in x.before):
-                        
                         break
             x.logfile_read.close()
 
-            with open('mylogfilename.txt', 'r') as f:
-                with open('clean.txt', 'w') as c:
-                    a = f.readlines()
-                    k = 0
-                    start = False
-                    for i in a:
-                        if('c.unimp' in i):
-                            break
-                        if ('core   0: 0x8' in i):
-                            start = True
-                            c.write(i)
-                        if('zero: 0x00000000' in i and start == True):
-                            x = ('{'+i+a[k+1]+a[k+2]+a[k+3]+a[k+4]+a[k+5]+a[k+6]+a[k+7]+'}' + '\n')
-                            c.write(x)
-                            
-                        k+=1
+            with open('mylogfilename.txt', 'r+') as f:
+                str=''
+                a = f.readlines()
+                k = 0
+                start = False
+                for i in a:
+                    if('c.unimp' in i):
+                        break
+                    if ('core   0: 0x8' in i):
+                        start = True
+                        str+=i
+                    if('zero: 0x00000000' in i and start == True):
+                        x = ('{'+i+a[k+1]+a[k+2]+a[k+3]+a[k+4]+a[k+5]+a[k+6]+a[k+7]+'}' + '\n')
+                        str+=x
+                    k+=1
+                f.write(str)
 
-
-            file_path = 'clean.txt'  # Replace with your actual file name
+            file_path = 'mylogfilename.txt'  # Replace with your actual file name
 
             # Initialize the list to store register values
             register_values = []
@@ -85,6 +83,7 @@ def assemble_code(request):
 
             # Print or use the register values as needed
             last_reg = register_values[-32:-1]
+            print('here',last_reg)
             hex_output = get_hex_gcc(code)
             return JsonResponse({'hex': hex_output ,
                              'is_sudo' : sudo_or_base,

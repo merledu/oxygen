@@ -25,7 +25,6 @@ while True:
     
     # if re.search(stop_pattern, x.before):
     if ('c.unimp' in x.before):
-            
             break
     time.sleep(0.1)
 x.logfile_read.close()
