@@ -382,7 +382,7 @@ function update_Register_Values(data, isHex='true') {
         const formattedValue = isHex ? `0x${(value >>> 0).toString(16).padStart(8, '0')}` : value.toString(10);
         document.getElementById(`reg-${index}`).innerText = formattedValue;
     });
-}
+}  
 
 function update_FRegister_Values(data, isHex='true') {
     data.forEach((value, index) => {
@@ -556,135 +556,137 @@ function myFunction() {
   }
 }
 
-// let code = [];
-// let timelineTable = [];
-// let currentCycle = 0;
-// let allInstructionsFinished = false; // Flag to check if all instructions have finished
+let code = [];
+let timelineTable = [];
+let currentCycle = 0;
+let pipelineFinished = false; // Flag to check if the pipeline has completed
 
-// function timeline() {
-//     const editorTextBox = document.getElementById('editor-text-box');
-//     code = editorTextBox.value.split('\n').filter(line => line.trim() !== ""); // Split code into array and remove empty lines
-//     console.log("Code loaded:", code); // Debugging: Check if the code is correctly loaded
-// }
+function timeline() {
+    const editorTextBox = document.getElementById('editor-text-box');
+    code = editorTextBox.value.split('\n').filter(line => line.trim() !== ""); // Split code into array and remove empty lines
+    console.log("Code loaded:", code); // Debugging: Check if the code is correctly loaded
+}
 
-// function initializeTimelineTable() {
-//     const stageTableBody = document.getElementById("stageTableBody");
-//     stageTableBody.innerHTML = ''; // Clear any existing rows
+function initializeTimelineTable() {
+    const stageTableBody = document.getElementById("stageTableBody");
+    stageTableBody.innerHTML = ''; // Clear any existing rows
     
-//     // Initially create a single row for the first instruction
-//     timelineTable.push({ fetch: code[0], decode: null, execute: null, memory: null, writeBack: null });
+    // Initialize pipeline with nulls for all stages
+    timelineTable = [{ fetch: code[0], decode: null, execute: null, memory: null, writeBack: null }];
     
-//     // Create the table row for the first instruction
-//     const row = document.createElement('tr');
-//     row.id = `row-0`;
-//     for (let i = 0; i < 5; i++) {
-//         const cell = document.createElement('td');
-//         cell.innerHTML = i === 0 ? code[0] : ''; // Only put the first instruction under Fetch
-//         row.appendChild(cell);
-//     }
+    // Create the single row for all stages
+    const row = document.createElement('tr');
+    row.id = `row-0`;
+    for (let i = 0; i < 5; i++) {
+        const cell = document.createElement('td');
+        cell.innerHTML = i === 0 ? code[0] : ''; // Only put the first instruction under Fetch
+        row.appendChild(cell);
+    }
     
-//     stageTableBody.appendChild(row);
+    stageTableBody.appendChild(row);
     
-//     console.log("Initial row created with first instruction under Fetch.");
-// }
+    console.log("Initial row created with first instruction under Fetch.");
+}
 
-// function run_Code() {
-//     // Check if all instructions have finished (i.e., reached Write Back)
-//     if (allInstructionsFinished) {
-//         resetPipeline(); // Reset the pipeline to its initial state
-//         allInstructionsFinished = false; // Reset the flag
-//         return;
-//     }
+function Next_Code() {
+    // If the pipeline is finished, reset the pipeline on the next run
+    if (pipelineFinished) {
+        resetPipeline();
+        pipelineFinished = false; // Reset the flag
+        return;
+    }
 
-//     // First, check if the timelineTable is empty, meaning it's the first run
-//     if (timelineTable.length === 0) {
-//         timeline(); // Parse the code into the 'code' array
-//         initializeTimelineTable(); // Initialize with the first instruction
-//         return;
-//     }
+    // First, check if the timelineTable is empty, meaning it's the first run
+    if (timelineTable.length === 0) {
+        timeline(); // Parse the code into the 'code' array
+        initializeTimelineTable(); // Initialize with the first instruction
+        return;
+    }
 
-//     if (code.length === 0) {
-//         console.log("No code entered!"); // Debugging: Check if there's any code to run
-//         return;
-//     }
+    if (code.length === 0) {
+        console.log("No code entered!"); // Debugging: Check if there's any code to run
+        return;
+    }
 
-//     currentCycle++; // Keep track of the cycles
-//     updatePipeline();
-//     updateTable();
-
-//     // Check if all instructions have passed the Write Back stage
-//     if (allInstructionsInWriteBack()) {
-//         allInstructionsFinished = true; // Set flag when all instructions are in Write Back
-//     }
-
-//     console.log("Pipeline updated. Current cycle:", currentCycle); // Debugging: Check current cycle
-// }
-
-// function updatePipeline() {
-//     // Move each instruction to the next stage
-//     timelineTable.forEach((instruction, index) => {
-//         if (instruction.writeBack === null) {
-//             // Shift the instructions through the pipeline stages
-//             instruction.writeBack = instruction.memory;
-//             instruction.memory = instruction.execute;
-//             instruction.execute = instruction.decode;
-//             instruction.decode = instruction.fetch;
-//             instruction.fetch = null;
-//         }
-//     });
-
-//     // Add the next instruction into the Fetch stage if there are remaining instructions
-//     if (timelineTable.length < code.length) {
-//         timelineTable.push({ fetch: code[timelineTable.length], decode: null, execute: null, memory: null, writeBack: null });
-//     }
-// }
-
-// function updateTable() {
-//     const stageTableBody = document.getElementById("stageTableBody");
-//     stageTableBody.innerHTML = ''; // Clear and redraw the table
+    currentCycle++; // Keep track of the cycles
+    updatePipeline();  // Move the instructions in the pipeline
+    updateTable();     // Reflect changes in the table
     
-//     timelineTable.forEach((instruction, index) => {
-//         const row = document.createElement('tr');
-//         row.id = `row-${index}`;
-        
-//         const fetchCell = document.createElement('td');
-//         fetchCell.innerHTML = instruction.fetch || '';
-//         row.appendChild(fetchCell);
+    // Check if all instructions have passed the Write Back stage
+    if (allInstructionsComplete()) {
+        pipelineFinished = true; // Set the flag to true when all instructions are complete
+    }
 
-//         const decodeCell = document.createElement('td');
-//         decodeCell.innerHTML = instruction.decode || '';
-//         row.appendChild(decodeCell);
+    console.log("Pipeline updated. Current cycle:", currentCycle); // Debugging: Check current cycle
+}
 
-//         const executeCell = document.createElement('td');
-//         executeCell.innerHTML = instruction.execute || '';
-//         row.appendChild(executeCell);
+function updatePipeline() {
+    // Shift each instruction through the stages like a train
+    let lastWriteBack = timelineTable[0].writeBack;
+    let lastMemory = timelineTable[0].memory;
+    let lastExecute = timelineTable[0].execute;
+    let lastDecode = timelineTable[0].decode;
+    let lastFetch = timelineTable[0].fetch;
 
-//         const memoryCell = document.createElement('td');
-//         memoryCell.innerHTML = instruction.memory || '';
-//         row.appendChild(memoryCell);
+    // Update pipeline stages by shifting instructions forward
+    timelineTable[0].writeBack = lastMemory;
+    timelineTable[0].memory = lastExecute;
+    timelineTable[0].execute = lastDecode;
+    timelineTable[0].decode = lastFetch;
+    
+    // Add new instruction under Fetch if available
+    if (currentCycle < code.length) {
+        timelineTable[0].fetch = code[currentCycle];
+    } else {
+        timelineTable[0].fetch = null; // No more new instructions to fetch
+    }
+}
 
-//         const writeBackCell = document.createElement('td');
-//         writeBackCell.innerHTML = instruction.writeBack || '';
-//         row.appendChild(writeBackCell);
-        
-//         stageTableBody.appendChild(row);
-//     });
-// }
+function updateTable() {
+    const stageTableBody = document.getElementById("stageTableBody");
+    stageTableBody.innerHTML = ''; // Clear and redraw the table
+    
+    // Create a single row representing all stages
+    const row = document.createElement('tr');
+    row.id = `row-0`;
+    
+    const fetchCell = document.createElement('td');
+    fetchCell.innerHTML = timelineTable[0].fetch || '';
+    row.appendChild(fetchCell);
 
-// function allInstructionsInWriteBack() {
-//     // Check if the last instruction has reached the Write Back stage
-//     return timelineTable.length === code.length && timelineTable.every(instruction => instruction.writeBack !== null);
-// }
+    const decodeCell = document.createElement('td');
+    decodeCell.innerHTML = timelineTable[0].decode || '';
+    row.appendChild(decodeCell);
 
-// function resetPipeline() {
-//     const stageTableBody = document.getElementById("stageTableBody");
-//     stageTableBody.innerHTML = ''; // Clear the table
+    const executeCell = document.createElement('td');
+    executeCell.innerHTML = timelineTable[0].execute || '';
+    row.appendChild(executeCell);
 
-//     timelineTable = []; // Clear the pipeline stages
-//     currentCycle = 0; // Reset cycle counter
+    const memoryCell = document.createElement('td');
+    memoryCell.innerHTML = timelineTable[0].memory || '';
+    row.appendChild(memoryCell);
 
-//     console.log("Pipeline reset to the initial state.");
-// }
+    const writeBackCell = document.createElement('td');
+    writeBackCell.innerHTML = timelineTable[0].writeBack || '';
+    row.appendChild(writeBackCell);
+    
+    stageTableBody.appendChild(row);
+}
 
+function allInstructionsComplete() {
+    // Check if the last instruction has passed the Write Back stage
+    return timelineTable[0].writeBack === code[code.length - 1];
+}
+
+function resetPipeline() {
+    // Reset the timeline table and pipeline state to the initial state
+    const stageTableBody = document.getElementById("stageTableBody");
+    stageTableBody.innerHTML = ''; // Clear the table
+
+    timelineTable = []; // Clear the pipeline stages
+    currentCycle = 0; // Reset cycle counter
+    
+    console.log("Pipeline reset to the initial state.");
+}
 
 

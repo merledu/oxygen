@@ -137,7 +137,7 @@ def run_code(request):
         sudo_or_base  = IP.checkpsudo(code)
         registers = last_reg
         execution2 = DP.RISCVSimulator()
-        # registers = execution2.run(hex_output)
+        registers = execution2.run(hex_output)
         f_registers = execution2.f_registers
         memory = execution2.memory
         return JsonResponse({'hex': hex_output ,

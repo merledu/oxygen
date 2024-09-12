@@ -66,6 +66,7 @@ with open(file_path, 'r') as file:
 # Print or use the register values as needed
 last_reg = register_values[-32:-1]
 
+
         
 
 # with open('output.txt', 'w') as f:
