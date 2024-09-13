@@ -12,7 +12,7 @@ from django.shortcuts import render
 from Temp import Datapath as DP
 from Temp import Datapath_single as DPS  
 from Temp import interperator as IP
-from check import last_reg
+from hex_dump.views import last_reg
 from django.views.decorators.csrf import csrf_exempt
 import subprocess
 from globals import SPIKE,TMP_ELF

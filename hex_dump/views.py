@@ -12,7 +12,7 @@ from Temp import Datapath as DP
 from Temp import Datapath_single as DPS  
 from Temp import interperator as IP
 
-
+last_reg = None
 
 class Wrong_input_Error(Exception):
     pass
@@ -64,6 +64,7 @@ def assemble_code(request):
                         str+=x
                     k+=1
                 f.write(str)
+                f.close()
 
             file_path = 'mylogfilename.txt'  # Replace with your actual file name
 
