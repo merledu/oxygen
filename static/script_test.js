@@ -283,20 +283,20 @@ function populate_Stats(total_ins,alu_ins,jump_ins,data_transfer_ins) {
                   <td id="Data_transfer">${data_transfer_ins}</td>
                 </tr>
                 <tr>
-                  <td>Data Hazards</td>
-                  <td id="Data_hazards">${0}</td>
+                  <td>I Extention instructions</td>
+                  <td id="I_ins">${0}</td>
                 </tr>
                 <tr>
-                  <td>Control Hazards</td>
-                  <td id="Control_hazards">${0}</td>
+                  <td>M Extention Instruction</td>
+                  <td id="M_ins">${0}</td>
                 </tr>
                 <tr>
-                  <td>Structural Hazards</td>
-                  <td id="Structural_hazards">${0}</td>
+                  <td>F Extention Instruction</td>
+                  <td id="F_ins">${0}</td>
                 </tr>
                 <tr>
-                  <td>Stalls</td>
-                  <td id="Stalls">${0}</td>
+                  <td>Supplementary Instruction</td>
+                  <td id="s_ins">${0}</td>
                 </tr>
               </tbody>
             </table>

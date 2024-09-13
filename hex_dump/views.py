@@ -121,7 +121,7 @@ def get_hex_gcc(code):
     
     pc_hex = extract_pc_hex(disassembly_file)
     for i in pc_hex:
-        hex_lines.append('0x'+pc_hex[i])
+        hex_lines.append(pc_hex[i])
     hex_output = '\n'.join(hex_lines)
     return hex_output
 

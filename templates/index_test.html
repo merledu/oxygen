@@ -229,22 +229,6 @@
         </div>
       </div>
       <div id='datapath'>
-        <div id='stage_table' class="card card--inverted">
-          <table>
-              <tr>
-                <td>Fetch</td>
-                <td>Decode</td>
-                <td>Execute</td>
-                <td>Memory</td>
-                <td>Write Back</td>
-              </tr>
-            <tbody id="stageTableBody">
-            </tbody>
-          </table>
-          <div id="stage_Buttons">
-            <button class="run-run-button" onclick="Next_Code()">Next cycle</button>
-          </div>
-        </div>
         <div id="datapath-content">
           <div id='stats_table' class="card card--inverted">
             <div id="stage_Buttons">
@@ -287,6 +271,10 @@
                 <tr>
                   <td>C Extention Instruction</td>
                   <td id="C_ins">0</td>
+                </tr>
+                <tr>
+                  <td>Supplementary Instruction</td>
+                  <td id="s_ins">0</td>
                 </tr>
               </tbody>
             </table>
