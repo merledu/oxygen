@@ -11,6 +11,7 @@ from django.http import JsonResponse
 from Temp import Datapath as DP
 from Temp import Datapath_single as DPS  
 from Temp import interperator as IP
+from .check import Simulator
 
 last_reg = None
 
@@ -19,7 +20,15 @@ class Wrong_input_Error(Exception):
 
 
 execution = DPS.RISCVSimulatorSingle()
+simulator = None
 
+async def assemble(request):
+    global simulator
+    if simulator is None:
+        simulator = Simulator()  # Create a new instance of the Simulator
+
+    await simulator.start()  # This will terminate any existing process and start a new one
+    # return JsonResponse({'status': 'Simulator started'})
 
 def assemble_code(request):
     if request.method == "POST":
@@ -86,6 +95,7 @@ def assemble_code(request):
             last_reg = register_values[-32:-1]
             print('here',last_reg)
             hex_output = get_hex_gcc(code)
+            
             return JsonResponse({'hex': hex_output ,
                              'is_sudo' : sudo_or_base,
                              'success': True}, )
