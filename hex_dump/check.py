@@ -1,6 +1,7 @@
 import asyncio
 import re
 from pexpect import EOF, TIMEOUT, spawn
+from globals import SPIKE,TMP_ELF
 
 class Simulator:
     def __init__(self):
@@ -18,12 +19,16 @@ class Simulator:
     async def start(self):
         if self.spike_process:
             self.terminate()  # Terminate the previous process if it's running
-        
-        command = '/home/abdulrehman/Desktop/oxygen/tools/spike/bin/spike -d --isa=rv32im /home/abdulrehman/Desktop/oxygen/tools/spike/bin/elf'
+        command = f'{SPIKE+"/spike"} -d --isa=rv32im {TMP_ELF}'
         self.spike_process = spawn(command)
         await asyncio.sleep(0.1)
         # Clear initial output
         self.spike_process.expect(['(spike)', TIMEOUT, EOF])
+        await self.step()
+        await self.step()
+        await self.step()
+        await self.step()
+        await self.step()
 
     def terminate(self):
         """Terminate the current Spike process if it is running."""
@@ -58,7 +63,7 @@ class Simulator:
             index = self.spike_process.expect([register_pattern, TIMEOUT, EOF])
             if index == 0:  # Matched '(spike)'
                 output = self.spike_process.after.decode('utf-8').strip()
-                return self.parse_registers(output)
+                return (output)
             elif index == 1:  # TIMEOUT
                 return "Timeout occurred"
             else:  # EOF

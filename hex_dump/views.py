@@ -22,80 +22,39 @@ class Wrong_input_Error(Exception):
 execution = DPS.RISCVSimulatorSingle()
 simulator = None
 
-async def assemble(request):
+async def assemble():
     global simulator
     if simulator is None:
         simulator = Simulator()  # Create a new instance of the Simulator
 
     await simulator.start()  # This will terminate any existing process and start a new one
+    print('spike running')
     # return JsonResponse({'status': 'Simulator started'})
 
-def assemble_code(request):
+async def step():
+    global simulator
+    if simulator is None:
+        return JsonResponse({'output': "Simulator not started"})
+
+    result = await simulator.step()
+    return result
+
+async def get_registers():
+    global simulator
+    if simulator is None:
+        return JsonResponse({'output': "Simulator not started"})
+
+    result = await simulator.get_registers()
+    return result
+async def assemble_code(request):
     if request.method == "POST":
+        await assemble()
         data = json.loads(request.body)
         code = data.get('code', '')
         try:
             # hex_output = IP.main(code)
             sudo_or_base  = IP.checkpsudo(code)
-            get_hex_gcc(code)
-            cmd = f"./spike -d --isa=rv32im {TMP_ELF}"
-            subprocess.call('cd tools/spike/bin', shell=True) 
-            pattern = r"warning: tohost and fromhost symbols not in ELF; can't communicate with target\s*\(spike\)"
-            stop_pattern = r"core\s+0:\s+0x80000002\s+\(0x00000000\)\s+c\.unimp\s+core\s+0:\s+exception\s+trap_illegal_instruction,\s+epc\s+0x80000002\s+core\s+0:\s+tval\s+0x00000000"
-            x = pexpect.spawn(cmd ,encoding='utf-8')
-            x.logfile_read=sys.stdout #Start subprocess.
-            x.logfile_read = open ('mylogfilename.txt', 'w')
-            x.expect(pattern)
-            while True:
-                x.sendline("")
-                x.expect('(spike)')
-                x.sendline('reg 0')
-                x.expect('zero: 0x00000000')
-                
-                # if re.search(stop_pattern, x.before):
-                if ('c.unimp' in x.before):
-                        break
-            x.logfile_read.close()
-
-            with open('mylogfilename.txt', 'r+') as f:
-                str=''
-                a = f.readlines()
-                k = 0
-                start = False
-                for i in a:
-                    if('c.unimp' in i):
-                        break
-                    if ('core   0: 0x8' in i):
-                        start = True
-                        str+=i
-                    if('zero: 0x00000000' in i and start == True):
-                        x = ('{'+i+a[k+1]+a[k+2]+a[k+3]+a[k+4]+a[k+5]+a[k+6]+a[k+7]+'}' + '\n')
-                        str+=x
-                    k+=1
-                f.write(str)
-                f.close()
-
-            file_path = 'mylogfilename.txt'  # Replace with your actual file name
-
-            # Initialize the list to store register values
-            register_values = []
-
-            # Regular expression pattern to match hex values
-            pattern = re.compile(r'0x[0-9a-fA-F]+')
-
-            # Open the file and read its contents
-            with open(file_path, 'r') as file:
-                for line in file:
-                    # Find all hex values in the line
-                    matches = pattern.findall(line)
-                    # Add them to the list of register values
-                    register_values.extend(matches)
-
-            # Print or use the register values as needed
-            last_reg = register_values[-32:-1]
-            print('here',last_reg)
             hex_output = get_hex_gcc(code)
-            
             return JsonResponse({'hex': hex_output ,
                              'is_sudo' : sudo_or_base,
                              'success': True}, )
@@ -107,6 +66,42 @@ def assemble_code(request):
             return JsonResponse({'success': False, 'error': str(e)})
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
+def parse_registers(input_str):
+# Use regex to extract register names and values
+    pattern = r'(\w+):\s+(0x[0-9a-fA-F]+)'
+    matches = re.findall(pattern, input_str)
+
+    # Create a dictionary with register names as keys and values as values
+    register_dict = [int(value, 16) for _, value in matches]
+    return register_dict
+async def step_code(request):
+    if request.method == "POST":
+        print("check")
+        data = json.loads(request.body)
+        instruction = data.get('instruction', '')
+        pc = data.get('pc', '')
+        memory = data.get('memory', '')
+        register = data.get('register', '')
+        Fregister = data.get('f_register', '')
+        execution.pc = pc
+        if (pc != 0):
+            execution.memory = memory
+            execution.registers = register
+            execution.f_registers = Fregister
+        ins = await step()
+        print(ins)
+        reg = await get_registers()
+        register= parse_registers(reg) #execution.run(instruction)
+        print(reg)
+        Fregister=execution.f_registers
+        memory = execution.memory
+        pc = execution.pc
+        print(pc)
+        return JsonResponse({'memory': memory ,
+                             'register' : register,
+                             'pc': pc,
+                             'f_reg': Fregister},)
+    return JsonResponse({'error': 'Invalid request'}, status=400)
 
 def create_ass_file(file_name, content, destination_folder):
     if not os.path.exists(destination_folder):

@@ -467,7 +467,7 @@ function stepInstruction() {
     if (currentInstructionRow) {
         currentInstructionRow.classList.add('highlight'); // Add highlight class
     }
-    axios.post('step', {
+    axios.post('gen-hex/step', {
       instruction: currentInstruction,
       pc: pc,
       memory:memorydic,
