@@ -9,12 +9,17 @@ def gen_stats(request):
         data = json.loads(request.body)
         code = data.get('code', '')
         globals.code = code
-        total_ins, jump_ins, data_transfer_ins, alu_ins = st.get_instruction_stats(code)
+        total_ins, jump_ins, data_transfer_ins, alu_ins, i_ins, m_ins, s_ins, f_ins, c_ins= st.get_instruction_stats(code)
         print('total ins :  ', total_ins)
         return JsonResponse({'total_ins': total_ins, 
                              'jump_ins': jump_ins,
                              'data_transfer_ins': data_transfer_ins,
-                             'alu_ins': alu_ins}
+                             'alu_ins': alu_ins,
+                             'i_ins': i_ins,
+                             'm_ins': m_ins,
+                             's_ins': s_ins,
+                             'f_ins': f_ins,
+                             'c_ins': c_ins}
                             )
     else:
         

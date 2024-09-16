@@ -250,7 +250,12 @@ function assemble_code() {
             const alu_ins = data2.data.alu_ins;
             const jump_ins = data2.data.jump_ins;
             const data_transfer_ins = data2.data.data_transfer_ins;
-            populate_Stats(total_ins,alu_ins,jump_ins,data_transfer_ins);
+            const i_ins = data2.data.i_ins
+            const m_ins = data2.data.m_ins
+            const f_ins = data2.data.f_ins
+            const c_ins = data2.data.c_ins
+            const s_ins = data2.data.s_ins
+            populate_Stats(total_ins,alu_ins,jump_ins,data_transfer_ins,i_ins,m_ins,f_ins,c_ins,s_ins);
         }
     }))
     .catch(error => {
@@ -258,7 +263,7 @@ function assemble_code() {
     })
 }
 
-function populate_Stats(total_ins,alu_ins,jump_ins,data_transfer_ins) {
+function populate_Stats(total_ins,alu_ins,jump_ins,data_transfer_ins,i_ins,m_ins,f_ins,c_ins,s_ins) {
     const tableBody = document.getElementById('statsTableBody');
     const tableHTML = `
               <tbody id="statsTableBody">
@@ -284,19 +289,23 @@ function populate_Stats(total_ins,alu_ins,jump_ins,data_transfer_ins) {
                 </tr>
                 <tr>
                   <td>I Extention instructions</td>
-                  <td id="I_ins">${0}</td>
+                  <td id="I_ins">${i_ins}</td>
                 </tr>
                 <tr>
                   <td>M Extention Instruction</td>
-                  <td id="M_ins">${0}</td>
+                  <td id="M_ins">${m_ins}</td>
                 </tr>
                 <tr>
                   <td>F Extention Instruction</td>
-                  <td id="F_ins">${0}</td>
+                  <td id="F_ins">${f_ins}</td>
+                </tr>
+                <tr>
+                  <td>C Extention Instruction</td>
+                  <td id="c_ins">${c_ins}</td>
                 </tr>
                 <tr>
                   <td>Supplementary Instruction</td>
-                  <td id="s_ins">${0}</td>
+                  <td id="s_ins">${s_ins}</td>
                 </tr>
               </tbody>
             </table>

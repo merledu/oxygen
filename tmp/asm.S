@@ -1,4 +1,3 @@
-addi x1,x1,1
-
-li x5,1
-
+li x1,1
+mul x2,x1,x1
+li x2,2
