@@ -26,7 +26,21 @@
     <div id="main-content" class="hidden">
       <div id="editor">
           <div class="card card--inverted" id="textbox">
-            <h2>Assembly Code Editor</h2>
+            <div id ='info'>
+              <h2>Assembly Code Editor</h2>
+              <button class = 'info-btn'>Info</button>
+              <dialog class = 'info-content'>
+                <h1>Welcome to RISC V Oxygen Simulator.</h1>
+                <h3>memory architecture : </h3>
+                <ul>
+                  <li>32-bit addressable memory</li>
+                  <li>Start address : 0x80000000</li>
+                </ul>
+                <h4>how to store at address 0x80000000 :</h4>
+                <p>use LUI to store a value at address 0x80000000</p>
+                <button id ='close-btn'>close</button>
+              </dialog>
+            </div>
             <label class="input">
               <textarea id = 'editor-text-box' autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" class="input__field"
                 type="text" placeholder="Enter your Instructions" value="Valuable value"></textarea>
@@ -36,8 +50,6 @@
               <button onclick="reset_editor()" class="reset-button">Clear</button>
             </div>
           </div>
-        
-  
         <div id="dump-config">
           <div id="config" class="card card--inverted">
             <h2>Configration</h2>
@@ -47,6 +59,16 @@
                 <option value="RV32">RV32</option>
                 <option value="RV64">RV64</option>
               </select>
+            </div>
+            <div id = 'extensions'>
+              <input checked type="checkbox" id="I-type" name="I-type" value="I-type" onclick="return false;"/>
+              <label for="I-type"> I-type</label><br>
+              <input type="checkbox" id="M-type" name="M-type" value="M-type">
+              <label for="M-type"> M-type</label><br>
+              <input type="checkbox" id="C-type" name="C-type" value="C-type">
+              <label for="C-type"> C-type</label><br>
+              <input type="checkbox" id="F-type" name="F-type" value="F-type">
+              <label for="F-type"> F-type</label><br>
             </div>
           </div>
           <div id="Dump-div" class="card card--inverted">
@@ -280,6 +302,6 @@
       </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="{% static 'script_test.js' %}"></script>
+     <script src="{% static 'script_test.js' %}"></script>
   </body>
 </html>
