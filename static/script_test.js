@@ -9,6 +9,7 @@ let isHex = 'true';
 const tabs = document.querySelectorAll('[data-tab-target]');
 const tabContents = document.querySelectorAll('[data-tab-content]');
 
+
 tabs.forEach(tab => {
   tab.addEventListener('click', () => {
     const target = document.querySelector(tab.dataset.tabTarget);
@@ -564,6 +565,17 @@ function myFunction() {
     navbar.classList.remove("sticky");
   }
 }
+
+const openbtn = document.querySelector('.info-btn');
+const closebtn = document.querySelector('#close-btn');
+const modal = document.querySelector('.info-content');
+
+openbtn.addEventListener('click', () => {
+    modal.showModal();
+})
+closebtn.addEventListener('click', () => {
+    modal.close();
+})
 
 
 
