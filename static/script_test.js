@@ -229,9 +229,17 @@ function assemble_code() {
     // timeline()
     // const code = document.getElementById('editor-container').value;
     code = document.getElementById('editor-text-box').value
-    console.log(code)
+    mtype = document.getElementById('M-type').checked ? 'm' : '';
+    ctype = document.getElementById('C-type').checked ? 'c' : '';
+    ftype = document.getElementById('F-type').checked ? 'f' : '';
+    console.log(mtype)
+    // if(document.getElementById('F-type').checked){
+    //     ftype = true
+    //     console.log("ftype is true")
+    // console.log(m_type)
+    // console.log(code)
     axios.all([
-        axios.post('gen-hex/assemble-code', { code: code }),
+        axios.post('gen-hex/assemble-code', { code: code,mtype:mtype,ctype:ctype,ftype:ftype}),
         axios.post('gen-stats/assemble-code', { code: code }),
         // axios.post('timeline-update', { code: code })
         
@@ -313,21 +321,6 @@ function populate_Stats(total_ins,alu_ins,jump_ins,data_transfer_ins,i_ins,m_ins
     `
     tableBody.innerHTML = tableHTML;
 }
-//     axios.post('gen-hex/assemble-code', { code: code })
-//             .then(response => {
-//                 if(response.data.success){
-//                     const hex = response.data.hex;
-//                     const baseins = response.data.is_sudo
-//                     populate_Decoder_Table(code,hex,baseins);
-//                     document.getElementById('dump-box').value = hex;
-//                 }else{
-//                     alert("Error: " + response.data.error);
-//                 }
-//             })
-//             .catch(error => {
-//                 console.error('There was an error!', error);
-//             })
-// }
 
 
 function copy_hex() {
@@ -576,6 +569,5 @@ openbtn.addEventListener('click', () => {
 closebtn.addEventListener('click', () => {
     modal.close();
 })
-
 
 

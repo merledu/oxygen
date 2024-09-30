@@ -16,10 +16,10 @@ class Simulator:
         register_dict = [int(value, 16) for _, value in matches]
         return register_dict
 
-    async def start(self):
+    async def start(self , command):
         if self.spike_process:
             self.terminate()  # Terminate the previous process if it's running
-        command = f'{SPIKE+"/spike"} -d --isa=rv32im {TMP_ELF}'
+        # command = f'{SPIKE+"/spike"} -d --isa=rv32im {TMP_ELF}'
         self.spike_process = spawn(command)
         await asyncio.sleep(0.1)
         # Clear initial output

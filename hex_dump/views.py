@@ -6,7 +6,7 @@ import subprocess
 import sys
 
 import pexpect
-from globals import RISCV32_GNU_TOOLCHAIN, RISCV64_GNU_TOOLCHAIN, TMP_ASM, TMP_DISASM, TMP_ELF, LINKER_SCRIPT
+from globals import RISCV32_GNU_TOOLCHAIN, RISCV64_GNU_TOOLCHAIN, TMP_ASM, TMP_DISASM, TMP_ELF, LINKER_SCRIPT, SPIKE
 from django.http import JsonResponse
 from Temp import Datapath as DP
 from Temp import Datapath_single as DPS  
@@ -20,14 +20,15 @@ class Wrong_input_Error(Exception):
 
 
 execution = DPS.RISCVSimulatorSingle()
-simulator = None
+simulator = None  #global variable to keep track of the Simulator instance
 
-async def assemble():
+async def assemble(command):
     global simulator
     if simulator is None:
-        simulator = Simulator()  # Create a new instance of the Simulator
+        simulator = Simulator()
+        print('spike running')# Create a new instance of the Simulator
 
-    await simulator.start()  # This will terminate any existing process and start a new one
+    await simulator.start(command)# This will terminate any existing process and start a new one
     print('spike running')
     # return JsonResponse({'status': 'Simulator started'})
 
@@ -48,13 +49,19 @@ async def get_registers():
     return result
 async def assemble_code(request):
     if request.method == "POST":
-        await assemble()
         data = json.loads(request.body)
         code = data.get('code', '')
+        mtype = data.get('mtype', '')
+        ctype = data.get('ctype', '')
+        ftype = data.get('ftype', '')
+        
         try:
             # hex_output = IP.main(code)
             sudo_or_base  = IP.checkpsudo(code)
-            hex_output = get_hex_gcc(code)
+            hex_output = get_hex_gcc(code , mtype, ctype, ftype)
+            command = f'{SPIKE+"/spike"} -d --isa=rv32i{mtype}{ctype}{ftype} {TMP_ELF}'
+            print(command)
+            await assemble(command)
             return JsonResponse({'hex': hex_output ,
                              'is_sudo' : sudo_or_base,
                              'success': True}, )
@@ -115,13 +122,13 @@ def create_ass_file(file_name, content, destination_folder):
         print(f"Error writing file: {e}")
 
 
-def get_hex_gcc(code):
+def get_hex_gcc(code , mtype, ctype, ftype):
     hex_lines = []
     with open(TMP_ASM, 'w') as file:
         file.write(code)
         print("here")
     try:
-        disassembly_file = simulate_bash_script(TMP_ASM)
+        disassembly_file = simulate_bash_script(TMP_ASM , mtype, ctype, ftype)
     except Exception as e:
         raise Wrong_input_Error(str(e))
     
@@ -154,9 +161,9 @@ def extract_pc_hex(filename):
     return pc_hex_dict
 
 
-def simulate_bash_script(file_name):
+def simulate_bash_script(file_name , mtype, ctype, ftype):
 
-    assemble_cmd = ["riscv32-unknown-elf-gcc","-march=rv32im", "-mabi=ilp32", "-T", LINKER_SCRIPT, "-static", "-mcmodel=medany", "-fvisibility=hidden", "-nostdlib", "-nostartfiles", "-g", "-o", TMP_ELF, file_name]
+    assemble_cmd = ["riscv32-unknown-elf-gcc",f"-march=rv32i{mtype}{ctype}{ftype}", "-mabi=ilp32", "-T", LINKER_SCRIPT, "-static", "-mcmodel=medany", "-fvisibility=hidden", "-nostdlib", "-nostartfiles", "-g", "-o", TMP_ELF, file_name]
     assemble_result = subprocess.run(assemble_cmd, capture_output=True, text=True)
     print(assemble_result.stderr)
     if assemble_result.returncode != 0:
