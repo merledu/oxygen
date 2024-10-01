@@ -98,6 +98,7 @@ async def step_code(request):
         ins = await step()
         print(ins)
         reg = await get_registers()
+        print(extract_values(ins, reg))
         register= parse_registers(reg) #execution.run(instruction)
         print(reg)
         Fregister=execution.f_registers
@@ -121,6 +122,28 @@ def create_ass_file(file_name, content, destination_folder):
     except Exception as e:
         print(f"Error writing file: {e}")
 
+def extract_values(instruction, register_dump):
+    # Extract the register name and immediate value from the instruction
+    match = re.search(r'sw\s+(\w+),\s*(\d+)\((\w+)\)', instruction)
+    if match:
+        immediate_value = int(match.group(2), 10)
+        register_name = match.group(3)
+    else:
+        immediate_value = None
+        register_name = None
+
+    # Extract the register value from the register dump
+    if register_name:
+        register_pattern = rf'{register_name}:\s*(0x[0-9a-fA-F]+)'
+        reg_value_match = re.search(register_pattern, register_dump)
+        if reg_value_match:
+            register_value = int(reg_value_match.group(1), 16)
+        else:
+            register_value = None
+    else:
+        register_value = None
+    
+    return immediate_value, register_name, register_value
 
 def get_hex_gcc(code , mtype, ctype, ftype):
     hex_lines = []
