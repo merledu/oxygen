@@ -14,6 +14,10 @@ from Temp import interperator as IP
 from .check import Simulator
 
 last_reg = None
+store_ins=[
+    "sw", "sb", "sh"
+]
+
 
 class Wrong_input_Error(Exception):
     pass
@@ -46,6 +50,14 @@ async def get_registers():
         return JsonResponse({'output': "Simulator not started"})
 
     result = await simulator.get_registers()
+    return result
+
+async def get_memory(addres):
+    global simulator
+    if simulator is None:
+        return JsonResponse({'output': "Simulator not started"})
+
+    result = await simulator.get_memory(addres)
     return result
 async def assemble_code(request):
     if request.method == "POST":
@@ -81,6 +93,8 @@ def parse_registers(input_str):
     # Create a dictionary with register names as keys and values as values
     register_dict = [int(value, 16) for _, value in matches]
     return register_dict
+
+
 async def step_code(request):
     if request.method == "POST":
         print("check")
@@ -98,13 +112,20 @@ async def step_code(request):
         ins = await step()
         print(ins)
         reg = await get_registers()
-        print(extract_values(ins, reg))
+        ins_split=ins.split()
+        add = extract_values(ins, reg)
+        print(hex(add))
+        # if (len(ins_split) >= 3): 
+        if add >= 2147483648:
+            print("hi")
+            mem= await get_memory(hex(add))
+            print(f"hi {mem}")
+        # print(f"hi {mem}")
         register= parse_registers(reg) #execution.run(instruction)
         print(reg)
         Fregister=execution.f_registers
         memory = execution.memory
         pc = execution.pc
-        print(pc)
         return JsonResponse({'memory': memory ,
                              'register' : register,
                              'pc': pc,
@@ -142,8 +163,12 @@ def extract_values(instruction, register_dump):
             register_value = None
     else:
         register_value = None
+    if((register_value == None) or (immediate_value ==None) ):
+        address = 0
+    else:
+        address=register_value+immediate_value
     
-    return immediate_value, register_name, register_value
+    return address
 
 def get_hex_gcc(code , mtype, ctype, ftype):
     hex_lines = []

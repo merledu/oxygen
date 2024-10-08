@@ -70,3 +70,26 @@ class Simulator:
                 return "Simulation ended"
         except EOF:
             return "Simulation ended unexpectedly"
+        
+        
+    async def get_memory(self,addr):
+        if not self.spike_process:
+            return "Simulator not started"
+        
+        self.spike_process.sendline(f'mem {addr}')
+        try:
+            hex_pattern = r'\b0[xX][0-9a-fA-F]+\b'
+            index = self.spike_process.expect([hex_pattern, TIMEOUT, EOF])
+            if index == 0:  # Matched '(spike)'
+                print('regix matched')
+                output = self.spike_process.after.decode('utf-8').strip()
+                # print(output)
+                return (output)
+            elif index == 1:  # TIMEOUT
+                return "Timeout occurred"
+            else:  # EOF
+                return "Simulation ended"
+        except EOF:
+            return "Simulation ended unexpectedly"
+        
+            
