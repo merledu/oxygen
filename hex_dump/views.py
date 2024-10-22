@@ -109,6 +109,7 @@ async def step_code(request):
             execution.memory = memory
             execution.registers = register
             execution.f_registers = Fregister
+        execution.run(instruction)
         ins = await step()
         print(ins)
         reg = await get_registers()
