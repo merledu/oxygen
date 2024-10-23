@@ -13,11 +13,15 @@ Oxygen is a RISC-V assembly simulator built with a Django backend. It supports t
 
 
 ## Getting Started
-1. Setup the application.
+1. Clone with submodules.
+   ```sh
+   git clone --recurse-submodules https://github.com/alihasanahmedkhan/oxygen.git
+   ```
+3. Setup the application.
    ```sh
    ./debian_setup.sh
    ```
-2. Run the development server.
+4. Run the development server.
    ```sh
    python3.10 manage.py runserver
    ```
