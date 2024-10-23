@@ -10,36 +10,6 @@
     <link rel="stylesheet" href="{% static 'style_test.css' %}">
   </head>
   <body>
-    {% comment %} <section>
-      <div class="square_box box_three"></div>
-      <div class="square_box box_four"></div>
-      <div class="container mt-5">
-        <div class="row">
-          <div class="col-sm-12">
-            <div class="alert fade alert-simple alert-warning alert-dismissible text-left font__family-montserrat font__size-16 font__weight-light brk-library-rendered rendered show" role="alert" data-brk-library="component__alert">
-              <button type="button" class="close font__size-18" data-dismiss="alert">
-                      <span aria-hidden="true">
-                        <i class="fa fa-times warning"></i>
-                      </span>
-                      <span class="sr-only">Close</span>
-                    </button>
-              <i class="start-icon fa fa-exclamation-triangle faa-flash animated"></i>
-              <strong class="font__weight-semibold">Warning!</strong> Better check yourself, you're not looking too good.
-            </div>
-          </div>
-          <div class="col-sm-12">
-            <div class="alert fade alert-simple alert-primary alert-dismissible text-left font__family-montserrat font__size-16 font__weight-light brk-library-rendered rendered show" role="alert" data-brk-library="component__alert">
-              <button type="button" class="close font__size-18" data-dismiss="alert">
-                      <span  aria-hidden="true"><i class="fa fa-times alertprimary"></i></span>
-                      <span class="sr-only">Close</span>
-                    </button>
-              <i class="start-icon fa fa-thumbs-up faa-bounce animated"></i>
-              <strong class="font__weight-semibold">Well done!</strong> You successfullyread this important.
-            </div>
-          </div>
-        </div>
-      </div>
-    </section> {% endcomment %}
     <div id="splash_screen">
       <div>
         <canvas id="c"></canvas>
@@ -51,20 +21,31 @@
     </div>
     <div id="main-content" class="hidden">
       <div id="editor">
-        <div id="code-editor">
           <div class="card card--inverted" id="textbox">
-            <h2>Assembly Code Editor</h2>
+            <div id ='info'>
+              <h2>Assembly Code Editor</h2>
+              <button class = 'info-btn'>Info</button>
+              <dialog class = 'info-content'>
+                <h1>Welcome to RISC V Oxygen Simulator.</h1>
+                <h3>memory architecture : </h3>
+                <ul>
+                  <li>32-bit addressable memory</li>
+                  <li>Start address : 0x80000000</li>
+                </ul>
+                <h4>how to store at address 0x80000000 :</h4>
+                <p>use LUI to store a value at address 0x80000000</p>
+                <button id ='close-btn'>close</button>
+              </dialog>
+            </div>
             <label class="input">
               <textarea id = 'editor-text-box' autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" class="input__field"
-                type="text" placeholder="Enter your Instructions" value="Valuable value" style="height: 80%"></textarea>
+                type="text" placeholder="Enter your Instructions" value="Valuable value"></textarea>
             </label>
             <div class="button-group">
               <a href="#decoder"><button id = 'assemble-btn' class="button glow-button" onclick="assemble_code()" >Assemble</button></a>
               <button onclick="reset_editor()" class="reset-button">Clear</button>
             </div>
           </div>
-        </div>
-  
         <div id="dump-config">
           <div id="config" class="card card--inverted">
             <h2>Configration</h2>
@@ -75,13 +56,25 @@
                 <option value="RV64">RV64</option>
               </select>
             </div>
+            <div id = 'extensions'>
+              <input checked type="checkbox" id="I-type" value="I-type" onclick="return false;"/>
+              <label for="I-type"> I-type</label><br>
+              <input  type="checkbox" id="M-type" name="M-type" value=none >
+              <label for="M-type"> M-type</label><br>
+              <input  type="checkbox" id="C-type" name="C-type" value=none  >
+              <label for="C-type"> C-type</label><br>
+              <input type="checkbox" id="F-type" name="F-type" value=none >
+              <label for="F-type"> F-type</label><br>
+              <input type="checkbox" id="D-type" name="D-type" value=none >
+              <label for="D-type"> D-type</label><br>
+            </div>
           </div>
           <div id="Dump-div" class="card card--inverted">
             <h2>Hex Dump</h2>
             <textarea readonly id="dump-box" class="input__field" type="text" placeholder="Hex dump will appear here"
-              value="" style="height: 150px"></textarea>
+              value=""></textarea>
             <div class="button-group">
-              <button onclick="copy_hex()">Copy</button>
+              <button class='copy-button' onclick="copy_hex()">Copy</button>
               <button class="run-run-button" onclick="download_hex()">Download</button>
               <button class="reset-button" onclick="clear_hex()">clear</button>
             </div>
@@ -125,7 +118,7 @@
                 <option value="decimal">Decimal</option>
               </select>
             </div>
-            <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <div id='reg-mem-btn'>
               <div class="dropdown">
                 <button class="dropbtn">Registers
                   <i class="fa fa-caret-down"></i>
@@ -139,7 +132,7 @@
                 <li data-tab-target="#memory"><button class="dropbtn">memory <i class="fa fa-caret-down"></i></button>
                 </li>
               </div>
-            </ul>
+            </div>
           </div>
   
           <div class="col-md-5">
@@ -256,24 +249,6 @@
         </div>
       </div>
       <div id='datapath'>
-        <div id='stage_table' class="card card--inverted">
-          <table>
-            <thead>
-              <tr>
-                <th>Fetch</th>
-                <th>Decode</th>
-                <th>Execute</th>
-                <th>Memory</th>
-                <th>Write Back</th>
-              </tr>
-            </thead>
-            <tbody id="stageTableBody">
-            </tbody>
-          </table>
-          <div id="stage_Buttons">
-            <button class="run-run-button" onclick="run_Code()">Run</button>
-          </div>
-        </div>
         <div id="datapath-content">
           <div id='stats_table' class="card card--inverted">
             <table>
@@ -299,20 +274,24 @@
                   <td id="Data_transfer">0</td>
                 </tr>
                 <tr>
-                  <td>Data Hazards</td>
-                  <td id="Data_hazards">0</td>
+                  <td>I Extention instructions</td>
+                  <td id="I_ins">0</td>
                 </tr>
                 <tr>
-                  <td>Control Hazards</td>
-                  <td id="Control_hazards">0</td>
+                  <td>M Extention Instruction</td>
+                  <td id="M_ins">0</td>
                 </tr>
                 <tr>
-                  <td>Structural Hazards</td>
-                  <td id="Structural_hazards">0</td>
+                  <td>F Extention Instruction</td>
+                  <td id="F_ins">0</td>
                 </tr>
                 <tr>
-                  <td>Stalls</td>
-                  <td id="Stalls">0</td>
+                  <td>C Extention Instruction</td>
+                  <td id="C_ins">0</td>
+                </tr>
+                <tr>
+                  <td>Supplementary Instruction</td>
+                  <td id="s_ins">0</td>
                 </tr>
               </tbody>
             </table>

@@ -4,6 +4,7 @@ sudo apt install device-tree-compiler libboost-regex-dev libboost-system-dev pyt
 
 # PATHS
 export OXYGEN_ROOT=`pwd`
+export TMP="$OXYGEN_ROOT/tmp"
 export OXYGEN_TOOLS="$OXYGEN_ROOT/tools"
 export OXYGEN_VENV="$OXYGEN_ROOT/.venv"
 export OXYGEN_SUBMODULES="$OXYGEN_ROOT/tools_submodules"
@@ -12,6 +13,7 @@ export SPIKE="$OXYGEN_TOOLS/spike"
 
 # Directories
 mkdir $OXYGEN_TOOLS
+mkdir $TMP
 
 
 # Django

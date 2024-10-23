@@ -1,15 +1,26 @@
+@import url('https://rsms.me/inter/inter.css');
+
+
 BODY, HTML {
     background-image: url('images/p3.jpg');
     margin: 0;
     padding: 0;
-    width: 100%;
     height: 100vh;
-    overflow: auto;
-    overflow-x: hidden;
+    width: 100vw;;
+    overflow: hidden;
     font-family: Arial, sans-serif;
     scroll-behavior: smooth;
-    /* background-color: #212121; */
 }
+
+
+@media screen and (max-width: 660px) {
+    BUTTON,.reset-button,.run-run-button,#assemble-btn,.step-button,.copy-button {
+      width: 46px; height: 15px;
+      font-size: 10px;
+      padding: 0 0 0 0;
+      font-weight: 1;
+    }
+  }
 
 
 .run-run-button{
@@ -29,6 +40,7 @@ BODY, HTML {
     height: 100vh;
     width: 100%;
     justify-content: space-around;
+    scroll-snap-align: start;
 }
 
 
@@ -60,12 +72,6 @@ BODY, HTML {
 
 .active[data-tab-content] {
     display: block;
-}
-
-
-BODY {
-    padding: 0;
-    margin: 0;
 }
 
 
@@ -103,6 +109,7 @@ BODY {
 
 #varient{
     display: flex;
+    flex-wrap: wrap;
     flex-direction: row;
     align-items: center;
     justify-content: flex-start;
@@ -148,17 +155,18 @@ BODY {
 
 
 #decoder {
-    width: 100%;
+    width: 100vw;
     height: 100vh;
     display: flex;
-    justify-content: space-evenly;
+    justify-content: space-around;
     align-items: flex-start;
+    scroll-snap-align: start;
 }
 
 
 #tablediv {
-    width: 40%;
-    height: 80vh;
+    width: 55vw;
+    height: 70vh;
     overflow-x: hidden;
     overflow-y: scroll;
     -ms-overflow-style: none;  /* IE and Edge */
@@ -184,12 +192,27 @@ a{
 }
 
 
+#rest-text{
+    position: relative;
+    font-size: 100px;
+    left: 12%;
+}
+
+
+#regmem-buttons{
+    display: flex;
+    flex-direction: column;
+    justify-items: center;
+    align-items: center;
+}
+
+
 #regmem {
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
-    width: 30%;
-    height: 80vh;
+    width: 20vw;
+    height: 70vh;
     -ms-overflow-style: none;  /* IE and Edge */
     scrollbar-width: none;  /* Firefox */
     overflow-y: scroll;
@@ -211,8 +234,6 @@ a{
 
 #letter-o {
     position: absolute;
-    top: 5%;
-    left: 40%;
     transform: translate(-50%, -50%);
     color: rgb(255, 255, 255);
     font-size: 100px;
@@ -220,6 +241,7 @@ a{
     white-space: nowrap;
     border: 1px;
     border-color: azure;
+    
 }
 
 
@@ -237,13 +259,13 @@ a{
 
 
     100% {
-        transform: translateX(-200px);
+        transform: translateX(-150px);
     }
 }
 
 
 .slide-in {
-    animation: slide-in 2s forwards;
+    animation: slide-in 1s forwards;
 }
 
 
@@ -262,7 +284,7 @@ TABLE, TH, TD {
 
 TH, TD {
     padding: 0.5rem;
-    text-align: left;
+    text-align: center;
 }
 
 
@@ -281,10 +303,12 @@ CANVAS {
 }
 
 
-#text {
+#text { 
     position: absolute;
-    top: 50%;
-    left: 50%;
+    justify-content: center ;
+    align-items: center;
+    display: flex;
+    flex-direction: row;
     transform: translate(-50%, -50%);
     color: rgb(255, 255, 255);
     font-size: 100px;
@@ -310,28 +334,33 @@ CANVAS {
 
 #main-content {
     width: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
+    height: 100%;
+    scroll-snap-type: y mandatory;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
 }
 
 
-#main-content.hidden{
+/* #main-content.hidden{
     display: none;
-    
+} */
+
+
+.editor, .decoder, .datapath {
+    flex: 1;
+    min-height: 100vh;
 }
 
+#editor-text-box{
+    height: 58vh;
+}
 
 
 #main-content.show {
-    display: flex;
     opacity: 1;
     transition: opacity 1s;
-    flex-direction: column;
 }
-
-
-@import url('https://rsms.me/inter/inter.css');
 
 
 :root {
@@ -357,7 +386,6 @@ CANVAS {
 
 LI {
     list-style-type: none;
-    padding: 4%;
 }
 
 
@@ -372,15 +400,13 @@ H4 {
 
 
 #editor {
-    align-self: center;
     width: 100%;
     height: 100vh;
     display: flex;
     flex-direction: row;
     justify-content: space-around;
+    scroll-snap-align: start;
 }
-
-
 
 
 #dump-config {
@@ -390,11 +416,6 @@ H4 {
     flex-direction: column;
     
 }
-
-
-/* #decodetable{
-  
-} */
 
 
 #code-editor {
@@ -424,8 +445,8 @@ MARK {
 
 #textbox {
     align-self: center;
-    height: 62%;
-    width: 100%;
+    height: 70vh;
+    width: 55vw;
     backdrop-filter: blur(10px);
 }
 
@@ -483,16 +504,27 @@ MARK {
 
 
 #dump-div {
-    height: 250px;
+    height: px;
     width: 100%;
     backdrop-filter: blur(8px);
+}
+
+
+#dump-box {
+    height: 70%;
+    width: 100%;
+}
+
+
+#Dump-div {
+    height: 40vh;
 }
 
 
 #config {
     backdrop-filter: blur(8px);
     align-self: stretch;
-    height: 10%;
+    height: 15vh;
 }
 
 
@@ -661,6 +693,7 @@ BUTTON + BUTTON {
 
 .notation-select{
     display: flex;
+    flex-wrap: wrap;
     flex-direction: row;
 }
 
@@ -671,7 +704,7 @@ BUTTON + BUTTON {
 
 
 #notation{
-    width: 30%;
+    width: fit-content;
     margin-left: 3px;
     height: 25px;
     border-radius: 5px;
@@ -750,7 +783,7 @@ BUTTON + BUTTON {
 
 .alert-simple.alert-warning
 {
-      border: 1px solid rgba(241, 142, 6, 0.81);
+    border: 1px solid rgba(241, 142, 6, 0.81);
     background-color: rgba(220, 128, 1, 0.16);
     box-shadow: 0px 0px 2px #ffb103;
     color: #ffb103;
@@ -766,7 +799,7 @@ BUTTON + BUTTON {
 
 .warning
 {
-      font-size: 18px;
+    font-size: 18px;
     color: #ffb40b;
     text-shadow: none;
 }
@@ -900,3 +933,44 @@ BUTTON + BUTTON {
     opacity: 0;
   }
 }
+
+#navbar {
+    overflow: hidden;
+    background-color: #333;
+  }
+  /* Navbar links */
+#navbar a {
+    float: left;
+    display: block;
+    color: #f1e7e7;
+    text-align: center;
+    padding: 25px;
+    text-decoration: none;
+  }
+  /* Page content */
+.content {
+    padding: 16px;
+  }
+  /* The sticky class is added to the navbar with JS when it reaches its scroll position */
+.sticky {
+    position: fixed;
+    top: 0;
+    width: 100%;
+  }
+  /* Add some top padding to the page content to prevent sudden quick movement (as the navigation bar gets a new position at the top of the page (position:fixed and top:0) */
+.sticky + .content {
+    padding-top: 60px;
+  }
+
+#info {
+    display:flex;
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+#extensions{
+    display:flex;
+    flex-direction: row;
+}
+
+

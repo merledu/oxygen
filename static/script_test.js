@@ -9,6 +9,7 @@ let isHex = 'true';
 const tabs = document.querySelectorAll('[data-tab-target]');
 const tabContents = document.querySelectorAll('[data-tab-content]');
 
+
 tabs.forEach(tab => {
   tab.addEventListener('click', () => {
     const target = document.querySelector(tab.dataset.tabTarget);
@@ -198,27 +199,104 @@ function showMainContent() {
     mainContent.classList.add('show');
 }
 
-setTimeout(hideSplashScreen, 0);
+setTimeout(hideSplashScreen,   3000);
 
 
 function assemble_code() {
+    // timeline()
     // const code = document.getElementById('editor-container').value;
     code = document.getElementById('editor-text-box').value
-    console.log(code)
-    axios.post('gen-hex/assemble-code', { code: code })
-            .then(response => {
-                if(response.data.success){
-                    const hex = response.data.hex;
-                    const baseins = response.data.is_sudo
-                    populate_Decoder_Table(code,hex,baseins);
-                    document.getElementById('dump-box').value = hex;
-                }else{
-                    alert("Error: " + response.data.error);
-                }
-            })
-            .catch(error => {
-                console.error('There was an error!', error);
-            })
+    mtype = document.getElementById('M-type').checked ? 'm' : '';
+    ctype = document.getElementById('C-type').checked ? 'c' : '';
+    ftype = document.getElementById('F-type').checked ? 'f' : '';
+    console.log(mtype)
+    // if(document.getElementById('F-type').checked){
+    //     ftype = true
+    //     console.log("ftype is true")
+    // console.log(m_type)
+    // console.log(code)
+    axios.all([
+        axios.post('gen-hex/assemble-code', { code: code,mtype:mtype,ctype:ctype,ftype:ftype}),
+        axios.post('gen-stats/assemble-code', { code: code }),
+        // axios.post('timeline-update', { code: code })
+        
+    ])
+    .then(axios.spread((data1, data2) => {
+        if(data1){
+            const hex = data1.data.hex;
+            console.log(hex)
+            const baseins = data1.data.is_sudo
+            populate_Decoder_Table(code,hex,baseins);
+            document.getElementById('dump-box').value = hex;
+        }else{
+            alert("Error: " + data1.error);
+        }
+        if(data2){
+            const total_ins = data2.data.total_ins;
+            const alu_ins = data2.data.alu_ins;
+            const jump_ins = data2.data.jump_ins;
+            const data_transfer_ins = data2.data.data_transfer_ins;
+            const i_ins = data2.data.i_ins
+            const m_ins = data2.data.m_ins
+            const f_ins = data2.data.f_ins
+            const c_ins = data2.data.c_ins
+            const s_ins = data2.data.s_ins
+            populate_Stats(total_ins,alu_ins,jump_ins,data_transfer_ins,i_ins,m_ins,f_ins,c_ins,s_ins);
+        }
+    }))
+    .catch(error => {
+        console.error('There was an error!', error);
+    })
+}
+
+function populate_Stats(total_ins,alu_ins,jump_ins,data_transfer_ins,i_ins,m_ins,f_ins,c_ins,s_ins) {
+    const tableBody = document.getElementById('statsTableBody');
+    const tableHTML = `
+              <tbody id="statsTableBody">
+                <tr>
+                  <td>Total instructions</td>
+                  <td id="total_instructions">${total_ins}</td>
+                </tr>
+                <tr>
+                  <td>Total cycles</td>
+                  <td id="Total_cycles">${0}</td>
+                </tr>
+                <tr>
+                  <td>ALU Instructions</td>
+                  <td id="ALU_instructions">${alu_ins}</td>
+                </tr>
+                <tr>
+                  <td>Jump Instructions</td>
+                  <td id="Jump_instructions">${jump_ins}</td>
+                </tr>
+                <tr>
+                  <td>Data Transfer Instructions</td>
+                  <td id="Data_transfer">${data_transfer_ins}</td>
+                </tr>
+                <tr>
+                  <td>I Extention instructions</td>
+                  <td id="I_ins">${i_ins}</td>
+                </tr>
+                <tr>
+                  <td>M Extention Instruction</td>
+                  <td id="M_ins">${m_ins}</td>
+                </tr>
+                <tr>
+                  <td>F Extention Instruction</td>
+                  <td id="F_ins">${f_ins}</td>
+                </tr>
+                <tr>
+                  <td>C Extention Instruction</td>
+                  <td id="c_ins">${c_ins}</td>
+                </tr>
+                <tr>
+                  <td>Supplementary Instruction</td>
+                  <td id="s_ins">${s_ins}</td>
+                </tr>
+              </tbody>
+            </table>
+    `
+    tableBody.innerHTML = tableHTML;
 }
 
 
@@ -284,7 +362,7 @@ function update_Register_Values(data, isHex='true') {
         const formattedValue = isHex ? `0x${(value >>> 0).toString(16).padStart(8, '0')}` : value.toString(10);
         document.getElementById(`reg-${index}`).innerText = formattedValue;
     });
-}
+}  
 
 function update_FRegister_Values(data, isHex='true') {
     data.forEach((value, index) => {
@@ -360,7 +438,7 @@ function stepInstruction() {
     if (currentInstructionRow) {
         currentInstructionRow.classList.add('highlight'); // Add highlight class
     }
-    axios.post('step', {
+    axios.post('gen-hex/step', {
       instruction: currentInstruction,
       pc: pc,
       memory:memorydic,
@@ -382,6 +460,7 @@ function stepInstruction() {
         if (newInstructionRow) {
             newInstructionRow.classList.add('highlight');
         }
+        console.log("typeof(memorydic)",(memorydic))
         populate_Memory_Table(memorydic,isHex)
         update_Register_Values(reg_value,isHex)
     })
@@ -440,6 +519,33 @@ document.getElementById('scrollDownBtn').addEventListener('click', () => {
         scrollUpBtn.classList.remove('disabled');
     }
 });
-
-
  // Hide the splash screen after 3 seconds
+ window.onscroll = function() {myFunction()};
+
+// Get the navbar
+// var navbar = document.getElementById("navbar");
+
+// // Get the offset position of the navbar
+// var sticky = navbar.offsetTop;
+
+// // Add the sticky class to the navbar when you reach its scroll position. Remove "sticky" when you leave the scroll position
+// function myFunction() {
+//   if (window.scrollY >= sticky) {
+//     navbar.classList.add("sticky")
+//   } else {
+//     navbar.classList.remove("sticky");
+//   }
+// }
+
+const openbtn = document.querySelector('.info-btn');
+const closebtn = document.querySelector('#close-btn');
+const modal = document.querySelector('.info-content');
+
+openbtn.addEventListener('click', () => {
+    modal.showModal();
+})
+closebtn.addEventListener('click', () => {
+    modal.close();
+})
+
+
