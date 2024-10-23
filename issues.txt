@@ -1,3 +1,5 @@
 1. when we change tab the assembly code disappears 
 2. decoder table is not updated 
 3. hex dump doesnt work
+4. RISC-V instructions are not being stored in the instruction memory.
+5. There is no validation for incorrect instructions in the editor, referring to the RISC-V instruction set validation linter.
