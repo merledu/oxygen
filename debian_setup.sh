@@ -20,6 +20,7 @@ mkdir $TMP
 python3 -m venv .venv
 source "$OXYGEN_VENV/bin/activate"
 pip3 install Django
+pip3 install pexpect
 
 
 # Toolchain
