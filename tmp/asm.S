@@ -1,5 +1,5 @@
-li x1,1
-li x2,5
+addi x1,x0,1
+addi x2,x0,5
 label:
 addi x1,x1,1
 addi x3,x0,0
