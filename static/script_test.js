@@ -382,35 +382,35 @@ function changeNotation(notation) {
 }
 
 
-function populate_Memory_Table(data,isHex='true') {
+function populate_Memory_Table(data, isHex = true) {
     const tableBody = document.getElementById('memoryTableBody');
     tableBody.innerHTML = ''; // Clear existing rows
 
-    
-            memoryValues = data; 
-            for (let i = 0; i < 10; i++) { 
-                const addr1 = memoryAddress + (i * 4);
-                const addr2 = memoryAddress + (i);
-                const value = memoryValues[addr2] || 0; 
-                const row = document.createElement('tr');
-                const formatValue = (value) => isHex ? `0x${value.toString(16)}` : value.toString(10);
+    const memoryAddress = 0x80000000; // Start address of the memory
+    const memoryValues = data;
 
-                row.innerHTML = `
-                    <td>${formatValue(addr1)}</td>
-                    <td>${formatValue(memoryValues[addr1] || 0)}</td>
-                    <td>${formatValue(memoryValues[addr1+1] || 0)}</td>
-                    <td>${formatValue(memoryValues[addr1+2] || 0)}</td>
-                    <td>${formatValue(memoryValues[addr1+3] || 0)}</td>
-                `;
-                tableBody.appendChild(row);
-            }
-        ;
+    for (let i = 0; i < 10; i++) {
+        const addr1 = memoryAddress + (i * 4);
+        const value = memoryValues[addr1] || 0;
+        const row = document.createElement('tr');
+        const formatValue = (value) => isHex ? `0x${value.toString(16)}` : value.toString(10);
+
+        row.innerHTML = `
+            <td>${formatValue(addr1)}</td>
+            <td>${formatValue(memoryValues[addr1] || 0)}</td>
+            <td>${formatValue(memoryValues[addr1 + 1] || 0)}</td>
+            <td>${formatValue(memoryValues[addr1 + 2] || 0)}</td>
+            <td>${formatValue(memoryValues[addr1 + 3] || 0)}</td>
+        `;
+        tableBody.appendChild(row);
+    }
 }
 
 
 
+
 function reset_Registers (){
-    axios.post('reset', {
+    axios.post('gen-hex/reset', {
     })
     .then(response => {
         const currentInstructionRow = document.getElementById('decoderTableBody').rows[pc/4];
