@@ -145,6 +145,21 @@ def create_ass_file(file_name, content, destination_folder):
     except Exception as e:
         print(f"Error writing file: {e}")
 
+def reset(request):
+    if request.method == "POST":
+        simulator.terminate()
+        execution.memory={}
+        execution.registers=[0]*32
+        execution.pc=0
+        execution.instruction_memory = {}
+        execution.f_registers = [0.0] * 32 
+        return JsonResponse({
+                             'register': execution.registers,
+                             'memory': execution.memory,
+                             'pc':execution.pc,
+                             'fregister': execution.f_registers}, )
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
 def extract_values(instruction, register_dump):
     # Extract the register name and immediate value from the instruction
     match = re.search(r'sw\s+(\w+),\s*(\d+)\((\w+)\)', instruction)
