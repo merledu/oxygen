@@ -189,8 +189,7 @@ class RISCVSimulatorSingle:
         # LHU
         elif funct3 == 0x5 and opcode == 0x3:
             address = self.registers[rs1] + self.sign_extend(imm, 12)
-            self.registers[rd] = self.sign_extend(self.memory.get(str(address, 0))| self.memory.get(str(address + 1) << 8, 0),16)
-            
+            self.registers[rd] = self.sign_extend((self.memory.get(str(address), 0) | self.memory.get(str(address + 1), 0)<<8),16)
             
             
     def execute_s_type(self, instruction):
