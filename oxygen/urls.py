@@ -21,9 +21,9 @@ from django.conf.urls.static import static
 from Itype.views import *
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('' , include('Itype.urls')),
-    path('gen-hex/' , include(('hex_dump.urls','hex_dump'),namespace = 'hex_dump')),
-    path('gen-stats/' , include(('stats.urls','stats'),namespace = 'stats')),
+    path('oxygen/admin/', admin.site.urls),
+    path('oxygen/' , include('Itype.urls')),
+    path('oxygen/gen-hex/' , include(('hex_dump.urls','hex_dump'),namespace = 'hex_dump')),
+    path('oxygen/gen-stats/' , include(('stats.urls','stats'),namespace = 'stats')),
     
 ]+ static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
