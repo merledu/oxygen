@@ -67,12 +67,13 @@ async def assemble_code(request):
         ctype = data.get('ctype', '')
         ftype = data.get('ftype', '')
         dtype = data.get('dtype', '')
+        rvtype = data.get('rvtype', '')
         
         try:
             # hex_output = IP.main(code)
             sudo_or_base  = IP.checkpsudo(code)
-            hex_output = get_hex_gcc(code , mtype, ctype, ftype, dtype)
-            command = f'{SPIKE+"/spike"} -d --isa=rv32i{mtype}{ctype}{ftype}{dtype} {TMP_ELF}'
+            hex_output = get_hex_gcc(code , mtype, ctype, ftype, dtype , rvtype)
+            command = f'{SPIKE+"/spike"} -d --isa={rvtype}i{mtype}{ctype}{ftype}{dtype} {TMP_ELF}'
             print(command)
             await assemble(command)
             return JsonResponse({'hex': hex_output ,
@@ -187,13 +188,13 @@ def extract_values(instruction, register_dump):
     
     return address
 
-def get_hex_gcc(code , mtype, ctype, ftype, dtype):
+def get_hex_gcc(code , mtype, ctype, ftype, dtype , rvtype):
     hex_lines = []
     with open(TMP_ASM, 'w') as file:
         file.write(code)
         print("here")
     try:
-        disassembly_file = simulate_bash_script(TMP_ASM , mtype, ctype, ftype, dtype)
+        disassembly_file = simulate_bash_script(TMP_ASM , mtype, ctype, ftype, dtype , rvtype)
     except Exception as e:
         raise Wrong_input_Error(str(e))
     
@@ -226,7 +227,13 @@ def extract_pc_hex(filename):
     return pc_hex_dict
 
 
-def simulate_bash_script(file_name , mtype, ctype, ftype, dtype):
+def simulate_bash_script(file_name , mtype, ctype, ftype, dtype , rvtype):
+    
+    assembletype = 'riscv32'
+    abitype = 'ilp32'
+    if rvtype == 'rv64':
+        assembletype = 'riscv64'
+        abitype = 'lp64'
 
     assemble_cmd = ["riscv32-unknown-elf-gcc",f"-march=rv32i{mtype}{ctype}{ftype}{dtype}", "-mabi=ilp32", "-T", LINKER_SCRIPT, "-static", "-mcmodel=medany", "-fvisibility=hidden", "-nostdlib", "-nostartfiles", "-g", "-o", TMP_ELF, file_name]
     assemble_result = subprocess.run(assemble_cmd, capture_output=True, text=True)
