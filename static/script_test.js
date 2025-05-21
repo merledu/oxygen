@@ -210,6 +210,8 @@ function assemble_code() {
     ctype = document.getElementById('C-type').checked ? 'c' : '';
     ftype = document.getElementById('F-type').checked ? 'f' : '';
     dtype = document.getElementById('D-type').checked ? 'd' : '';
+    rvtype = document.getElementById('varient-drop').value.toLowerCase()
+    console.log(rvtype)
     console.log(mtype)
     // if(document.getElementById('F-type').checked){
     //     ftype = true
@@ -217,7 +219,7 @@ function assemble_code() {
     // console.log(m_type)
     // console.log(code)
     axios.all([
-        axios.post('gen-hex/assemble-code', { code: code,mtype:mtype,ctype:ctype,ftype:ftype,dtype:dtype}),
+        axios.post('gen-hex/assemble-code', { code:code,mtype:mtype,ctype:ctype,ftype:ftype,dtype:dtype,rvtype:rvtype }),
         axios.post('gen-stats/assemble-code', { code: code }),
         // axios.post('timeline-update', { code: code })
         
