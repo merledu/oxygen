@@ -228,20 +228,33 @@ def extract_pc_hex(filename):
 
 
 def simulate_bash_script(file_name , mtype, ctype, ftype, dtype , rvtype):
-    
+    extensions = mtype + ctype + ftype + dtype
     assembletype = 'riscv32'
-    abitype = 'ilp32'
+    abi = 'ilp32'
+    if rvtype == "rv32":
+        abi = "ilp32"
+        if "f" in extensions and "d" in extensions:
+            abi = "ilp32d"
+        elif "f" in extensions:
+            abi = "ilp32f"
+    else:
+        abi = "lp64"
+        assembletype = 'riscv64'
+        if "f" in extensions and "d" in extensions:
+            abi = "lp64d"
+        elif "f" in extensions:
+            abi = "lp64f"
     if rvtype == 'rv64':
         assembletype = 'riscv64'
         abitype = 'lp64'
 
-    assemble_cmd = ["riscv32-unknown-elf-gcc",f"-march=rv32i{mtype}{ctype}{ftype}{dtype}", "-mabi=ilp32", "-T", LINKER_SCRIPT, "-static", "-mcmodel=medany", "-fvisibility=hidden", "-nostdlib", "-nostartfiles", "-g", "-o", TMP_ELF, file_name]
+    assemble_cmd = [f"{assembletype}-unknown-elf-gcc",f"-march={rvtype}i{extensions}", f"-mabi={abi}", "-T", LINKER_SCRIPT, "-static", "-mcmodel=medany", "-fvisibility=hidden", "-nostdlib", "-nostartfiles", "-g", "-o", TMP_ELF, file_name]
     assemble_result = subprocess.run(assemble_cmd, capture_output=True, text=True)
     print(assemble_result.stderr)
     if assemble_result.returncode != 0:
         raise Exception(f"Error in assembly: {assemble_result.stderr}")
 
-    disassemble_cmd = ["riscv32-unknown-elf-objdump","-M","no-aliases", "-d", TMP_ELF]
+    disassemble_cmd = [f"{assembletype}-unknown-elf-objdump","-M","no-aliases", "-d", TMP_ELF]
     with open(TMP_DISASM, 'w') as disassemble_output:
         disassemble_result = subprocess.run(disassemble_cmd, stdout=disassemble_output, text=True)
     if disassemble_result.returncode != 0:

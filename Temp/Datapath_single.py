@@ -131,6 +131,8 @@ class RISCVSimulatorSingle:
  
         # ADDI
         if funct3 == 0x0 and opcode == 0x13:
+            print(rd)
+            print(rs1)
             self.registers[rd] = self.registers[rs1] + self.sign_extend(imm, 12)
         # SLLI
         elif funct3 == 0x1 and opcode == 0x13:
