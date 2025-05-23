@@ -12,9 +12,8 @@ BODY, HTML {
     scroll-behavior: smooth;
 }
 
-
 @media screen and (max-width: 660px) {
-    BUTTON,.reset-button,.run-run-button,#assemble-btn,.step-button,.copy-button {
+    BUTTON,.reset-button,.run-run-button,#assemble-btn,.step-button,.copy-button.button-glow-button{
       width: 46px; height: 15px;
       font-size: 10px;
       padding: 0 0 0 0;
@@ -25,6 +24,27 @@ BODY, HTML {
 
 .run-run-button{
     background-color: green;
+}
+
+.step-button:disabled{
+    color: white;
+    background-color: gray;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.run-run-button:disabled{
+    color: white;
+    background-color: gray;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.button-glow-button:disabled{
+    color: white;
+    background-color: gray;
+    cursor: not-allowed;
+    box-shadow: none;
 }
 
 
@@ -127,6 +147,7 @@ BODY, HTML {
 #assemble-btn{
     color: white;
 }
+
 
 
 #splash_screen{

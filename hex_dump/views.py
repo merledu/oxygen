@@ -153,7 +153,7 @@ def reset(request):
         execution.registers=[0]*32
         execution.pc=0
         execution.instruction_memory = {}
-        execution.f_registers = [0.0] * 32 
+        execution.f_registers = [0.0] * 32
         return JsonResponse({
                              'register': execution.registers,
                              'memory': execution.memory,
