@@ -211,8 +211,6 @@ function assemble_code() {
     ftype = document.getElementById('F-type').checked ? 'f' : '';
     dtype = document.getElementById('D-type').checked ? 'd' : '';
     rvtype = document.getElementById('varient-drop').value.toLowerCase()
-    console.log(rvtype)
-    console.log(mtype)
     // if(document.getElementById('F-type').checked){
     //     ftype = true
     //     console.log("ftype is true")

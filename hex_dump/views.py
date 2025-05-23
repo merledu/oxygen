@@ -229,10 +229,10 @@ def extract_pc_hex(filename):
 
 def simulate_bash_script(file_name , mtype, ctype, ftype, dtype , rvtype):
     extensions = mtype + ctype + ftype + dtype
-    assembletype = 'riscv32'
-    abi = 'ilp32'
+    
     if rvtype == "rv32":
-        abi = "ilp32"
+        assembletype = 'riscv32'
+        abi = 'ilp32'
         if "f" in extensions and "d" in extensions:
             abi = "ilp32d"
         elif "f" in extensions:
@@ -244,9 +244,6 @@ def simulate_bash_script(file_name , mtype, ctype, ftype, dtype , rvtype):
             abi = "lp64d"
         elif "f" in extensions:
             abi = "lp64f"
-    if rvtype == 'rv64':
-        assembletype = 'riscv64'
-        abitype = 'lp64'
 
     assemble_cmd = [f"{assembletype}-unknown-elf-gcc",f"-march={rvtype}i{extensions}", f"-mabi={abi}", "-T", LINKER_SCRIPT, "-static", "-mcmodel=medany", "-fvisibility=hidden", "-nostdlib", "-nostartfiles", "-g", "-o", TMP_ELF, file_name]
     assemble_result = subprocess.run(assemble_cmd, capture_output=True, text=True)

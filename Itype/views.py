@@ -46,7 +46,6 @@ def assemble_code(request):
     if request.method == "POST":
         data = json.loads(request.body)
         code = data.get('code', '')
-        print('test')
         try:
             # hex_output = IP.main(code)
             sudo_or_base  = IP.checkpsudo(code)
