@@ -1,4 +1,4 @@
-li x1,0x80000000
+lui x1,0x8000
+li x1,0x0000
 li x2,2
-sb x2,0(x1)
-lhu x3,0(x1)
+sw x2,0(x5)
