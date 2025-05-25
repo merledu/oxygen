@@ -248,6 +248,14 @@ function assemble_code() {
     .catch(error => {
         console.error('There was an error!', error);
     })
+    const assemblebtn = document.getElementsByClassName('button-glow-button')[0];
+    assemblebtn.disabled = true;
+
+    const runbtn = document.getElementsByClassName('run-run-button')[1];
+    runbtn.disabled = false;
+
+    const stepbtn = document.getElementsByClassName('step-button')[0];
+    stepbtn.disabled = false;
 }
 
 function populate_Stats(total_ins,alu_ins,jump_ins,data_transfer_ins,i_ins,m_ins,f_ins,c_ins,s_ins) {
@@ -406,9 +414,6 @@ function populate_Memory_Table(data, isHex = true) {
     }
 }
 
-
-
-
 function reset_Registers (){
     axios.post('gen-hex/reset', {
     })
@@ -419,16 +424,22 @@ function reset_Registers (){
         }
         const newPc = response.data.pc;
         memorydic = response.data.memory
-        console.log(memorydic)
-        reg_value = response.data.register
-        f_reg_value = response.data.f_register
-        console.log(reg_value)
+        const reg_value = response.data.register
+        const f_reg_value = response.data.fregister
         pc = newPc;
-        console.log(pc)
         populate_Memory_Table(memorydic,isHex)
         update_Register_Values(reg_value,isHex)
         update_FRegister_Values(f_reg_value,isHex)
     })
+    const assemblebtn = document.getElementsByClassName('button-glow-button')[0];
+    assemblebtn.disabled = false
+
+    const stepbtn = document.getElementsByClassName('step-button')[0];
+    stepbtn.disabled = true
+
+    const runbtn = document.getElementsByClassName('run-run-button')[1];
+    runbtn.disabled = true
+    // assemble_code();
 }
 
 
