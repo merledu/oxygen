@@ -4,9 +4,10 @@ import json
 import os
 import subprocess
 import sys
+from asgiref.sync import sync_to_async
 
 import pexpect
-from globals import RISCV32_GNU_TOOLCHAIN, RISCV64_GNU_TOOLCHAIN, TMP_ASM, TMP_DISASM, TMP_ELF, LINKER_SCRIPT, SPIKE
+from globals import RISCV32_GNU_TOOLCHAIN, RISCV64_GNU_TOOLCHAIN, TMP, TMP_ASM, TMP_DISASM, TMP_ELF, LINKER_SCRIPT, SPIKE
 from django.http import JsonResponse
 from Temp import Datapath as DP
 from Temp import Datapath_single as DPS  
@@ -24,42 +25,53 @@ class Wrong_input_Error(Exception):
 
 
 execution = DPS.RISCVSimulatorSingle()
-simulator = None  #global variable to keep track of the Simulator instance
+session_simulators = {}  #global variable to keep track of the Simulator instance
 
-async def assemble(command):
-    global simulator
+async def assemble(command,session_key):
+    simulator = session_simulators.get(session_key)
     if simulator is None:
         simulator = Simulator()
+        session_simulators[session_key] = simulator
         print('spike running')# Create a new instance of the Simulator
 
     await simulator.start(command)# This will terminate any existing process and start a new one
     print('spike running')
     # return JsonResponse({'status': 'Simulator started'})
 
-async def step():
-    global simulator
+async def step(session_key):
+    simulator = session_simulators.get(session_key)
     if simulator is None:
         return JsonResponse({'output': "Simulator not started"})
 
     result = await simulator.step()
     return result
 
-async def get_registers():
-    global simulator
+async def get_registers(session_key):
+    simulator = session_simulators.get(session_key)
     if simulator is None:
         return JsonResponse({'output': "Simulator not started"})
 
     result = await simulator.get_registers()
     return result
 
-async def get_memory(addres):
-    global simulator
+async def get_memory(addres,session_key):
+    simulator = session_simulators.get(session_key)
     if simulator is None:
         return JsonResponse({'output': "Simulator not started"})
 
     result = await simulator.get_memory(addres)
     return result
+
+def get_user_tmp_paths(session_key):
+    user_tmp = os.path.join(TMP, session_key)
+    os.makedirs(user_tmp, exist_ok=True)
+    return user_tmp
 async def assemble_code(request):
+    await sync_to_async(request.session.save)()
+    session_key = request.session.session_key
+    if not session_key:
+        await sync_to_async(request.session.save)()
+        session_key = request.session.session_key
     if request.method == "POST":
         data = json.loads(request.body)
         code = data.get('code', '')
@@ -71,11 +83,16 @@ async def assemble_code(request):
         
         try:
             # hex_output = IP.main(code)
+            tmp = get_user_tmp_paths(session_key)
+            tmp_elf = os.path.join(tmp, 'elf')
+            tmp_asm = os.path.join(tmp, 'asm.S')
+            tmp_disasm = os.path.join(tmp, 'disasm.S')
+            
             sudo_or_base  = IP.checkpsudo(code)
-            hex_output = get_hex_gcc(code , mtype, ctype, ftype, dtype , rvtype)
-            command = f'{SPIKE+"/spike"} -d --isa={rvtype}i{mtype}{ctype}{ftype}{dtype} {TMP_ELF}'
+            hex_output = get_hex_gcc(code , mtype, ctype, ftype, dtype , rvtype,tmp_asm , tmp_elf , tmp_disasm)
+            command = f'{SPIKE+"/spike"} -d --isa={rvtype}i{mtype}{ctype}{ftype}{dtype} {tmp_elf}'
             print(command)
-            await assemble(command)
+            await assemble(command,session_key)
             return JsonResponse({'hex': hex_output ,
                              'is_sudo' : sudo_or_base,
                              'success': True}, )
@@ -99,6 +116,11 @@ def parse_registers(input_str):
 
 async def step_code(request):
     if request.method == "POST":
+        await sync_to_async(request.session.save)()
+        session_key = request.session.session_key
+        if not session_key:
+            await sync_to_async(request.session.save)()
+            session_key = request.session.session_key
         print("check")
         data = json.loads(request.body)
         instruction = data.get('instruction', '')
@@ -112,16 +134,16 @@ async def step_code(request):
             execution.registers = register
             execution.f_registers = Fregister
         execution.run(instruction)
-        ins = await step()
+        ins = await step(session_key)
         print(ins)
-        reg = await get_registers()
+        reg = await get_registers(session_key)
         ins_split=ins.split()
         add = extract_values(ins, reg)
         print(hex(add))
         # if (len(ins_split) >= 3): 
         if add >= 2147483648:
             print("hi")
-            mem= await get_memory(hex(add))
+            mem= await get_memory(hex(add),session_key)
             print(f"hi {mem}")
         # print(f"hi {mem}")
         register= parse_registers(reg) #execution.run(instruction)
@@ -135,19 +157,16 @@ async def step_code(request):
                              'f_reg': Fregister},)
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
-def create_ass_file(file_name, content, destination_folder):
-    if not os.path.exists(destination_folder):
-        os.makedirs(destination_folder)
-    file_path = os.path.join(destination_folder, f"{file_name}.S")
-    try:
-        with open(file_path, 'w') as file:
-            file.write(content)
-        print(f"File created at {file_path}")
-    except Exception as e:
-        print(f"Error writing file: {e}")
-
 def reset(request):
     if request.method == "POST":
+        request.session.save()
+        session_key = request.session.session_key
+        if not session_key:
+           request.session.save()
+           session_key = request.session.session_key
+        simulator = session_simulators.get(session_key)
+        if not simulator:
+            return JsonResponse({'error': 'Simulator not running'}, status=404)
         simulator.terminate()
         execution.memory={}
         execution.registers=[0]*32
@@ -188,17 +207,17 @@ def extract_values(instruction, register_dump):
     
     return address
 
-def get_hex_gcc(code , mtype, ctype, ftype, dtype , rvtype):
+def get_hex_gcc(code , mtype, ctype, ftype, dtype , rvtype , tmp_asm , tmp_elf , tmp_disasm):
     hex_lines = []
-    with open(TMP_ASM, 'w') as file:
+    with open(tmp_asm, 'w') as file:
         file.write(code)
         print("here")
     try:
-        disassembly_file = simulate_bash_script(TMP_ASM , mtype, ctype, ftype, dtype , rvtype)
+        disassembly_file = simulate_bash_script(tmp_asm ,tmp_elf , tmp_disasm , mtype, ctype, ftype, dtype , rvtype)
     except Exception as e:
         raise Wrong_input_Error(str(e))
     
-    pc_hex = extract_pc_hex(disassembly_file)
+    pc_hex = extract_pc_hex(disassembly_file, tmp_elf)
     for i in pc_hex:
         hex_lines.append(pc_hex[i])
     hex_output = '\n'.join(hex_lines)
@@ -215,19 +234,19 @@ def extract_first_error_line(output):
     return None  
 
 
-def extract_pc_hex(filename):
+def extract_pc_hex(filename , tmp_elf):
     pc_hex_dict = {}
     with open(filename, 'r') as file:
         for line in file:
             parts = line.split(':')
             if len(parts) > 1 and parts[1].strip(): 
                 pc, hex_value = parts[0].strip(), parts[1].split()[0]
-                if (pc!=TMP_ELF):
+                if (pc!=tmp_elf):
                     pc_hex_dict[pc] = hex_value    
     return pc_hex_dict
 
 
-def simulate_bash_script(file_name , mtype, ctype, ftype, dtype , rvtype):
+def simulate_bash_script(file_name ,tmp_elf , tmp_disasm, mtype, ctype, ftype, dtype , rvtype):
     extensions = mtype + ctype + ftype + dtype
     
     if rvtype == "rv32":
@@ -245,17 +264,17 @@ def simulate_bash_script(file_name , mtype, ctype, ftype, dtype , rvtype):
         elif "f" in extensions:
             abi = "lp64f"
 
-    assemble_cmd = [f"{assembletype}-unknown-elf-gcc",f"-march={rvtype}i{extensions}", f"-mabi={abi}", "-T", LINKER_SCRIPT, "-static", "-mcmodel=medany", "-fvisibility=hidden", "-nostdlib", "-nostartfiles", "-g", "-o", TMP_ELF, file_name]
+    assemble_cmd = [f"{assembletype}-unknown-elf-gcc",f"-march={rvtype}i{extensions}", f"-mabi={abi}", "-T", LINKER_SCRIPT, "-static", "-mcmodel=medany", "-fvisibility=hidden", "-nostdlib", "-nostartfiles", "-g", "-o", tmp_elf, file_name]
     assemble_result = subprocess.run(assemble_cmd, capture_output=True, text=True)
     print(assemble_result.stderr)
     if assemble_result.returncode != 0:
         raise Exception(f"Error in assembly: {assemble_result.stderr}")
 
-    disassemble_cmd = [f"{assembletype}-unknown-elf-objdump","-M","no-aliases", "-d", TMP_ELF]
-    with open(TMP_DISASM, 'w') as disassemble_output:
+    disassemble_cmd = [f"{assembletype}-unknown-elf-objdump","-M","no-aliases", "-d", tmp_elf]
+    with open(tmp_disasm, 'w') as disassemble_output:
         disassemble_result = subprocess.run(disassemble_cmd, stdout=disassemble_output, text=True)
     if disassemble_result.returncode != 0:
         raise Exception(f"Error in disassembly: {disassemble_result.stderr}")
 
-    print(f"Disassembly file created: {TMP_DISASM}")
-    return TMP_DISASM
+    print(f"Disassembly file created: {tmp_disasm}")
+    return tmp_disasm
