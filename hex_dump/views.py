@@ -137,7 +137,6 @@ async def step_code(request):
         ins = await step(session_key)
         print(ins)
         reg = await get_registers(session_key)
-        ins_split=ins.split()
         add = extract_values(ins, reg)
         print(hex(add))
         # if (len(ins_split) >= 3): 
