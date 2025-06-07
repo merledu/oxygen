@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OXYGEN - RISC-V Simulator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Inter:wght@400;600&family=Roboto+Mono&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Inter', sans-serif;
+      background: radial-gradient(circle at center, #1e1b4b 0%, #0a0f1c 70%);
+      color: #dbeafe;
+      overflow: hidden;
+    }
+    /* splash screen */
+    .splash {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100%;
+      padding: 1rem;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+      animation: fadeIn 2s ease-out forwards;
+    }
+    /* splash screen bg */
+    .background-effects {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .circuit-pattern {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" opacity="0.1"><path d="M10 10h80v10H10zM10 30h20v10H10zM40 30h50v10H40zM10 50h60v10H10zM70 50h20v10H70zM10 70h40v10H10zM60 70h30v10H60z" stroke="%2338bdf8" stroke-width="2" fill="none"/></svg>');
+      opacity: 0.1;
+      animation: slideCircuit 20s linear infinite;
+    }
+
+    .particles {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+    }
+
+    .particle {
+      position: absolute;
+      background: rgba(56, 189, 248, 0.7);
+      border-radius: 50%;
+      animation: float 8s infinite ease-in-out;
+    }
+    /* Main logo OXYGEN */
+    .logo {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(3rem, 8vw, 5rem);
+      color: #38bdf8;
+      letter-spacing: 3px;
+      text-shadow: 0 0 20px rgba(56, 189, 248, 0.8), 0 0 40px rgba(56, 189, 248, 0.5);
+      animation: pulse 2.5s infinite ease-in-out;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* glowing effect behind OXYGEN */
+    .logo::after {
+      content: '';
+      position: absolute;
+      top: -20%;
+      left: -10%;
+      width: 120%;
+      height: 140%;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.3) 0%, transparent 70%);
+      z-index: -1;
+      animation: glow 3s infinite ease-in-out;
+    }
+
+
+    /* Tagline */
+    .tagline { 
+      margin-top: 1.5rem;
+      font-size: clamp(1.1rem, 4vw, 1.5rem);
+      color: #93c5fd;
+      font-family: 'Roboto Mono', monospace;
+      font-weight: 400;
+      opacity: 0;
+      animation: slideUp 2s ease-out 1.5s forwards;
+      background: linear-gradient(90deg, #93c5fd, #60a5fa);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    @keyframes fadeIn {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      0% { transform: translateY(30px); opacity: 0; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes pulse {
+      0%, 100% { text-shadow: 0 0 20px rgba(56, 189, 248, 0.8), 0 0 40px rgba(56, 189, 248, 0.5); }
+      50% { text-shadow: 0 0 30px rgba(56, 189, 248, 1), 0 0 60px rgba(56, 189, 248, 0.7); }
+    }
+    @keyframes glow {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 0.5; }
+    }
+
+    @keyframes slideCircuit {
+      0% { background-position: 0 0; }
+      100% { background-position: 200px 200px; }
+    }
+
+    @keyframes float {
+      0% { transform: translateY(100vh) scale(0.5); opacity: 0.6; }
+      50% { opacity: 0.3; }
+      100% { transform: translateY(-20vh) scale(1); opacity: 0; }
+    }
+
+    @media (max-width: 480px) {
+      .logo {
+        font-size: clamp(2rem, 6vw, 3.5rem);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="background-effects">
+    <div class="circuit-pattern"></div>
+    <div class="particles" id="particles"></div>
+  </div>
+  <div class="splash">
+    <div class="logo">OXYGEN</div>
+    <div class="tagline">A RISC-V Assembly Simulator</div>
+  </div>
+
+  <script>
+    const particlesContainer = document.getElementById('particles'); // particle animation for effectt
+    function createParticle() {
+      const particle = document.createElement('div');
+      particle.className = 'particle';
+      const size = Math.random() * 8 + 2;
+      particle.style.width = `${size}px`;
+      particle.style.height = `${size}px`;
+      particle.style.left = `${Math.random() * 100}%`;
+      particle.style.animationDuration = `${Math.random() * 5 + 5}s`;
+      particle.style.animationDelay = `${Math.random() * 5}s`;
+      particlesContainer.appendChild(particle);
+      setTimeout(() => particle.remove(), 12000);
+    }
+
+    // generatinn particles continuously
+    for (let i = 0; i < 20; i++) {
+      setTimeout(createParticle, i * 300);
+    }
+    setInterval(createParticle, 600);
+
+    const style = document.createElement('style'); // Fade out animation for smooth transition
+    style.textContent = `
+      @keyframes fadeOut {
+        0% { opacity: 1; }
+        100% { opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
+</body>
+</html>
