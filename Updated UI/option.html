@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Oxygen Simulator - RISC-V Assembly Environment</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Roboto+Mono&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: radial-gradient(circle at center, #1e1b4b 0%, #0a0f1c 70%);
+      color: #dbeafe;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+    .header {
+      background: linear-gradient(90deg, #2563eb, #7c3aed);
+      border-radius: 16px 16px 0 0;
+      padding: 1.5rem;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(2rem, 5vw, 3rem);
+      color: #ffffff;
+      text-shadow: 0 0 15px rgba(56, 189, 248, 0.8);
+    }
+    .header p {
+      font-family: 'Roboto Mono', monospace;
+      color: #e0f2fe;
+    }
+    .panel {
+      background: #0f172a;
+      border: 1px solid #4b5e8e;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      transition: all 0.3s ease;
+    }
+    .panel:hover {
+      border-color: #60a5fa;
+      box-shadow: 0 0 15px rgba(96, 165, 250, 0.5);
+    }
+    .editor {
+      width: 100%;
+      height: 300px;
+      background: #1e293b;
+      color: #dbeafe;
+      font-family: 'Roboto Mono', monospace;
+      border: 1px solid #4b5e8e;
+      border-radius: 8px;
+      padding: 1rem;
+      resize: none;
+      transition: all 0.3s ease;
+    }
+    .editor:focus {
+      border-color: #60a5fa;
+      outline: none;
+      box-shadow: 0 0 10px rgba(96, 165, 250, 0.5);
+    }
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      color: #ffffff;
+    }
+    .btn-assemble {
+      background: linear-gradient(45deg, #4f46e5, #7c3aed);
+    }
+    .btn-assemble:hover {
+      background: linear-gradient(45deg, #4338ca, #6d28d9);
+      transform: translateY(-2px);
+    }
+    .btn-clear {
+      background: linear-gradient(45deg, #ef4444, #f97316);
+    }
+    .btn-clear:hover {
+      background: linear-gradient(45deg, #dc2626, #ea580c);
+      transform: translateY(-2px);
+    }
+    .btn-run {
+      background: linear-gradient(45deg, #10b981, #34d399);
+    }
+    .btn-run:hover {
+      background: linear-gradient(45deg, #059669, #10b981);
+      transform: translateY(-2px);
+    }
+    .btn-step {
+      background: linear-gradient(45deg, #f59e0b, #fbbf24);
+    }
+    .btn-step:hover {
+      background: linear-gradient(45deg, #d97706, #f59e0b);
+      transform: translateY(-2px);
+    }
+    .btn-reset {
+      background: linear-gradient(45deg, #ef4444, #f97316);
+    }
+    .btn-reset:hover {
+      background: linear-gradient(45deg, #dc2626, #ea580c);
+      transform: translateY(-2px);
+    }
+    .table-container {
+      max-height: 300px;
+      overflow-y: auto;
+      scrollbar-color: #4b5e8e #0f172a;
+    }
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+    th, td {
+      padding: 0.75rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      text-align: left;
+    }
+    th {
+      background: rgba(96, 165, 250, 0.2);
+      position: sticky;
+      top: 0;
+    }
+    tr:hover {
+      background: rgba(96, 165, 250, 0.1);
+      transition: background 0.2s ease;
+    }
+    .notation-toggle, .variant-toggle {
+      display: inline-flex;
+      background: #1e293b;
+      border-radius: 8px;
+      padding: 0.25rem;
+    }
+    .notation-toggle button, .variant-toggle button {
+      padding: 0.5rem 1rem;
+      border: none;
+      background: none;
+      color: #93c5fd;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.3s ease;
+    }
+    .notation-toggle button.active, .variant-toggle button.active {
+      background: linear-gradient(45deg, #2563eb, #7c3aed);
+      color: #ffffff;
+    }
+    .footer {
+      background: #0f172a;
+      border-top: 1px solid #4b5e8e;
+      border-radius: 0 0 16px 16px;
+      padding: 1.5rem;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+    .footer a {
+      color: #60a5fa;
+      transition: color 0.3s ease;
+    }
+    .footer a:hover {
+      color: #93c5fd;
+    }
+  </style>
+</head>
+<body class="p-4">
+  <div class="container mx-auto max-w-6xl">
+    <div class="header">
+      <h1>Oxygen Simulator</h1>
+      <p class="text-lg">RISC-V Assembly Environment</p>
+      <p class="text-sm mt-2">RISC-V Specification Compliant</p>
+    </div>
+
+    <div class="p-6">
+      <div class="panel">
+        <h2 class="text-xl font-bold text-indigo-300 mb-4">Assembly Code Editor</h2>
+        <textarea class="editor" id="codeEditor"></textarea>
+        <div class="flex space-x-4 mt-4">
+          <button class="btn btn-assemble" onclick="assembleCode()">Assemble</button>
+          <button class="btn btn-clear" onclick="clearEditor()">Clear</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="panel">
+          <h2 class="text-xl font-bold text-indigo-300 mb-4">Configuration</h2>
+          <label class="block text-sm mb-2">Variant:</label>
+          <div class="variant-toggle">
+            <button class="active" onclick="setVariant('RV32')">RV32</button>
+            <button onclick="setVariant('RV64')">RV64</button>
+          </div>
+        </div>
+        <div class="panel">
+          <h2 class="text-xl font-bold text-indigo-300 mb-4">Hex Dump</h2>
+          <textarea class="editor h-40" id="hexDump" readonly></textarea>
+          <div class="flex space-x-4 mt-4">
+            <button class="btn btn-assemble" onclick="copyHex()">Copy</button>
+            <button class="btn btn-assemble" onclick="downloadHex()">Download</button>
+            <button class="btn btn-clear" onclick="clearHex()">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="flex space-x-4 mb-4">
+          <button class="btn btn-run" onclick="runCode()">Run</button>
+          <button class="btn btn-step" onclick="stepCode()">Step</button>
+          <button class="btn btn-reset" onclick="resetSimulator()">Reset</button>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>PC</th>
+                <th>Machine Code</th>
+                <th>Base Instruction</th>
+                <th>Original Instruction</th>
+              </tr>
+            </thead>
+            <tbody id="instructionTable">
+              <tr>
+                <td>0x80000000</td>
+                <td>0x00100293</td>
+                <td>addi t0, zero, 1</td>
+                <td>li t0, 1</td>
+              </tr>
+              <tr>
+                <td>0x80000004</td>
+                <td>0x00200313</td>
+                <td>addi t1, zero, 2</td>
+                <td>li t1, 2</td>
+              </tr>
+              <tr>
+                <td>0x80000008</td>
+                <td>0x006283b3</td>
+                <td>add t2, t0, t1</td>
+                <td>add t2, t0, t1</td>
+              </tr>
+              <tr>
+                <td>0x8000000C</td>
+                <td>0x00400413</td>
+                <td>addi s0, zero, 4</td>
+                <td>li s0, 4</td>
+              </tr>
+              <tr>
+                <td>0x80000010</td>
+                <td>0x00742023</td>
+                <td>sw t2, 0(s0)</td>
+                <td>sw t2, (s0)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="notation-toggle mb-4">
+          <button class="active" onclick="setNotation('hex')">Hex</button>
+          <button onclick="setNotation('decimal')">Decimal</button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h2 class="text-xl font-bold text-indigo-300 mb-4">Registers</h2>
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Register</th>
+                    <th>ABI Name</th>
+                    <th>Value</th>
+                  </tr>
+                </thead>
+                <tbody id="registerTable"></tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <h2 class="text-xl font-bold text-indigo-300 mb-4">Memory</h2>
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Address</th>
+                    <th>+0</th>
+                    <th>+1</th>
+                    <th>+2</th>
+                    <th>+3</th>
+                  </tr>
+                </thead>
+                <tbody id="memoryTable">
+                  <tr>
+                    <td>0x80000000</td>
+                    <td>0x93</td>
+                    <td>0x02</td>
+                    <td>0x10</td>
+                    <td>0x00</td>
+                  </tr>
+                  <tr>
+                    <td>0x80000004</td>
+                    <td>0x13</td>
+                    <td>0x03</td>
+                    <td>0x20</td>
+                    <td>0x00</td>
+                  </tr>
+                  <tr>
+                    <td>0x80000008</td>
+                    <td>0xb3</td>
+                    <td>0x83</td>
+                    <td>0x62</td>
+                    <td>0x00</td>
+                  </tr>
+                  <tr>
+                    <td>0x8000000C</td>
+                    <td>0x13</td>
+                    <td>0x04</td>
+                    <td>0x40</td>
+                    <td>0x00</td>
+                  </tr>
+                  <tr>
+                    <td>0x80000010</td>
+                    <td>0x23</td>
+                    <td>0x20</td>
+                    <td>0x74</td>
+                    <td>0x00</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div class="flex justify-between mt-2">
+                <button class="btn btn-assemble" onclick="scrollMemory('up')">Scroll Up</button>
+                <button class="btn btn-assemble" onclick="scrollMemory('down')">Scroll Down</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="panel">
+          <h2 class="text-xl font-bold text-indigo-300 mb-4">About Oxygen Simulator</h2>
+          <p class="text-sm">
+            Oxygen is a powerful RISC-V assembly simulator designed for education, research, and development. Our tool helps developers understand and debug RISC-V assembly code efficiently.
+          </p>
+          <p class="text-sm mt-2">Supports RV32 and RV64 specifications with comprehensive debugging features.</p>
+        </div>
+        <div class="panel">
+          <h2 class="text-xl font-bold text-indigo-300 mb-4">Contact Information</h2>
+          <p class="text-sm">Email: <a href="mailto:support@merl-uetp.org">support@merl-uetp.org</a></p>
+          <p class="text-sm mt-1">Address: ST, 13, Abul Hasan Isphahani Rd, opposite Safari, Block 7 Gulshan-e-Iqbal, Karachi, 75300</p>
+          <p class="text-sm mt-1">Phone: 021-34994305</p>
+          <p class="text-sm mt-1">Website: <a href="https://merl-uetp.org" target="_blank">Micro Electronics Research Laboratory</a></p>
+        </div>
+        <div class="panel">
+          <h2 class="text-xl font-bold text-indigo-300 mb-4">Repository & Resources</h2>
+          <p class="text-sm"><a href="#" target="_blank">GitHub Repository</a></p>
+          <p class="text-sm mt-1"><a href="#" target="_blank">Documentation</a></p>
+          <p class="text-sm mt-1"><a href="#" target="_blank">Report an Issue</a></p>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p>© 2024 Oxygen Simulator Open Source Project | By MERL</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let registers = new Array(32).fill(0);
+    let memory = new Array(1024).fill(0);
+    let pc = 0x80000000;
+    let variant = 'RV32';
+    let notation = 'hex';
+
+    function assembleCode() {
+      const code = document.getElementById('codeEditor').value;
+      alert('Assembling code: ' + code);
+      const hexDump = document.getElementById('hexDump');
+      hexDump.value = 'Assembled hex output will appear here...';
+    }
+
+    function clearEditor() {
+      document.getElementById('codeEditor').value = '';
+    }
+
+    function setVariant(v) {
+      variant = v;
+      const buttons = document.querySelectorAll('.variant-toggle button');
+      buttons.forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      alert('Variant set to: ' + v);
+    }
+
+    function copyHex() {
+      const hexDump = document.getElementById('hexDump');
+      hexDump.select();
+      document.execCommand('copy');
+      alert('Hex dump copied to clipboard!');
+    }
+
+    function downloadHex() {
+      const hexDump = document.getElementById('hexDump').value;
+      const blob = new Blob([hexDump], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'hex_dump.txt';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function clearHex() {
+      document.getElementById('hexDump').value = '';
+    }
+
+    function setNotation(n) {
+      notation = n;
+      const buttons = document.querySelectorAll('.notation-toggle button');
+      buttons.forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      updateTables();
+    }
+
+    function runCode() {
+      alert('Running full simulation...');
+      updateTables();
+    }
+
+    function stepCode() {
+      alert('Stepping through code... PC: ' + (notation === 'hex' ? '0x' + pc.toString(16) : pc));
+      pc += 4;
+      updateTables();
+    }
+
+    function resetSimulator() {
+      registers = new Array(32).fill(0);
+      memory = new Array(1024).fill(0);
+      pc = 0x80000000;
+      alert('Simulator reset!');
+      updateTables();
+    }
+
+    function updateTables() {
+      const regTable = document.getElementById('registerTable');
+      regTable.innerHTML = '';
+      const abiNames = ['zero', 'ra', 'sp', 'gp', 'tp', 't0', 't1', 't2', 's0', 's1', 'a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 's2', 's3', 's4', 's5', 's6', 's7', 's8', 's9', 's10', 's11', 't3', 't4', 't5', 't6'];
+      for (let i = 0; i < 32; i++) {
+        const row = regTable.insertRow();
+        row.insertCell().textContent = 'x' + i;
+        row.insertCell().textContent = abiNames[i];
+        row.insertCell().textContent = notation === 'hex' ? '0x' + registers[i].toString(16) : registers[i];
+      }
+
+      const memTable = document.getElementById('memoryTable');
+      memTable.innerHTML = '';
+      for (let i = 0x80000000; i <= 0x80000010; i += 4) {
+        const row = memTable.insertRow();
+        row.insertCell().textContent = notation === 'hex' ? '0x' + i.toString(16) : i;
+        for (let j = 0; j < 4; j++) {
+          const val = memory[i - 0x80000000 + j] || 0;
+          row.insertCell().textContent = notation === 'hex' ? '0x' + val.toString(16).padStart(2, '0') : val;
+        }
+      }
+    }
+
+    function scrollMemory(direction) {
+      const table = document.getElementById('memoryTable').parentElement;
+      table.scrollTop += direction === 'up' ? -50 : 50;
+    }
+    updateTables();
+  </script>
+  <!-- <script src="script.js"></script> -->
+</body>
+</html>
