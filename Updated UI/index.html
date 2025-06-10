@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Oxygen Simulator - RISC-V Assembly Environment</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+      /* Reset and base styles */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      }
+      
+      body {
+        background: linear-gradient(135deg, #1a2a6c, #2c3e50);
+        color: #f0f0f0;
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      /* Header styles */
+      header {
+        background: rgba(10, 20, 40, 0.95);
+        backdrop-filter: blur(10px);
+        padding: 15px 30px;
+        border-bottom: 1px solid rgba(79, 195, 247, 0.3);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      }
+      
+      .logo-container {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+      
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      
+      .logo-icon {
+        font-size: 2.5rem;
+        color: #4fc3f7;
+        text-shadow: 0 0 10px rgba(79, 195, 247, 0.7);
+      }
+      
+      .logo-text {
+        display: flex;
+        flex-direction: column;
+      }
+      
+      .logo-text h1 {
+        font-size: 1.8rem;
+        font-weight: 700;
+        letter-spacing: 1px;
+        color: #fff;
+      }
+      
+      .logo-text span {
+        font-size: 1rem;
+        color: #a8dadc;
+        letter-spacing: 0.5px;
+      }
+      
+      .riscv-tag {
+        background: rgba(79, 195, 247, 0.15);
+        border: 1px solid rgba(79, 195, 247, 0.3);
+        border-radius: 20px;
+        padding: 6px 15px;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      .nav-links {
+        display: flex;
+        gap: 25px;
+        align-items: center;
+      }
+      
+      .nav-links a {
+        color: #f0f0f0;
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 1.05rem;
+        transition: all 0.3s ease;
+        padding: 8px 15px;
+        border-radius: 6px;
+      }
+      
+      .nav-links a:hover {
+        background: rgba(79, 195, 247, 0.2);
+        color: #4fc3f7;
+      }
+      
+      .nav-links a.active {
+        background: rgba(79, 195, 247, 0.3);
+        color: #4fc3f7;
+      }
+      
+      .nav-links i {
+        margin-right: 8px;
+      }
+      
+      .mobile-menu-btn {
+        display: none;
+        background: transparent;
+        border: none;
+        color: #f0f0f0;
+        font-size: 1.5rem;
+        cursor: pointer;
+      }
+
+      /* Main content styles */
+      #main-content {
+        padding: 30px;
+        animation: fadeIn 0.8s ease;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+
+      /* Main content layout */
+      #editor, #decoder {
+        display: flex;
+        gap: 24px;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+      }
+
+      #code-editor, #dump-config, #tablediv, #regmem {
+        flex: 1;
+        background: rgba(30, 30, 46, 0.95);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+        transition: transform 0.3s ease;
+        min-width: 300px;
+      }
+
+      #code-editor:hover,
+      #dump-config:hover,
+      #tablediv:hover,
+      #regmem:hover {
+        transform: translateY(-4px);
+      }
+
+      /* Card section */
+      .card--inverted {
+        background: rgba(44, 53, 75, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 18px;
+        margin-bottom: 18px;
+      }
+
+      /* Headings */
+      h2 {
+        color: #4fc3f7;
+        margin-bottom: 16px;
+        font-size: 1.4rem;
+        border-bottom: 2px solid rgba(79, 195, 247, 0.4);
+        padding-bottom: 10px;
+        letter-spacing: 0.5px;
+      }
+
+      /* Input field */
+      .input__field {
+        width: 100%;
+        background: rgba(25, 25, 35, 0.85);
+        border: 1px solid rgba(79, 195, 247, 0.3);
+        border-radius: 10px;
+        padding: 14px;
+        color: #e0e0e0;
+        font-family: "Fira Code", monospace;
+        resize: vertical;
+        min-height: 160px;
+        font-size: 0.95rem;
+      }
+
+      /* Editor text area - INCREASED HEIGHT */
+      #editor-text-box {
+        height: 320px; /* Increased from 80% to fixed height */
+        min-height: 320px;
+      }
+
+      /* Button group */
+      .button-group {
+        display: flex;
+        gap: 12px;
+        margin-top: 18px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        background: linear-gradient(to right, #4fc3f7, #29b6f6);
+        color: #0a192f;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+        flex: 1;
+        min-width: 120px;
+        text-transform: uppercase;
+      }
+
+      /* Consistent button styles */
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(41, 182, 246, 0.4);
+      }
+      
+      /* Red buttons */
+      .button-red {
+        background: linear-gradient(to right, #ff5252, #d32f2f) !important;
+      }
+      
+      .button-red:hover {
+        background: #d32f2f !important;
+        box-shadow: 0 6px 16px rgba(211, 47, 47, 0.4) !important;
+      }
+      
+      /* Green buttons */
+      .button-green {
+        background: linear-gradient(to right, #4CAF50, #2E7D32) !important;
+      }
+      
+      .button-green:hover {
+        background: #2E7D32 !important;
+        box-shadow: 0 6px 16px rgba(46, 125, 50, 0.4) !important;
+      }
+
+      /* Table styling */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 18px;
+        background-color: rgba(30, 30, 46, 0.95);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+
+      th, td {
+        padding: 14px;
+        text-align: left;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 0.9rem;
+      }
+
+      th {
+        background: rgba(79, 195, 247, 0.2);
+        color: #4fc3f7;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      /* Notation select dropdown */
+      .notation-select {
+        margin-bottom: 20px;
+      }
+
+      select {
+        background: rgba(25, 25, 35, 0.85);
+        border: 1px solid rgba(79, 195, 247, 0.4);
+        border-radius: 8px;
+        color: #f0f0f0;
+        padding: 10px 14px;
+        font-size: 0.95rem;
+        width: 100%;
+        font-family: 'Fira Code', monospace;
+        transition: border-color 0.3s ease;
+      }
+
+      select:focus {
+        outline: none;
+        border-color: #4fc3f7;
+        box-shadow: 0 0 6px rgba(79, 195, 247, 0.5);
+      }
+
+      /* Tab navigation styling */
+      .nav-tabs {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+      }
+
+      .nav-item {
+        background: rgba(79, 195, 247, 0.15);
+        padding: 10px 22px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        color: #cfd8dc;
+        font-weight: 500;
+        font-size: 0.95rem;
+        text-transform: uppercase;
+      }
+
+      .nav-item:hover,
+      .nav-item.active {
+        background: #4fc3f7;
+        color: #0f172a;
+        box-shadow: 0 4px 12px rgba(79, 195, 247, 0.3);
+      }
+
+      /* Tab content */
+      .tab-content > div {
+        display: none;
+        animation: fadeIn 0.4s ease-in-out;
+      }
+
+      .tab-content > div.active {
+        display: block;
+      }
+
+      /* Fade animation */
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      /* Registers & Memory Tables */
+      .registers-table,
+      .memory-table {
+        width: 100%;
+        border-collapse: collapse;
+        background-color: rgba(30, 30, 46, 0.95);
+        border-radius: 10px;
+        overflow: hidden;
+        margin-top: 10px;
+        
+      }
+
+      .registers-table th,
+      .memory-table th,
+      .registers-table td,
+      .memory-table td {
+        padding: 12px;
+        text-align: left;
+        font-size: 0.9rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .registers-table th,
+      .memory-table th {
+        background: rgba(79, 195, 247, 0.2);
+        color: #4fc3f7;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      /* Run buttons */
+      .run-button {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+      }
+
+      .run-button button {
+        flex: 1;
+        padding: 12px 20px;
+        background: linear-gradient(to right, #4fc3f7, #29b6f6);
+        border: none;
+        border-radius: 8px;
+        color: #0f172a;
+        font-weight: 600;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+      }
+
+      .run-button button:hover {
+        background: #29b6f6;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 14px rgba(41, 182, 246, 0.4);
+      }
+
+      /* Footer styles */
+      footer {
+        background: rgba(10, 20, 40, 0.95);
+        border-top: 1px solid rgba(79, 195, 247, 0.2);
+        padding: 30px;
+        margin-top: 40px;
+      }
+      
+      .footer-content {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 30px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      
+      .footer-section {
+        flex: 1;
+        min-width: 250px;
+      }
+      
+      .footer-section h3 {
+        color: #4fc3f7;
+        margin-bottom: 15px;
+        font-size: 1.3rem;
+      }
+      
+      .footer-section p {
+        color: #a8dadc;
+        margin-bottom: 10px;
+        line-height: 1.6;
+      }
+      
+      .footer-section a {
+        color: #f0f0f0;
+        text-decoration: none;
+        transition: color 0.3s ease;
+        display: block;
+        margin-bottom: 8px;
+      }
+      
+      .footer-section a:hover {
+        color: #4fc3f7;
+      }
+      
+      .social-links {
+        display: flex;
+        gap: 15px;
+        margin-top: 15px;
+      }
+      
+      .social-links a {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(79, 195, 247, 0.2);
+        color: #f0f0f0;
+        font-size: 1.2rem;
+        transition: all 0.3s ease;
+      }
+      
+      .social-links a:hover {
+        background: #4fc3f7;
+        transform: translateY(-3px);
+      }
+      
+      .copyright {
+        text-align: center;
+        padding-top: 20px;
+        margin-top: 30px;
+        border-top: 1px solid rgba(79, 195, 247, 0.1);
+        color: #a8dadc;
+        font-size: 0.9rem;
+      }
+
+      /* NEW: Scrollable registers container */
+      .scrollable-registers {
+        height: 380px; /* Fixed height */
+        overflow-y: auto;
+        border-radius: 10px;
+        border: 1px solid rgba(79, 195, 247, 0.3);
+        margin-top: 10px;
+      }
+      
+      /* Custom scrollbar for the registers container */
+      .scrollable-registers::-webkit-scrollbar {
+        width: 8px;
+      }
+      
+      .scrollable-registers::-webkit-scrollbar-track {
+        background: rgba(25, 25, 35, 0.5);
+        border-radius: 4px;
+      }
+      
+      .scrollable-registers::-webkit-scrollbar-thumb {
+        background: rgba(79, 195, 247, 0.5);
+        border-radius: 4px;
+      }
+      
+      .scrollable-registers::-webkit-scrollbar-thumb:hover {
+        background: rgba(79, 195, 247, 0.8);
+      }
+
+      /* Responsive adjustments */
+      @media (max-width: 1200px) {
+        #editor, #decoder {
+          flex-direction: column;
+        }
+      }
+      
+      @media (max-width: 900px) {
+        .nav-links {
+          display: none;
+        }
+        
+        .mobile-menu-btn {
+          display: block;
+        }
+        
+        .logo-text h1 {
+          font-size: 1.5rem;
+        }
+        
+        .riscv-tag span {
+          display: none;
+        }
+        
+        .riscv-tag {
+          padding: 6px 10px;
+        }
+        
+        /* Adjust height for mobile */
+        .scrollable-registers {
+          height: 300px;
+        }
+      }
+      
+      @media (max-width: 768px) {
+        .footer-content {
+          flex-direction: column;
+          gap: 20px;
+        }
+        
+        #editor-text-box {
+          height: 250px; /* Slightly smaller on mobile */
+        }
+      }
+    </style>
+  </head>
+  <body>    
+    <div id="main-content">
+      <!-- Header Section -->
+      <header>
+        <div class="logo-container">
+          <div class="logo">
+            <div class="logo-icon">
+              <i class="fas fa-microchip"></i>
+            </div>
+            <div class="logo-text">
+              <h1>Oxygen Simulator</h1>
+              <span>RISC-V Assembly Environment</span>
+            </div>
+          </div>
+          <div class="riscv-tag">
+            <i class="fas fa-cogs"></i>
+            <span>RISC-V Specification Compliant</span>
+          </div>
+        </div>
+        
+        <button class="mobile-menu-btn">
+          <i class="fas fa-bars"></i>
+        </button>
+      </header>
+      
+      <!-- Main Content -->
+      <div id="editor">
+        <div id="code-editor">
+          <div class="card card--inverted" id="textbox">
+            <h2>Assembly Code Editor</h2>
+            <label class="input">
+              <!-- Increased height and removed value attribute -->
+              <textarea id='editor-text-box' autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" class="input__field"
+                type="text" placeholder="Enter your RISC-V assembly instructions here..."></textarea>
+            </label>
+            <div class="button-group">
+              <button onclick="assemble_code()">Assemble</button>
+              <button onclick="reset_editor()" class="button-red">Clear</button>
+            </div>
+          </div>
+        </div>
+  
+        <div id="dump-config">
+          <div id="config" class="card card--inverted">
+            <h2>Configuration</h2>
+            <label for="dog-names">Variant : </label>
+            <select name="dog-names" id="dog-names">
+              <option value="rigatoni">RV32</option>
+              <option value="dave">RV64</option>
+            </select>
+          </div>
+          <div id="Dump-div" class="card card--inverted">
+            <h2>Hex Dump</h2>
+            <textarea readonly id="dump-box" class="input__field" type="text" placeholder="Hex dump will appear here"
+              value="" style="height: 200px"></textarea>
+            <div class="button-group">
+              <button onclick="copyHexDump()">Copy</button>
+              <button class="button-green" onclick="downloadHexDump()">Download</button>
+              <button class="button-red" onclick="clearHexDump()">Clear</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="decoder">
+        <div id="tablediv" class="card card--inverted">
+          <div class="run-button">
+            <button onclick="runCode()">Run</button>
+            <button onclick="stepInstruction()">Step</button>
+            <button onclick="reset()">Reset</button>
+          </div>
+          <table id="decodetable">
+            <thead>
+              <tr>
+                <th>
+                  <h3>PC</h3>
+                </th>
+                <th>
+                  <h3>Machine Code</h3>
+                </th>
+                <th>
+                  <h3>Base Instruction</h3>
+                </th>
+                <th>
+                  <h3>Original Instruction</h3>
+                </th>
+              </tr>
+            </thead>
+  
+            <tbody id="decoderTableBody">
+              <tr>
+                <td>
+                  <h4>0x80000000</h4>
+                </td>
+                <td>
+                  <h4>0x00100293</h4>
+                </td>
+                <td>
+                  <h4>addi t0, zero, 1</h4>
+                </td>
+                <td>
+                  <h4>li t0, 1</h4>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <h4>0x80000004</h4>
+                </td>
+                <td>
+                  <h4>0x00200313</h4>
+                </td>
+                <td>
+                  <h4>addi t1, zero, 2</h4>
+                </td>
+                <td>
+                  <h4>li t1, 2</h4>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <h4>0x80000008</h4>
+                </td>
+                <td>
+                  <h4>0x006283b3</h4>
+                </td>
+                <td>
+                  <h4>add t2, t0, t1</h4>
+                </td>
+                <td>
+                  <h4>add t2, t0, t1</h4>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <h4>0x8000000C</h4>
+                </td>
+                <td>
+                  <h4>0x00400413</h4>
+                </td>
+                <td>
+                  <h4>addi s0, zero, 4</h4>
+                </td>
+                <td>
+                  <h4>li s0, 4</h4>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <h4>0x80000010</h4>
+                </td>
+                <td>
+                  <h4>0x00742023</h4>
+                </td>
+                <td>
+                  <h4>sw t2, 0(s0)</h4>
+                </td>
+                <td>
+                  <h4>sw t2, (s0)</h4>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="regmem" class="card card--inverted">
+          <div>
+            <div class="notation-select">
+              <label for="notation">Notation:</label>
+              <select id="notation" onchange="changeNotation(this.value)">
+                <option value="hex">Hex</option>
+                <option value="decimal">Decimal</option>
+              </select>
+            </div>
+            <ul class="nav-tabs" id="myTab" role="tablist">
+              <li class="nav-item active" data-tab-target="#registers">Registers</li>
+              <li class="nav-item" data-tab-target="#memory">Memory</li>
+            </ul>
+          </div>
+  
+          <div class="col-md-5">
+            <div class="tab-content" id="myTabContent">
+              <div id="registers" role="tabpanel" class="active">
+                <!-- Registers content -->
+                <div id="registers-content">
+                  <!-- NEW: Scrollable container for registers -->
+                  <div class="scrollable-registers">
+                    <table class="registers-table">
+                      <thead>
+                        <tr>
+                          <th>Register</th>
+                          <th>ABI Name</th>
+                          <th>Value</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                          <script>
+                          const registers = [
+                            { number: 0, name: "zero" },
+                            { number: 1, name: "ra" },
+                            { number: 2, name: "sp" },
+                            { number: 3, name: "gp" },
+                            { number: 4, name: "tp" },
+                            { number: 5, name: "t0" },
+                            { number: 6, name: "t1" },
+                            { number: 7, name: "t2" },
+                            { number: 8, name: "s0/fp" },
+                            { number: 9, name: "s1" },
+                            { number: 10, name: "a0" },
+                            { number: 11, name: "a1" },
+                            { number: 12, name: "a2" },
+                            { number: 13, name: "a3" },
+                            { number: 14, name: "a4" },
+                            { number: 15, name: "a5" },
+                            { number: 16, name: "a6" },
+                            { number: 17, name: "a7" },
+                            { number: 18, name: "s2" },
+                            { number: 19, name: "s3" },
+                            { number: 20, name: "s4" },
+                            { number: 21, name: "s5" },
+                            { number: 22, name: "s6" },
+                            { number: 23, name: "s7" },
+                            { number: 24, name: "s8" },
+                            { number: 25, name: "s9" },
+                            { number: 26, name: "s10" },
+                            { number: 27, name: "s11" },
+                            { number: 28, name: "t3" },
+                            { number: 29, name: "t4" },
+                            { number: 30, name: "t5" },
+                            { number: 31, name: "t6" },
+                          ];
+                          registers.forEach((register) => {
+                            document.write(`
+                                        <tr>
+                                            <td>x${register.number}</td>
+                                            <td>${register.name}</td>
+                                            <td id="reg-${register.number}">0x00000000</td>
+                                        </tr>
+                                    `);
+                          });
+                        </script>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+              <div id="memory" role="tabpanel">
+                <div id="memory-content">
+                  <table class="memory-table">
+                    <thead>
+                      <tr>
+                        <th>Address</th>
+                        <th>+0</th>
+                        <th>+1</th>
+                        <th>+2</th>
+                        <th>+3</th>
+                      </tr>
+                    </thead>
+                    <tbody id="memoryTableBody">
+                      <tr>
+                        <td>0x80000000</td>
+                        <td>0x93</td>
+                        <td>0x02</td>
+                        <td>0x10</td>
+                        <td>0x00</td>
+                      </tr>
+                      <tr>
+                        <td>0x80000004</td>
+                        <td>0x13</td>
+                        <td>0x03</td>
+                        <td>0x20</td>
+                        <td>0x00</td>
+                      </tr>
+                      <tr>
+                        <td>0x80000008</td>
+                        <td>0xb3</td>
+                        <td>0x83</td>
+                        <td>0x62</td>
+                        <td>0x00</td>
+                      </tr>
+                      <tr>
+                        <td>0x8000000C</td>
+                        <td>0x13</td>
+                        <td>0x04</td>
+                        <td>0x40</td>
+                        <td>0x00</td>
+                      </tr>
+                      <tr>
+                        <td>0x80000010</td>
+                        <td>0x23</td>
+                        <td>0x20</td>
+                        <td>0x74</td>
+                        <td>0x00</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div class="button-group">
+                    <button id="scrollUpBtn">Scroll Up</button>
+                    <button id="scrollDownBtn">Scroll Down</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Footer Section -->
+      <footer id="contact">
+        <div class="footer-content">
+          <div class="footer-section">
+            <h3>About Oxygen Simulator</h3>
+            <p>Oxygen is a powerful RISC-V assembly simulator designed for education, research, and development. Our tool helps developers understand and debug RISC-V assembly code efficiently.</p>
+            <p>Supports RV32 and RV64 specifications with comprehensive debugging features.</p>
+          </div>
+          
+          <div class="footer-section">
+            <h3>Contact Information</h3>
+           <p><i class="fas fa-envelope"></i> Email: merl@uit.edu</a></p>
+            <p><i class="fas fa-map-marker-alt"></i> Address: ST، 13, Abul Hasan Isphahani Rd،, opposite Safari, Block 7 Gulshan-e-Iqbal, Karachi, 75300</p>
+            <p><i class="fas fa-phone"></i> Phone: 021-34994305</p>
+            <p><i class="fas fa-globe"></i> Website: <a href="https://merledupk.org/" target="_blank" style="display: inline;">Micro Electronics Research Laboratory</a></p>
+          </div>
+          
+          <div class="footer-section">
+            <h3>Repository & Resources</h3>
+            <a href="https://github.com/merledu/oxygen" target="_blank"><i class="fab fa-github"></i> GitHub Repository</a>
+            <a href=""><i class="fas fa-book"></i> Documentation</a>
+            <a href="https://github.com/merledu/oxygen/issues" target="_blank"><i class="fas fa-exclamation-circle"></i> Report an Issue</a>
+          </div>
+        </div>
+        
+        <div class="copyright">
+          <p>&copy; 2024 Oxygen Simulator Open Source Project | By MERL</p>
+        </div>
+      </footer>
+    </div>
+    
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+      // Initialize the page
+      document.addEventListener('DOMContentLoaded', function() {
+        // Tab switching functionality
+        document.querySelectorAll('.nav-item').forEach(tab => {
+          tab.addEventListener('click', () => {
+            // Remove active class from all tabs
+            document.querySelectorAll('.nav-item').forEach(t => t.classList.remove('active'));
+            // Add active class to clicked tab
+            tab.classList.add('active');
+            
+            // Get target tab content
+            const targetId = tab.getAttribute('data-tab-target');
+            
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content > div').forEach(content => {
+              content.classList.remove('active');
+            });
+            
+            // Show target content
+            document.querySelector(targetId).classList.add('active');
+          });
+        });
+        
+        // Mobile menu toggle
+        document.querySelector('.mobile-menu-btn').addEventListener('click', function() {
+          const nav = document.querySelector('.nav-links');
+          if (nav.style.display === 'flex') {
+            nav.style.display = 'none';
+          } else {
+            nav.style.display = 'flex';
+            nav.style.flexDirection = 'column';
+            nav.style.position = 'absolute';
+            nav.style.top = '100%';
+            nav.style.right = '0';
+            nav.style.background = 'rgba(10, 20, 40, 0.95)';
+            nav.style.width = '250px';
+            nav.style.padding = '15px';
+            nav.style.borderRadius = '0 0 0 10px';
+            nav.style.boxShadow = '0 8px 16px rgba(0,0,0,0.3)';
+          }
+        });
+        
+        // Initialize with some sample code
+        document.getElementById('editor-text-box').value = 
+          "li t0, 1\nli t1, 2\nadd t2, t0, t1\nli s0, 4\nsw t2, (s0)";
+          
+        // Highlight the first register for demo purposes
+        setTimeout(() => {
+          document.getElementById('reg-5').textContent = '0x00000001';
+          document.getElementById('reg-6').textContent = '0x00000002';
+          document.getElementById('reg-7').textContent = '0x00000003';
+        }, 500);
+      });
+      
+      // Enhanced button functions
+      function assemble_code() {
+        const editorContent = document.getElementById('editor-text-box').value;
+        if (!editorContent.trim()) {
+          alert('Please enter some RISC-V assembly code first!');
+          return;
+        }
+        document.getElementById('dump-box').value = "0x00100293\n0x00200313\n0x006283b3\n0x00400413\n0x00742023";
+        alert('Code assembled successfully!');
+      }
+      
+      function reset_editor() {
+        document.getElementById('editor-text-box').value = '';
+      }
+      
+      function clearHexDump() {
+        document.getElementById('dump-box').value = '';
+      }
+      
+      function copyHexDump() {
+        const dumpBox = document.getElementById('dump-box');
+        dumpBox.select();
+        document.execCommand('copy');
+        alert('Hex dump copied to clipboard!');
+      }
+      
+      function downloadHexDump() {
+        const content = document.getElementById('dump-box').value;
+        if (!content) {
+          alert('Nothing to download!');
+          return;
+        }
+        
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'riscv_hex_dump.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+      
+      function runCode() {
+        alert('Running simulation...');
+      }
+      
+      function stepInstruction() {
+        alert('Stepping through instructions...');
+      }
+      
+      function reset() {
+        alert('Resetting simulator...');
+      }
+      
+      function changeNotation(value) {
+        alert(`Changed notation to: ${value}`);
+      }
+    </script>
+  </body>
+</html>
