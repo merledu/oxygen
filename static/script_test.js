@@ -36,33 +36,33 @@ document.addEventListener('input', e => {
   }
 })
 
-var c = document.getElementById('c');
-var w = c.width = window.innerWidth,
-    h = c.height = window.innerHeight,
-    ctx = c.getContext('2d'),
+// var c = document.getElementById('c');
+// var w = c.width = window.innerWidth,
+//     h = c.height = window.innerHeight,
+//     ctx = c.getContext('2d'),
 
-    minDist = 10,
-    maxDist = 30,
-    initialWidth = 10,
-    maxLines = 80,
-    initialLines = 10,
-    speed = 5,
+//     minDist = 10,
+//     maxDist = 30,
+//     initialWidth = 10,
+//     maxLines = 80,
+//     initialLines = 10,
+//     speed = 5,
 
-    lines = [],
-    frame = 0,
-    timeSinceLast = 0,
+//     lines = [],
+//     frame = 0,
+//     timeSinceLast = 0,
 
-    dirs = [
-        [0, 1], [1, 0], [0, -1], [-1, 0],
-        [0.7, 0.7], [0.7, -0.7], [-0.7, 0.7], [-0.7, -0.7]
-    ],
-    starter = {
-        x: w / 2,
-        y: h / 2,
-        vx: 0,
-        vy: 0,
-        width: initialWidth
-    };
+//     dirs = [
+//         [0, 1], [1, 0], [0, -1], [-1, 0],
+//         [0.7, 0.7], [0.7, -0.7], [-0.7, 0.7], [-0.7, -0.7]
+//     ],
+//     starter = {
+//         x: w / 2,
+//         y: h / 2,
+//         vx: 0,
+//         vy: 0,
+//         width: initialWidth
+//     };
 
 function init() {
     lines.length = 0;
@@ -158,8 +158,8 @@ Line.prototype.step = function () {
 }
 
 
-init();
-anim();
+// init();
+// anim();
 
 
 window.addEventListener('resize', function () {
@@ -180,26 +180,82 @@ function showRestText() {
 setTimeout(showRestText, 1000); // Show the rest of the text after 1 second
 
 
-function hideSplashScreen() {
-    var splashScreen = document.getElementById('splash_screen');
-    splashScreen.classList.add('fade-out');
-    splashScreen.addEventListener('animationend', removeSplashScreen); // Remove splash screen after fade-out animation ends
-}
+// function hideSplashScreen() {
+//     var splashScreen = document.getElementById('splash_screen');
+//     splashScreen.classList.add('fade-out');
+//     splashScreen.addEventListener('animationend', removeSplashScreen); // Remove splash screen after fade-out animation ends
+// }
 
 
-function removeSplashScreen() {
-    var splashScreen = document.getElementById('splash_screen');
-    splashScreen.remove();
-    showMainContent();
+// function removeSplashScreen() {
+//     var splashScreen = document.getElementById('splash_screen');
+//     splashScreen.remove();
+//     showMainContent();
+// }
+
+const particlesContainer = document.getElementById('particles');
+
+function createParticle() {
+    console.log("particles");
+  const particle = document.createElement('div');
+  particle.className = 'particle';
+  const size = Math.random() * 8 + 2;
+  particle.style.width = `${size}px`;
+  particle.style.height = `${size}px`;
+  particle.style.left = `${Math.random() * 100}%`;
+  particle.style.animationDuration = `${Math.random() * 5 + 5}s`;
+  particle.style.animationDelay = `${Math.random() * 5}s`;
+  particlesContainer.appendChild(particle);
+  setTimeout(() => particle.remove(), 12000);
 }
+
+for (let i = 0; i < 20; i++) {
+  setTimeout(createParticle, i * 300);
+}
+setInterval(createParticle, 600);
+
+// Fade out splash screen after 4 seconds
+setTimeout(() => {
+  const splash = document.getElementById('splash_screen');
+  const background = document.querySelector('.background-effects');
+
+  if (splash) splash.classList.add('fadeOut');
+  if (background) background.classList.add('fadeOut');
+
+  setTimeout(() => {
+    splash?.remove();
+    background?.remove();
+    console.log("mainshow");
+    showMainContent(); // Reveal your app
+  }, 1000); // Match with animation duration
+}, 4000);
+
+// Inject fadeOut keyframes (in case they're needed dynamically)
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; visibility: hidden; }
+  }
+`;
+document.head.appendChild(style);
 
 
 function showMainContent() {
+    console.log("Revealing main content");
     var mainContent = document.getElementById('main-content');
-    mainContent.classList.add('show');
+    if (mainContent){
+        mainContent.classList.remove('hidden');
+        mainContent.classList.add('show');
+        document.body.classList.remove('no-bg');
+        document.body.classList.add('show-bg');
+    }
+
+    
+    
 }
 
-setTimeout(hideSplashScreen,   3000);
+
 
 
 function assemble_code() {
@@ -210,6 +266,7 @@ function assemble_code() {
     ctype = document.getElementById('C-type').checked ? 'c' : '';
     ftype = document.getElementById('F-type').checked ? 'f' : '';
     dtype = document.getElementById('D-type').checked ? 'd' : '';
+    vtype = document.getElementById('V-type').checked ? 'v' : '';
     rvtype = document.getElementById('varient-drop').value.toLowerCase()
     // if(document.getElementById('F-type').checked){
     //     ftype = true
@@ -217,7 +274,7 @@ function assemble_code() {
     // console.log(m_type)
     // console.log(code)
     axios.all([
-        axios.post('gen-hex/assemble-code', { code:code,mtype:mtype,ctype:ctype,ftype:ftype,dtype:dtype,rvtype:rvtype }),
+        axios.post('gen-hex/assemble-code', { code:code,mtype:mtype,ctype:ctype,ftype:ftype,dtype:dtype,vtype:vtype,rvtype:rvtype }),
         axios.post('gen-stats/assemble-code', { code: code }),
         // axios.post('timeline-update', { code: code })
         

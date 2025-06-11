@@ -3,22 +3,22 @@
   {% load static %}
   {% csrf_token %}
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Oxygen Simulator</title>
-    {% comment %} <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"> {% endcomment %}
-    <link rel="stylesheet" href="{% static 'style_test.css' %}">
-  </head>
-  <body>
-    <div id="splash_screen">
-      <div>
-        <canvas id="c"></canvas>
-        <div id="text">
-          <span id="letter-o" class="slide-in">O</span>
-          <span id="rest-text" class="hidden">xygen</span>
-        </div>
-      </div>
-    </div>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Oxygen Simulator</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Inter:wght@400;600&family=Roboto+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'style_test.css' %}">
+</head>
+  <body class="no-bg">
+    <div class="background-effects">
+  <div class="circuit-pattern"></div>
+  <div class="particles" id="particles"></div>
+</div>
+<div id="splash_screen" class="splash">
+  <div class="logo">OXYGEN</div>
+  <div class="tagline">A RISC-V Assembly Simulator</div>
+</div>
     <div id="main-content" class="hidden">
       <div id="editor">
           <div class="card card--inverted" id="textbox">
@@ -69,6 +69,8 @@
               <label for="F-type"> F-type</label><br>
               <input type="checkbox" id="D-type" name="D-type" value=none >
               <label for="D-type"> D-type</label><br>
+              <input type="checkbox" id="V-type" name="V-type" value=none >
+              <label for="V-type"> V-type</label><br>
             </div>
           </div>
           <div id="Dump-div" class="card card--inverted">

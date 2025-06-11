@@ -79,6 +79,7 @@ async def assemble_code(request):
         ctype = data.get('ctype', '')
         ftype = data.get('ftype', '')
         dtype = data.get('dtype', '')
+        vtype = data.get('vtype', '')
         rvtype = data.get('rvtype', '')
         
         try:
@@ -89,8 +90,8 @@ async def assemble_code(request):
             tmp_disasm = os.path.join(tmp, 'disasm.S')
             
             sudo_or_base  = IP.checkpsudo(code)
-            hex_output = get_hex_gcc(code , mtype, ctype, ftype, dtype , rvtype,tmp_asm , tmp_elf , tmp_disasm)
-            command = f'{SPIKE+"/spike"} -d --isa={rvtype}i{mtype}{ctype}{ftype}{dtype} {tmp_elf}'
+            hex_output = get_hex_gcc(code , mtype, ctype, ftype, dtype , vtype, rvtype,tmp_asm , tmp_elf , tmp_disasm)
+            command = f'{SPIKE+"/spike"} -d --isa={rvtype}i{mtype}{ctype}{ftype}{dtype}{vtype} {tmp_elf}'
             print(command)
             await assemble(command,session_key)
             return JsonResponse({'hex': hex_output ,
@@ -206,13 +207,13 @@ def extract_values(instruction, register_dump):
     
     return address
 
-def get_hex_gcc(code , mtype, ctype, ftype, dtype , rvtype , tmp_asm , tmp_elf , tmp_disasm):
+def get_hex_gcc(code , mtype, ctype, ftype, dtype , vtype , rvtype , tmp_asm , tmp_elf , tmp_disasm):
     hex_lines = []
     with open(tmp_asm, 'w') as file:
         file.write(code)
         print("here")
     try:
-        disassembly_file = simulate_bash_script(tmp_asm ,tmp_elf , tmp_disasm , mtype, ctype, ftype, dtype , rvtype)
+        disassembly_file = simulate_bash_script(tmp_asm ,tmp_elf , tmp_disasm , mtype, ctype, ftype, dtype , vtype , rvtype)
     except Exception as e:
         raise Wrong_input_Error(str(e))
     
@@ -245,8 +246,8 @@ def extract_pc_hex(filename , tmp_elf):
     return pc_hex_dict
 
 
-def simulate_bash_script(file_name ,tmp_elf , tmp_disasm, mtype, ctype, ftype, dtype , rvtype):
-    extensions = mtype + ctype + ftype + dtype
+def simulate_bash_script(file_name ,tmp_elf , tmp_disasm, mtype, ctype, ftype, dtype , vtype , rvtype):
+    extensions = mtype + ctype + ftype + dtype + vtype 
     
     if rvtype == "rv32":
         assembletype = 'riscv32'
