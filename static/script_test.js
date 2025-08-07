@@ -217,7 +217,7 @@ function assemble_code() {
     // console.log(m_type)
     // console.log(code)
     axios.all([
-        axios.post('gen-hex/assemble-code', { code:code,mtype:mtype,ctype:ctype,ftype:ftype,dtype:dtype,rvtype:rvtype }),
+        axios.post('assemble-code', { code:code,mtype:mtype,ctype:ctype,ftype:ftype,dtype:dtype,rvtype:rvtype }),
         axios.post('gen-stats/assemble-code', { code: code }),
         // axios.post('timeline-update', { code: code })
         
@@ -415,7 +415,7 @@ function populate_Memory_Table(data, isHex = true) {
 }
 
 function reset_Registers (){
-    axios.post('gen-hex/reset', {
+    axios.post('reset', {
     })
     .then(response => {
         const currentInstructionRow = document.getElementById('decoderTableBody').rows[pc/4];
@@ -450,7 +450,7 @@ function stepInstruction() {
     if (currentInstructionRow) {
         currentInstructionRow.classList.add('highlight'); // Add highlight class
     }
-    axios.post('gen-hex/step', {
+    axios.post('step', {
       instruction: currentInstruction,
       pc: pc,
       memory:memorydic,
@@ -477,7 +477,7 @@ function stepInstruction() {
         update_Register_Values(reg_value,isHex)
     })
     .catch(error => {
-      console.error(error);
+      window.alert(error);
     });
 }
 
