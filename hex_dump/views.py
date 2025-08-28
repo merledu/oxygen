@@ -52,7 +52,9 @@ async def get_registers(session_key):
         return JsonResponse({'output': "Simulator not started"})
 
     result = await simulator.get_registers()
-    return result
+    vreg = await simulator.get_registers_vtype()
+    print(vreg)
+    return result,vreg
 
 async def get_memory(addres,session_key):
     simulator = session_simulators.get(session_key)
@@ -79,6 +81,7 @@ async def assemble_code(request):
         ctype = data.get('ctype', '')
         ftype = data.get('ftype', '')
         dtype = data.get('dtype', '')
+        vtype = data.get('vtype', '')
         rvtype = data.get('rvtype', '')
         
         try:
@@ -89,8 +92,8 @@ async def assemble_code(request):
             tmp_disasm = os.path.join(tmp, 'disasm.S')
             
             sudo_or_base  = IP.checkpsudo(code)
-            hex_output = get_hex_gcc(code , mtype, ctype, ftype, dtype , rvtype,tmp_asm , tmp_elf , tmp_disasm)
-            command = f'{SPIKE+"/spike"} -d --isa={rvtype}i{mtype}{ctype}{ftype}{dtype} {tmp_elf}'
+            hex_output = get_hex_gcc(code , mtype, ctype, ftype, dtype ,vtype, rvtype,tmp_asm , tmp_elf , tmp_disasm)
+            command = f'{SPIKE+"/spike"} -d --isa={rvtype}i{mtype}{ctype}{ftype}{dtype}{vtype} {tmp_elf}'
             print(command)
             await assemble(command,session_key)
             return JsonResponse({'hex': hex_output ,
@@ -121,7 +124,6 @@ async def step_code(request):
         if not session_key:
             await sync_to_async(request.session.save)()
             session_key = request.session.session_key
-        print("check")
         data = json.loads(request.body)
         instruction = data.get('instruction', '')
         pc = data.get('pc', '')
@@ -135,23 +137,25 @@ async def step_code(request):
             execution.f_registers = Fregister
         execution.run(instruction)
         ins = await step(session_key)
-        print(ins)
-        reg = await get_registers(session_key)
+        print('check' ,ins)
+        reg,vreg= await get_registers(session_key)
+        vreg_array = vreg_dict_to_hex_array(vreg['vector_registers'])
+        print('array test',vreg_array)
         add = extract_values(ins, reg)
-        print(hex(add))
+        # print(hex(add))
         # if (len(ins_split) >= 3): 
         if add >= 2147483648:
-            print("hi")
             mem= await get_memory(hex(add),session_key)
             print(f"hi {mem}")
         # print(f"hi {mem}")
         register= parse_registers(reg) #execution.run(instruction)
-        print(reg)
+        print('after parse ' , reg)
         Fregister=execution.f_registers
         memory = execution.memory
         pc = execution.pc
         return JsonResponse({'memory': memory ,
                              'register' : register,
+                             'vreg': vreg_array,
                              'pc': pc,
                              'f_reg': Fregister},)
     return JsonResponse({'error': 'Invalid request'}, status=400)
@@ -206,13 +210,14 @@ def extract_values(instruction, register_dump):
     
     return address
 
-def get_hex_gcc(code , mtype, ctype, ftype, dtype , rvtype , tmp_asm , tmp_elf , tmp_disasm):
+def get_hex_gcc(code , mtype, ctype, ftype, dtype ,vtype, rvtype , tmp_asm , tmp_elf , tmp_disasm):
+    print('checkv get', vtype ,mtype)
     hex_lines = []
     with open(tmp_asm, 'w') as file:
         file.write(code)
         print("here")
     try:
-        disassembly_file = simulate_bash_script(tmp_asm ,tmp_elf , tmp_disasm , mtype, ctype, ftype, dtype , rvtype)
+        disassembly_file = simulate_bash_script(tmp_asm ,tmp_elf , tmp_disasm , mtype, ctype, ftype, dtype ,vtype , rvtype)
     except Exception as e:
         raise Wrong_input_Error(str(e))
     
@@ -222,6 +227,18 @@ def get_hex_gcc(code , mtype, ctype, ftype, dtype , rvtype , tmp_asm , tmp_elf ,
     hex_output = '\n'.join(hex_lines)
     return hex_output
 
+def vreg_dict_to_hex_array(vreg_dict):
+    """
+    Convert to array with hex values as integers
+    """
+    vreg_array = [[0, 0] for _ in range(32)]
+    
+    for reg_name, values in vreg_dict.items():
+        reg_num = int(reg_name[1:])
+        vreg_array[reg_num][0] = int(values[0], 16)  # Convert hex string to int
+        vreg_array[reg_num][1] = int(values[1], 16)
+    
+    return vreg_array
 
 def extract_first_error_line(output):
     error_pattern = re.compile(r"^(.*?Error:.*)$")
@@ -245,9 +262,10 @@ def extract_pc_hex(filename , tmp_elf):
     return pc_hex_dict
 
 
-def simulate_bash_script(file_name ,tmp_elf , tmp_disasm, mtype, ctype, ftype, dtype , rvtype):
-    extensions = mtype + ctype + ftype + dtype
-    
+def simulate_bash_script(file_name ,tmp_elf , tmp_disasm, mtype, ctype, ftype, dtype , vtype , rvtype):
+    extensions = mtype + ctype + ftype + dtype + vtype
+    print('checkv', vtype)
+
     if rvtype == "rv32":
         assembletype = 'riscv32'
         abi = 'ilp32'
@@ -265,7 +283,7 @@ def simulate_bash_script(file_name ,tmp_elf , tmp_disasm, mtype, ctype, ftype, d
 
     assemble_cmd = [f"{assembletype}-unknown-elf-gcc",f"-march={rvtype}i{extensions}", f"-mabi={abi}", "-T", LINKER_SCRIPT, "-static", "-mcmodel=medany", "-fvisibility=hidden", "-nostdlib", "-nostartfiles", "-g", "-o", tmp_elf, file_name]
     assemble_result = subprocess.run(assemble_cmd, capture_output=True, text=True)
-    print(assemble_result.stderr)
+    print(assemble_result.stderr , assemble_result.returncode)
     if assemble_result.returncode != 0:
         raise Exception(f"Error in assembly: {assemble_result.stderr}")
 

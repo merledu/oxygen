@@ -210,6 +210,7 @@ function assemble_code() {
     ctype = document.getElementById('C-type').checked ? 'c' : '';
     ftype = document.getElementById('F-type').checked ? 'f' : '';
     dtype = document.getElementById('D-type').checked ? 'd' : '';
+    vtype = document.getElementById('V-type').checked ? 'v' : '';
     rvtype = document.getElementById('varient-drop').value.toLowerCase()
     // if(document.getElementById('F-type').checked){
     //     ftype = true
@@ -217,7 +218,7 @@ function assemble_code() {
     // console.log(m_type)
     // console.log(code)
     axios.all([
-        axios.post('gen-hex/assemble-code', { code:code,mtype:mtype,ctype:ctype,ftype:ftype,dtype:dtype,rvtype:rvtype }),
+        axios.post('gen-hex/assemble-code', { code:code,mtype:mtype,ctype:ctype,ftype:ftype,dtype:dtype,vtype:vtype,rvtype:rvtype }),
         axios.post('gen-stats/assemble-code', { code: code }),
         // axios.post('timeline-update', { code: code })
         
@@ -246,7 +247,7 @@ function assemble_code() {
         }
     }))
     .catch(error => {
-        console.error('There was an error!', error);
+        alert('There was an error!', error);
     })
     const assemblebtn = document.getElementsByClassName('button-glow-button')[0];
     assemblebtn.disabled = true;
@@ -379,7 +380,14 @@ function update_FRegister_Values(data, isHex='true') {
         document.getElementById(`freg-${index}`).innerText = formattedValue;
     });
 }
-
+function update_VRegister_Values(data, isHex='true') {
+    data.forEach((value, index) => {
+        const formattedValue0 = isHex ? `0x${(value[0] >>> 0).toString(16).padStart(8, '0')}` : value[0].toString(10);
+        const formattedValue1 = isHex ? `0x${(value[1] >>> 0).toString(16).padStart(8, '0')}` : value[1].toString(10);
+        document.getElementById(`vreg-l${index}`).innerText = formattedValue0;
+        document.getElementById(`vreg-o${index}-1`).innerText = formattedValue1;
+    });
+}
 
 function changeNotation(notation) {
     isHex = notation === 'hex';
@@ -462,7 +470,9 @@ function stepInstruction() {
         memorydic = response.data.memory
         reg_value = response.data.register
         f_reg_value = response.data.f_reg
+        v_reg_value = response.data.vreg
         console.log("returned reg val",reg_value)
+        console.log("returned reg val",v_reg_value)
         pc = newPc;
         console.log(pc)
         if (currentInstructionRow) {
@@ -472,9 +482,10 @@ function stepInstruction() {
         if (newInstructionRow) {
             newInstructionRow.classList.add('highlight');
         }
-        console.log("typeof(memorydic)",(memorydic))
         populate_Memory_Table(memorydic,isHex)
         update_Register_Values(reg_value,isHex)
+        update_FRegister_Values(f_reg_value,isHex)
+        update_VRegister_Values(v_reg_value,isHex)
     })
     .catch(error => {
       console.error(error);
