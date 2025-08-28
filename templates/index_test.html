@@ -129,8 +129,9 @@
                   <i class="fa fa-caret-down"></i>
                 </button>
                 <div class="dropdown-content">
-                  <li class="nav-item" data-tab-target="#ftype-registers"><a href='#ftype-registers'>F-type Registers</a></li>
                   <li data-tab-target="#registers" class="nav-item"><a href='#registers'>I-type Registers</a></li>
+                  <li class="nav-item" data-tab-target="#ftype-registers"><a href='#ftype-registers'>F-type Registers</a></li>
+                  <li class="nav-item" data-tab-target="#vtype-registers"><a href='#vtype-registers'>V-type Registers</a></li>
                 </div>
               </div>
               <div class="dropdown">
@@ -224,6 +225,33 @@
                                                   <td id="freg-${i}">0.0</td>
                                               </tr>
                                           `);
+                        }
+                      </script>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div data-tab-content id="vtype-registers" role="tabpanel">
+                <!-- V-Type Registers content -->
+                <div id="vtype-registers-content">
+                  <table class="vtype-registers-table">
+                    <thead>
+                      <tr>
+                        <th>Register</th>
+                        <th>[1]</th>
+                        <th>[0]</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <script>
+                        for (let i = 0; i < 32; i++) {
+                          document.write(`
+                            <tr>
+                              <td>v${i}</td>
+                              <td id="vreg-l-${i}">0x0000000000000000</td>
+                              <td id="vreg-o-${i}">0x0000000000000000</td>
+                            </tr>
+                          `);
                         }
                       </script>
                     </tbody>
