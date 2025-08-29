@@ -485,7 +485,7 @@ function stepInstruction() {
         populate_Memory_Table(memorydic,isHex)
         update_Register_Values(reg_value,isHex)
         update_FRegister_Values(f_reg_value,isHex)
-        update_VRegister_Values(v_reg_value,isHex)
+        // update_VRegister_Values(v_reg_value,isHex)
     })
     .catch(error => {
       console.error(error);
