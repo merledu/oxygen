@@ -20,19 +20,21 @@ store_ins=[
 ]
 
 
+
 class Wrong_input_Error(Exception):
     pass
-
 
 execution = DPS.RISCVSimulatorSingle()
 session_simulators = {}  #global variable to keep track of the Simulator instance
 
-async def assemble(command,session_key):
+async def assemble(command,session_key, vtype):
     simulator = session_simulators.get(session_key)
     if simulator is None:
         simulator = Simulator()
         session_simulators[session_key] = simulator
         print('spike running')# Create a new instance of the Simulator
+    
+    simulator.vtype = bool(vtype == 'v')
 
     await simulator.start(command)# This will terminate any existing process and start a new one
     print('spike running')
@@ -52,7 +54,10 @@ async def get_registers(session_key):
         return JsonResponse({'output': "Simulator not started"})
 
     result = await simulator.get_registers()
-    vreg = await simulator.get_registers_vtype()
+    if (simulator.vtype):
+        vreg = await simulator.get_registers_vtype()
+    else:
+        vreg = None
     print(vreg)
     return result,vreg
 
@@ -82,6 +87,8 @@ async def assemble_code(request):
         ftype = data.get('ftype', '')
         dtype = data.get('dtype', '')
         vtype = data.get('vtype', '')
+        print(vtype)
+
         rvtype = data.get('rvtype', '')
         
         try:
@@ -95,17 +102,45 @@ async def assemble_code(request):
             hex_output = get_hex_gcc(code , mtype, ctype, ftype, dtype ,vtype, rvtype,tmp_asm , tmp_elf , tmp_disasm)
             command = f'{SPIKE+"/spike"} -d --isa={rvtype}i{mtype}{ctype}{ftype}{dtype}{vtype} {tmp_elf}'
             print(command)
-            await assemble(command,session_key)
+            await assemble(command,session_key, vtype)
             return JsonResponse({'hex': hex_output ,
                              'is_sudo' : sudo_or_base,
                              'success': True}, )
         except IP.InstructionError as e:
-            return JsonResponse({'success': False, 'error': str(e)})
+            error_text = str(e)
+            line, message = extract_asm_error(error_text)
+            return JsonResponse({
+                'success': False,
+                'error_line': line,
+                'error_message': message
+            })
         except ValueError as e:
-            return JsonResponse({'success': False, 'error': str(e)})
+            error_text = str(e)
+            line, message = extract_asm_error(error_text)
+            return JsonResponse({
+                'success': False,
+                'error_line': line,
+                'error_message': message
+            })
         except Wrong_input_Error as e:
-            return JsonResponse({'success': False, 'error': str(e)})
+            error_text = str(e)
+            line, message = extract_asm_error(error_text)
+            print('line 128',message)
+            return JsonResponse({
+                'success': False,
+                'error_line': line,
+                'error_message': message
+            })  
     return JsonResponse({'error': 'Invalid request'}, status=400)
+
+def extract_asm_error(err_text):
+    pattern = r"asm\.S:(\d+): Error: (.+)"
+    match = re.search(pattern, err_text)
+    if match:
+        line = int(match.group(1))
+        message = match.group(2).strip()
+        return line, message
+    return None, err_text.strip()
 
 def parse_registers(input_str):
 # Use regex to extract register names and values
@@ -139,7 +174,10 @@ async def step_code(request):
         ins = await step(session_key)
         print('check' ,ins)
         reg,vreg= await get_registers(session_key)
-        vreg_array = vreg_dict_to_hex_array(vreg['vector_registers'])
+        if vreg:
+            vreg_array = vreg_dict_to_hex_array(vreg['vector_registers'])
+        else:
+            vreg_array = [[0, 0] for _ in range(32)]
         print('array test',vreg_array)
         add = extract_values(ins, reg)
         # print(hex(add))
@@ -283,7 +321,7 @@ def simulate_bash_script(file_name ,tmp_elf , tmp_disasm, mtype, ctype, ftype, d
 
     assemble_cmd = [f"{assembletype}-unknown-elf-gcc",f"-march={rvtype}i{extensions}", f"-mabi={abi}", "-T", LINKER_SCRIPT, "-static", "-mcmodel=medany", "-fvisibility=hidden", "-nostdlib", "-nostartfiles", "-g", "-o", tmp_elf, file_name]
     assemble_result = subprocess.run(assemble_cmd, capture_output=True, text=True)
-    print(assemble_result.stderr , assemble_result.returncode)
+    print(assemble_result.stderr ,'between', assemble_result.returncode) 
     if assemble_result.returncode != 0:
         raise Exception(f"Error in assembly: {assemble_result.stderr}")
 

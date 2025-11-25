@@ -6,6 +6,7 @@ from globals import SPIKE,TMP_ELF
 class Simulator:
     def __init__(self):
         self.spike_process = None
+        self.vtype = False
     
     def parse_registers(input_str):
     # Use regex to extract register names and values
@@ -80,15 +81,19 @@ class Simulator:
         try:
         # Capture output until next (spike) prompt
             vector_pattern = r'VLEN=.*?(?=\(spike\))'
+
             
             index = self.spike_process.expect([vector_pattern, TIMEOUT, EOF])
+            
             if index == 0:
                 
                 raw_output = self.spike_process.after.decode('utf-8').strip()
                 raw_output = raw_output.replace("(spike)", "").strip()
 
                 lines = raw_output.splitlines()
+                
                 result = {}
+
 
                 # First line contains VLEN and ELEN
                 header_match = re.search(r'VLEN=(\d+) bits; ELEN=(\d+) bits', lines[0])
@@ -111,6 +116,7 @@ class Simulator:
                 print(result)
                 return result
             elif index == 1:  
+                print(f"Timeout! Buffer before timeout: {self.spike_process.before.decode('utf-8', errors='replace')}")
                 return {"error": "Timeout occurred"}
             else:  
                 return {"error": "Simulation ended"}

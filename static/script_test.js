@@ -224,6 +224,10 @@ function assemble_code() {
         
     ])
     .then(axios.spread((data1, data2) => {
+        if (data1 && data1.data && data1.data.success === false) {
+        alert(data1.data.error_message + " at line " + data1.data.error_line); // <-- display Wrong_input_Error message
+        return; // stop further handling
+        }
         if(data1){
             const hex = data1.data.hex;
             console.log(hex)
@@ -247,7 +251,18 @@ function assemble_code() {
         }
     }))
     .catch(error => {
-        alert('There was an error!', error);
+        if (error.response && error.response.data) {
+            const data = error.response.data;
+            if (data.error_line) {
+                alert(`Error at line ${data.error_line}\n${data.error_message}`);
+            } else if (data.error) {
+                alert(data.error);
+            } else {
+                alert("Unknown error occurred");
+            }
+        } else {
+            alert("Network error");
+        }
     })
     const assemblebtn = document.getElementsByClassName('button-glow-button')[0];
     assemblebtn.disabled = true;
