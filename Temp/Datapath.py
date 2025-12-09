@@ -4,15 +4,42 @@ class RISCVSimulator:
         self.pc = 0
         self.memory = {}
         self.instruction_memory = {}
+        self.instruction_memory = {}
         self.f_registers = [0.0] * 32 
+        # Vector registers: 32 registers, each is a list of bytes (or ints). 
+        # Assuming VLEN=128 bits (16 bytes) for simulation.
+        self.v_registers = [[0]*16 for _ in range(32)]
+        self.VLEN = 128 # bits
+        self.ELEN = 8 # Element width in bits (default 8 for vle8.v)
 
     def load_instructions(self, instructions):
-        for i, instruction in enumerate(instructions):
-            self.instruction_memory[i * 4] = instruction
+        current_addr = 0
+        for instruction in instructions:
+            # instruction is an integer
+            # Determine length based on value range or just store it?
+            # If it's > 0xFFFF, it's 32-bit. But what if it's a small 32-bit instruction?
+            # Actually, RISC-V 32-bit instructions always have lower 2 bits = 11.
+            # 16-bit instructions have lower 2 bits != 11.
             
-    def execute_instruction(self, instruction):
+            if (instruction & 0x3) == 0x3:
+                length = 4
+            else:
+                length = 2
+            
+            self.instruction_memory[current_addr] = (instruction, length)
+            current_addr += length
+            
+    def execute_instruction(self, instruction_info):
+        instruction, length = instruction_info
         self.registers[0]=0
         
+        # Check for Compressed
+        if length == 2:
+            self.execute_c_type(instruction)
+            self.pc += 2
+            self.registers[0]=0
+            return
+
         opcode = instruction & 0x7F
         if opcode == 0x33:  # Rtype 
             self.execute_r_type(instruction)
@@ -36,7 +63,143 @@ class RISCVSimulator:
         elif opcode == 0x67:  # Ftype
             self.execute_f_type(instruction)
             self.pc+=4
+        elif opcode == 0x53: # Ftype / Dtype
+             self.execute_f_d_type(instruction)
+             self.pc+=4
+        elif opcode == 0x07: # FLW / FLD
+             self.execute_f_d_load(instruction)
+             self.pc+=4
+        elif opcode == 0x27: # FSW / FSD
+             self.execute_f_d_store(instruction)
+             self.pc+=4
+        elif opcode == 0x57: # Vtype
+             self.execute_v_type(instruction)
+             self.pc+=4
+        else:
+             print(f"Error: Unknown opcode {hex(opcode)} at PC {self.pc}")
+             raise ValueError(f"Unknown opcode {hex(opcode)}")
+        
         self.registers[0]=0
+
+    def execute_c_type(self, instruction):
+        # Decode Compressed Instruction
+        opcode = instruction & 0x3
+        funct3 = (instruction >> 13) & 0x7
+        
+        if opcode == 0: # Quadrant 0
+            if funct3 == 0: # c.addi4spn
+                rd = ((instruction >> 2) & 0x7) + 8
+                imm = ((instruction >> 5) & 0x1) << 3 | ((instruction >> 6) & 0x1) << 2 | \
+                      ((instruction >> 7) & 0xF) << 6 | ((instruction >> 11) & 0x3) << 4
+                if imm == 0: raise ValueError("c.addi4spn imm=0")
+                self.registers[rd] = self.registers[2] + imm
+            elif funct3 == 2: # c.lw
+                rs1 = ((instruction >> 7) & 0x7) + 8
+                rd = ((instruction >> 2) & 0x7) + 8
+                imm = ((instruction >> 6) & 0x1) << 2 | ((instruction >> 10) & 0x7) << 3 | ((instruction >> 5) & 0x1) << 6
+                addr = self.registers[rs1] + imm
+                self.registers[rd] = self.memory.get(addr, 0) | (self.memory.get(addr+1, 0) << 8) | \
+                                     (self.memory.get(addr+2, 0) << 16) | (self.memory.get(addr+3, 0) << 24)
+            elif funct3 == 6: # c.sw
+                rs1 = ((instruction >> 7) & 0x7) + 8
+                rs2 = ((instruction >> 2) & 0x7) + 8
+                imm = ((instruction >> 6) & 0x1) << 2 | ((instruction >> 10) & 0x7) << 3 | ((instruction >> 5) & 0x1) << 6
+                addr = self.registers[rs1] + imm
+                val = self.registers[rs2]
+                self.memory[addr] = val & 0xFF
+                self.memory[addr+1] = (val >> 8) & 0xFF
+                self.memory[addr+2] = (val >> 16) & 0xFF
+                self.memory[addr+3] = (val >> 24) & 0xFF
+            # Add other Q0 instructions (c.fld, c.fsd, etc.) as needed
+            
+        elif opcode == 1: # Quadrant 1
+            if funct3 == 0: # c.addi
+                rd = (instruction >> 7) & 0x1F
+                imm = self.sign_extend(((instruction >> 2) & 0x1F) | ((instruction >> 12) & 0x1) << 5, 6)
+                if rd != 0: self.registers[rd] += imm
+            elif funct3 == 1: # c.jal
+                offset = self.sign_extend(((instruction >> 3) & 0x7) << 1 | ((instruction >> 11) & 0x1) << 4 | \
+                                          ((instruction >> 2) & 0x1) << 5 | ((instruction >> 7) & 0x1) << 6 | \
+                                          ((instruction >> 6) & 0x1) << 7 | ((instruction >> 9) & 0x3) << 8 | \
+                                          ((instruction >> 8) & 0x1) << 10 | ((instruction >> 12) & 0x1) << 11, 12)
+                self.registers[1] = self.pc + 2
+                self.pc += offset
+                self.pc -= 2 # Compensate for outer loop increment? No, outer loop adds 2.
+                # Wait, if I change PC here, I should handle the return.
+                # The caller adds 2. So I should subtract 2 from target?
+                # Or better, set PC to target - 2.
+                self.pc -= 2 
+            elif funct3 == 5: # c.j
+                offset = self.sign_extend(((instruction >> 3) & 0x7) << 1 | ((instruction >> 11) & 0x1) << 4 | \
+                                          ((instruction >> 2) & 0x1) << 5 | ((instruction >> 7) & 0x1) << 6 | \
+                                          ((instruction >> 6) & 0x1) << 7 | ((instruction >> 9) & 0x3) << 8 | \
+                                          ((instruction >> 8) & 0x1) << 10 | ((instruction >> 12) & 0x1) << 11, 12)
+                self.pc += offset
+                self.pc -= 2
+            elif funct3 == 6: # c.beqz
+                rs1 = ((instruction >> 7) & 0x7) + 8
+                offset = self.sign_extend(((instruction >> 3) & 0x3) << 1 | ((instruction >> 10) & 0x3) << 3 | \
+                                          ((instruction >> 2) & 0x1) << 5 | ((instruction >> 5) & 0x3) << 6 | \
+                                          ((instruction >> 12) & 0x1) << 8, 9)
+                if self.registers[rs1] == 0:
+                    self.pc += offset
+                    self.pc -= 2
+            elif funct3 == 7: # c.bnez
+                rs1 = ((instruction >> 7) & 0x7) + 8
+                offset = self.sign_extend(((instruction >> 3) & 0x3) << 1 | ((instruction >> 10) & 0x3) << 3 | \
+                                          ((instruction >> 2) & 0x1) << 5 | ((instruction >> 5) & 0x3) << 6 | \
+                                          ((instruction >> 12) & 0x1) << 8, 9)
+                if self.registers[rs1] != 0:
+                    self.pc += offset
+                    self.pc -= 2
+            # Add other Q1 instructions
+            
+        elif opcode == 2: # Quadrant 2
+            if funct3 == 0: # c.slli
+                rd = (instruction >> 7) & 0x1F
+                shamt = ((instruction >> 2) & 0x1F) | ((instruction >> 12) & 0x1) << 5
+                if rd != 0: self.registers[rd] <<= shamt
+            elif funct3 == 2: # c.lwsp
+                rd = (instruction >> 7) & 0x1F
+                imm = ((instruction >> 4) & 0x7) << 2 | ((instruction >> 12) & 0x1) << 5 | ((instruction >> 2) & 0x3) << 6
+                if rd != 0:
+                    addr = self.registers[2] + imm
+                    self.registers[rd] = self.memory.get(addr, 0) | (self.memory.get(addr+1, 0) << 8) | \
+                                         (self.memory.get(addr+2, 0) << 16) | (self.memory.get(addr+3, 0) << 24)
+            elif funct3 == 4:
+                if (instruction >> 12) & 0x1 == 0:
+                    if (instruction >> 2) & 0x1F == 0: # c.jr
+                        rs1 = (instruction >> 7) & 0x1F
+                        if rs1 != 0:
+                            self.pc = self.registers[rs1]
+                            self.pc -= 2
+                    else: # c.mv
+                        rd = (instruction >> 7) & 0x1F
+                        rs2 = (instruction >> 2) & 0x1F
+                        if rd != 0 and rs2 != 0: self.registers[rd] = self.registers[rs2]
+                else:
+                    if (instruction >> 2) & 0x1F == 0: # c.jalr
+                        rs1 = (instruction >> 7) & 0x1F
+                        if rs1 != 0:
+                            t = self.pc + 2
+                            self.pc = self.registers[rs1]
+                            self.registers[1] = t
+                            self.pc -= 2
+                    else: # c.add
+                        rd = (instruction >> 7) & 0x1F
+                        rs2 = (instruction >> 2) & 0x1F
+                        if rd != 0 and rs2 != 0: self.registers[rd] += self.registers[rs2]
+            elif funct3 == 6: # c.swsp
+                rs2 = (instruction >> 2) & 0x1F
+                imm = ((instruction >> 9) & 0xF) << 2 | ((instruction >> 7) & 0x3) << 6
+                addr = self.registers[2] + imm
+                val = self.registers[rs2]
+                self.memory[addr] = val & 0xFF
+                self.memory[addr+1] = (val >> 8) & 0xFF
+                self.memory[addr+2] = (val >> 16) & 0xFF
+                self.memory[addr+3] = (val >> 24) & 0xFF
+            # Add other Q2 instructions
+
     def execute_r_type(self, instruction):
         
         funct7 = (instruction >> 25) & 0x7F
@@ -313,33 +476,155 @@ class RISCVSimulator:
             self.registers[rd] = self.pc + 4
             self.pc += self.sign_extend(imm, 21)  # increment after execution
         
-    def execute_f_type(self, instruction):
-    # F-type instructions (e.g., ADD, SUB, MUL, DIV)
+        # FMV
+        # ... implement moves if needed
+
+    def execute_v_type(self, instruction):
+        # Decode Vector Instruction
+        # opcode is 0x57 (1010111) or 0x07 (0000111) for loads?
+        # Wait, opcode for V is 0x57 (OP-V).
+        # Loads/Stores are 0x07 (LOAD-FP) / 0x27 (STORE-FP) collision?
+        # No, Vector Loads are 0x07 (0000111) same as FLW?
+        # Actually, standard RISC-V Vector extension uses:
+        # LOAD-FP (0x07): FLW, FLD, VLE... distinguished by width/funct3?
+        # FLW: funct3=010. FLD: funct3=011.
+        # VLE8: funct3=000.
+        # So I need to update execute_f_d_load/store to dispatch to vector load/store if funct3 matches.
+        
+        # But here I am in execute_v_type which handles OP-V (0x57).
+        
+        funct6 = (instruction >> 26) & 0x3F
+        vm = (instruction >> 25) & 0x1
+        vs2 = (instruction >> 20) & 0x1F
+        rs1 = (instruction >> 15) & 0x1F
+        funct3 = (instruction >> 12) & 0x7
+        vd = (instruction >> 7) & 0x1F
+        
+        # OPIVV (funct3=000), OPIVX (funct3=100), OPIVI (funct3=011)
+        
+        if funct3 == 0x0: # OPIVV
+            if funct6 == 0x00: # vadd.vv
+                for i in range(16): # Assuming VLEN=128, SEW=8
+                    self.v_registers[vd][i] = (self.v_registers[rs1][i] + self.v_registers[vs2][i]) & 0xFF
+            elif funct6 == 0x00 and funct3 == 0x0: # vmul.vv? No, check funct6
+                 pass # Add vmul logic
+                 
+        elif funct3 == 0x4: # OPIVX
+            if funct6 == 0x00: # vadd.vx
+                scalar = self.registers[rs1]
+                for i in range(16):
+                    self.v_registers[vd][i] = (self.v_registers[vs2][i] + scalar) & 0xFF
+                    
+        elif funct3 == 0x3: # OPIVI
+            if funct6 == 0x00: # vadd.vi
+                imm = self.sign_extend(rs1, 5) # rs1 field holds imm
+                for i in range(16):
+                    self.v_registers[vd][i] = (self.v_registers[vs2][i] + imm) & 0xFF
+
+    def execute_f_d_load(self, instruction):
+        imm = (instruction >> 20) & 0xFFF
+        rs1 = (instruction >> 15) & 0x1F
+        funct3 = (instruction >> 12) & 0x7
+        rd = (instruction >> 7) & 0x1F
+        
+        addr = self.registers[rs1] + self.sign_extend(imm, 12)
+        
+        if funct3 == 0x2: # FLW
+            val = self.memory.get(addr, 0) | (self.memory.get(addr+1, 0) << 8) | \
+                  (self.memory.get(addr+2, 0) << 16) | (self.memory.get(addr+3, 0) << 24)
+            self.f_registers[rd] = float(val) 
+            
+        elif funct3 == 0x3: # FLD
+            val = self.memory.get(addr, 0) | (self.memory.get(addr+1, 0) << 8) | \
+                  (self.memory.get(addr+2, 0) << 16) | (self.memory.get(addr+3, 0) << 24) | \
+                  (self.memory.get(addr+4, 0) << 32) | (self.memory.get(addr+5, 0) << 40) | \
+                  (self.memory.get(addr+6, 0) << 48) | (self.memory.get(addr+7, 0) << 56)
+            self.f_registers[rd] = float(val)
+            
+        elif funct3 == 0x0: # VLE8.V
+             # Vector Load
+             # For simplicity, assume VLEN=128, SEW=8
+             for i in range(16):
+                 self.v_registers[rd][i] = self.memory.get(addr + i, 0)
+
+    def execute_f_d_store(self, instruction):
+        imm = ((instruction >> 25) << 5) | ((instruction >> 7) & 0x1F)
+        rs2 = (instruction >> 20) & 0x1F
+        rs1 = (instruction >> 15) & 0x1F
+        funct3 = (instruction >> 12) & 0x7
+        
+        addr = self.registers[rs1] + self.sign_extend(imm, 12)
+        
+        if funct3 == 0x2: # FSW
+            val = int(self.f_registers[rs2])
+            self.memory[addr] = val & 0xFF
+            self.memory[addr+1] = (val >> 8) & 0xFF
+            self.memory[addr+2] = (val >> 16) & 0xFF
+            self.memory[addr+3] = (val >> 24) & 0xFF
+        elif funct3 == 0x3: # FSD
+            val = int(self.f_registers[rs2])
+            self.memory[addr] = val & 0xFF
+            self.memory[addr+1] = (val >> 8) & 0xFF
+            self.memory[addr+2] = (val >> 16) & 0xFF
+            self.memory[addr+3] = (val >> 24) & 0xFF
+            self.memory[addr+4] = (val >> 32) & 0xFF
+            self.memory[addr+5] = (val >> 40) & 0xFF
+            self.memory[addr+6] = (val >> 48) & 0xFF
+            self.memory[addr+7] = (val >> 56) & 0xFF
+        elif funct3 == 0x0: # VSE8.V
+             # Vector Store
+             for i in range(16):
+                 self.memory[addr + i] = self.v_registers[rs2][i] & 0xFF
+
+    def sign_extend(self, value, bits):
         funct7 = (instruction >> 25) & 0x7F
         rs2 = (instruction >> 20) & 0x1F
         rs1 = (instruction >> 15) & 0x1F
         funct3 = (instruction >> 12) & 0x7
         rd = (instruction >> 7) & 0x1F
-        opcode = instruction & 0x7F
-
-        # FLW
-        if opcode == 0x37 and funct3 == 0x2:
-            self.f_registers[rd] = self.memory[self.registers[rs1] + self.sign_extend(instruction & 0xFFF, 12)]
-        # FSW
-        elif opcode == 0x3B and funct3 == 0x2:
-            self.memory[self.registers[rs1] + self.sign_extend(instruction & 0xFFF, 12)] = self.f_registers[rs2]
+        
+        fmt = (instruction >> 25) & 0x3 # Top 2 bits of funct7 are fmt? No, funct7 is 7 bits.
+        # funct7: 5 bits opcode-like + 2 bits fmt.
+        # Standard: funct7[6:2] is opcode, funct7[1:0] is fmt.
+        # S = 00, D = 01.
+        
+        fmt = funct7 & 0x3
+        op = funct7 >> 2
+        
         # FADD
-        elif opcode == 0x67 and funct7 == 0x00 and funct3 == 0x0:
+        if op == 0x00:
             self.f_registers[rd] = self.f_registers[rs1] + self.f_registers[rs2]
         # FSUB
-        elif opcode == 0x67 and funct7 == 0x20 and funct3 == 0x0:
+        elif op == 0x01:
             self.f_registers[rd] = self.f_registers[rs1] - self.f_registers[rs2]
         # FMUL
-        elif opcode == 0x67 and funct7 == 0x00 and funct3 == 0x1:
+        elif op == 0x02:
             self.f_registers[rd] = self.f_registers[rs1] * self.f_registers[rs2]
         # FDIV
-        elif opcode == 0x67 and funct7 == 0x00 and funct3 == 0x2:
-            self.f_registers[rd] = self.f_registers[rs1] / self.f_registers[rs2]
+        elif op == 0x03:
+            if self.f_registers[rs2] != 0:
+                self.f_registers[rd] = self.f_registers[rs1] / self.f_registers[rs2]
+            else:
+                self.f_registers[rd] = float('inf') # Handle div by zero
+        # FSGNJ
+        elif op == 0x04:
+            # Simplified sign injection
+            if funct3 == 0: # fsgnj
+                self.f_registers[rd] = abs(self.f_registers[rs1]) * (1 if self.f_registers[rs2] >= 0 else -1)
+            elif funct3 == 1: # fsgnjn
+                self.f_registers[rd] = abs(self.f_registers[rs1]) * (-1 if self.f_registers[rs2] >= 0 else 1)
+            elif funct3 == 2: # fsgnjx
+                self.f_registers[rd] = abs(self.f_registers[rs1]) * (1 if (self.f_registers[rs1] >= 0) == (self.f_registers[rs2] >= 0) else -1)
+        # FMIN/FMAX
+        elif op == 0x05:
+            if funct3 == 0: # fmin
+                self.f_registers[rd] = min(self.f_registers[rs1], self.f_registers[rs2])
+            elif funct3 == 1: # fmax
+                self.f_registers[rd] = max(self.f_registers[rs1], self.f_registers[rs2])
+        # FCVT
+        # ... implement conversions if needed
+        # FMV
+        # ... implement moves if needed
 
     def sign_extend(self, value, bits):
         # imm ka signextend
@@ -348,17 +633,36 @@ class RISCVSimulator:
         return value
 
     def run(self, instructions):
-        instructions = instructions.split('\n')
-        instructions = list(filter(('').__ne__, instructions))
-        for i in range(len(instructions)):
-            hex_int = int(instructions[i], 16)
-            instructions[i]=hex_int
+        try:
+            instructions = instructions.split('\n')
+            instructions = list(filter(('').__ne__, instructions))
+            parsed_instructions = []
+            for i in range(len(instructions)):
+                line = instructions[i].strip()
+                if not line: continue
+                if line.startswith('Error'):
+                     print(line)
+                     return []
+                hex_int = int(line, 16)
+                parsed_instructions.append(hex_int)
+                
+            self.load_instructions(parsed_instructions)
             
-        self.load_instructions(instructions)
-        while self.pc < len(instructions) * 4:
-            instruction = self.instruction_memory[self.pc]
-            self.execute_instruction(instruction)
-        return self.registers
+            # Calculate total size
+            total_size = 0
+            for inst in parsed_instructions:
+                 if (inst & 0x3) == 0x3: total_size += 4
+                 else: total_size += 2
+
+            while self.pc < total_size:
+                if self.pc not in self.instruction_memory:
+                    break
+                instruction_info = self.instruction_memory[self.pc]
+                self.execute_instruction(instruction_info)
+            return self.registers
+        except Exception as e:
+            print(f"Runtime Error: {str(e)}")
+            return []
     
 
     def dump_registers(self):
