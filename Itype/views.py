@@ -50,6 +50,7 @@ def assemble_code(request):
             # hex_output = IP.main(code)
             sudo_or_base  = IP.checkpsudo(code)
             hex_output = get_hex_gcc(code)
+            print('line 53 ', hex_output)
             return JsonResponse({'hex': hex_output ,
                              'is_sudo' : sudo_or_base,
                              'success': True}, )
@@ -117,15 +118,19 @@ def step_code(request):
             execution.memory = memory
             execution.registers = register
             execution.f_registers = Fregister
+            # execution.v_registers = Vregister # Need to accept vreg from frontend if passed
+        
         register=execution.run(instruction)
         Fregister=execution.f_registers
         memory = execution.memory
         pc = execution.pc
+        v_registers = execution.v_registers
         print(pc)
         return JsonResponse({'memory': memory ,
                              'register' : register,
                              'pc': pc,
-                             'f_reg': Fregister},)
+                             'f_reg': Fregister,
+                             'vreg': v_registers},)
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
@@ -139,12 +144,14 @@ def run_code(request):
         execution2 = DP.RISCVSimulator()
         registers = execution2.run(hex_output)
         f_registers = execution2.f_registers
+        v_registers = execution2.v_registers
         memory = execution2.memory
         return JsonResponse({'hex': hex_output ,
                              'is_sudo': sudo_or_base,
                              'registers': registers,
                              'memory': memory,
-                             'f_reg': f_registers}, )
+                             'f_reg': f_registers,
+                             'vreg': v_registers}, )
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
@@ -155,11 +162,13 @@ def reset(request):
         execution.pc=0
         execution.instruction_memory = {}
         execution.f_registers = [0.0] * 32 
+        execution.v_registers = [[0]*16 for _ in range(32)]
         return JsonResponse({
                              'register': execution.registers,
                              'memory': execution.memory,
                              'pc':execution.pc,
-                             'fregister': execution.f_registers}, )
+                             'fregister': execution.f_registers,
+                             'vreg': execution.v_registers}, )
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 

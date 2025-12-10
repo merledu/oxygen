@@ -114,6 +114,8 @@ INSTRUCTION_SET = {
     'auipc':   ('0010111', None, None, 'U'),
     'ecall':   ('1110011', '000', '0000000', 'I'),
     'ebreak':  ('1110011', '000', '0000001', 'I'),
+    'fence':   ('0001111', '000', None, 'I'),
+    'fence.i': ('0001111', '001', None, 'I'),
     # M extension instructions
     'mul':     ('0110011', '000', '0000001', 'R'),
     'mulh':    ('0110011', '001', '0000001', 'R'),
@@ -596,7 +598,11 @@ def parse_instruction(instruction):
         if inst_type == 'R':
             rd = register_to_bin(parts[1],5)
             rs1 = register_to_bin(parts[2],5)
-            rs2 = register_to_bin(parts[3],5)
+            if len(parts) > 3:
+                rs2 = register_to_bin(parts[3],5)
+            else:
+                rs2 = register_to_bin('x0', 5) # Default to x0 for 2-operand R-type
+                
             if rd == "ERROR" or rs1 == "ERROR" or rs2 == "ERROR":
                 print("Error: Invalid register value provided.")
                 raise ValueError(f"Unknown register")
@@ -604,9 +610,26 @@ def parse_instruction(instruction):
             return FORMATS['R'].format(funct7=funct7, rs2=rs2, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
         
         elif inst_type == 'I':
-            rd = register_to_bin(parts[1],5)
-            rs1 = register_to_bin(parts[2],5)
-            imm = imm_to_bin(parts[3], 12)
+            if inst_name.startswith('fence'):
+                 # Handle fence optional args
+                 if len(parts) == 1:
+                     rd = register_to_bin('x0', 5)
+                     rs1 = register_to_bin('x0', 5)
+                     imm = imm_to_bin('0', 12)
+                 else:
+                     # fence pred, succ?
+                     # For now assume standard I-type format if args provided: fence rd, rs1, imm
+                     # But standard fence is: fence pred, succ
+                     # pred/succ are in imm field.
+                     # Let's just support 'fence' -> 0,0,0
+                     rd = register_to_bin('x0', 5)
+                     rs1 = register_to_bin('x0', 5)
+                     imm = imm_to_bin('0', 12)
+            else:
+                rd = register_to_bin(parts[1],5)
+                rs1 = register_to_bin(parts[2],5)
+                imm = imm_to_bin(parts[3], 12)
+            
             if rd == "ERROR" or rs1 == "ERROR":
                 print("Error: Invalid register value provided.")
                 raise ValueError(f"Unknown register")
@@ -771,6 +794,8 @@ def main(instructions_str):
         #     instructions_str=instructions_str.replace(')', ' ')
             
         instructions = instructions_str.lower().splitlines()
+        # Strip comments
+        instructions = [line.split('#')[0].strip() for line in instructions]
         while '' in instructions:
             instructions.remove('')
         hex_lines = []

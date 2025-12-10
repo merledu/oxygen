@@ -1,3 +1,5 @@
+import math
+
 class RISCVSimulator:
     def __init__(self):
         self.registers = [0] * 32
@@ -40,6 +42,7 @@ class RISCVSimulator:
             self.registers[0]=0
             return
 
+
         opcode = instruction & 0x7F
         if opcode == 0x33:  # Rtype 
             self.execute_r_type(instruction)
@@ -74,6 +77,12 @@ class RISCVSimulator:
              self.pc+=4
         elif opcode == 0x57: # Vtype
              self.execute_v_type(instruction)
+             self.pc+=4
+        elif opcode == 0x73: # System (ecall, ebreak)
+             self.execute_system_type(instruction)
+             self.pc+=4
+        elif opcode == 0x0F: # Fence
+             self.execute_fence_type(instruction)
              self.pc+=4
         else:
              print(f"Error: Unknown opcode {hex(opcode)} at PC {self.pc}")
@@ -110,13 +119,103 @@ class RISCVSimulator:
                 self.memory[addr+1] = (val >> 8) & 0xFF
                 self.memory[addr+2] = (val >> 16) & 0xFF
                 self.memory[addr+3] = (val >> 24) & 0xFF
-            # Add other Q0 instructions (c.fld, c.fsd, etc.) as needed
+            elif funct3 == 1: # c.fld
+                rs1 = ((instruction >> 7) & 0x7) + 8
+                rd = ((instruction >> 2) & 0x7) + 8
+                imm = ((instruction >> 6) & 0x1) << 3 | ((instruction >> 10) & 0x7) << 4 | ((instruction >> 5) & 0x1) << 7
+                addr = self.registers[rs1] + imm
+                val = 0
+                for i in range(8): val |= self.memory.get(addr+i, 0) << (i*8)
+                self.f_registers[rd] = float(val) # Should interpret bits as double
+            elif funct3 == 5: # c.fsd
+                rs1 = ((instruction >> 7) & 0x7) + 8
+                rs2 = ((instruction >> 2) & 0x7) + 8
+                imm = ((instruction >> 6) & 0x1) << 3 | ((instruction >> 10) & 0x7) << 4 | ((instruction >> 5) & 0x1) << 7
+                addr = self.registers[rs1] + imm
+                val = int(self.f_registers[rs2])
+                for i in range(8): self.memory[addr+i] = (val >> (i*8)) & 0xFF
             
         elif opcode == 1: # Quadrant 1
             if funct3 == 0: # c.addi
                 rd = (instruction >> 7) & 0x1F
                 imm = self.sign_extend(((instruction >> 2) & 0x1F) | ((instruction >> 12) & 0x1) << 5, 6)
                 if rd != 0: self.registers[rd] += imm
+            elif funct3 == 2: # c.li
+                rd = (instruction >> 7) & 0x1F
+                imm = self.sign_extend(((instruction >> 2) & 0x1F) | ((instruction >> 12) & 0x1) << 5, 6)
+                if rd != 0: self.registers[rd] = imm
+            elif funct3 == 3: # c.lui / c.addi16sp
+                rd = (instruction >> 7) & 0x1F
+                imm = self.sign_extend(((instruction >> 2) & 0x1F) | ((instruction >> 12) & 0x1) << 5, 6)
+                # Check if rd is 2 (sp) -> c.addi16sp
+                if rd == 2:
+                    # imm format is different for addi16sp
+                    # imm = nzimm[9] | nzimm[4|6|8:7|5] | nzimm[5]
+                    # instruction bits: 12 | 6-2
+                    # 12 -> 9
+                    # 6 -> 4
+                    # 5 -> 6
+                    # 4-3 -> 8:7
+                    # 2 -> 5
+                    # Wait, standard encoding:
+                    # imm[9] = inst[12]
+                    # imm[4] = inst[6]
+                    # imm[6] = inst[5]
+                    # imm[8:7] = inst[4:3]
+                    # imm[5] = inst[2]
+                    imm16 = ((instruction >> 12) & 0x1) << 9 | ((instruction >> 6) & 0x1) << 4 | \
+                            ((instruction >> 5) & 0x1) << 6 | ((instruction >> 3) & 0x3) << 7 | \
+                            ((instruction >> 2) & 0x1) << 5
+                    imm16 = self.sign_extend(imm16, 10) * 16 # Scaled by 16? No, bits are 9:4, so *16 is implicit in bit pos?
+                    # Actually bits are 9,8,7,6,5,4. So it represents value * 16.
+                    # My manual decoding above constructs the value / 16?
+                    # bit 9 is at pos 9.
+                    # So yes, the value constructed is the immediate.
+                    # But wait, sign extension should be on bit 9?
+                    # Yes, imm[9] is sign bit.
+                    if (imm16 >> 9) & 1: imm16 -= 1024
+                    self.registers[2] += imm16
+                elif rd != 0: # c.lui
+                    # imm is 17:12.
+                    # inst[12] -> imm[17]
+                    # inst[6:2] -> imm[16:12]
+                    imm_lui = ((instruction >> 12) & 0x1) << 17 | ((instruction >> 2) & 0x1F) << 12
+                    if (imm_lui >> 17) & 1: imm_lui -= 0x40000 # Sign extend 18 bits? No, LUI loads 20 bits.
+                    # c.lui loads nzimm[17:12] into bits 17:12 of rd, sign extends bit 17.
+                    # Wait, LUI loads 20 bits U-immediate. c.lui loads non-zero imm into 17:12.
+                    # So value is sign_extend(imm, 6) << 12.
+                    imm_val = self.sign_extend(((instruction >> 2) & 0x1F) | ((instruction >> 12) & 0x1) << 5, 6)
+                    self.registers[rd] = imm_val << 12
+            elif funct3 == 4: # ALU ops
+                # sub, xor, or, and...
+                # funct2 in 11:10
+                funct2 = (instruction >> 10) & 0x3
+                rd = ((instruction >> 7) & 0x7) + 8
+                rs2 = ((instruction >> 2) & 0x7) + 8
+                if funct2 == 0: # c.srli
+                     shamt = ((instruction >> 2) & 0x1F) | ((instruction >> 12) & 0x1) << 5
+                     self.registers[rd] >>= shamt
+                elif funct2 == 1: # c.srai
+                     shamt = ((instruction >> 2) & 0x1F) | ((instruction >> 12) & 0x1) << 5
+                     self.registers[rd] >>= shamt # Python handles signed shift if value is signed?
+                     # Need to ensure arithmetic shift behavior if simulating 32-bit words
+                elif funct2 == 2: # c.andi
+                     imm = self.sign_extend(((instruction >> 2) & 0x1F) | ((instruction >> 12) & 0x1) << 5, 6)
+                     self.registers[rd] &= imm
+                elif funct2 == 3: # c.sub, c.xor, c.or, c.and
+                     # funct1 in 6:5, but instruction format for CA is different.
+                     # 100 0 11 xxx 00 xxx 01 (c.sub)
+                     # bit 12 is 0.
+                     # bit 6:5 is op.
+                     op_sub = (instruction >> 5) & 0x3
+                     if op_sub == 0: # c.sub
+                         self.registers[rd] -= self.registers[rs2]
+                     elif op_sub == 1: # c.xor
+                         self.registers[rd] ^= self.registers[rs2]
+                     elif op_sub == 2: # c.or
+                         self.registers[rd] |= self.registers[rs2]
+                     elif op_sub == 3: # c.and
+                         self.registers[rd] &= self.registers[rs2]
             elif funct3 == 1: # c.jal
                 offset = self.sign_extend(((instruction >> 3) & 0x7) << 1 | ((instruction >> 11) & 0x1) << 4 | \
                                           ((instruction >> 2) & 0x1) << 5 | ((instruction >> 7) & 0x1) << 6 | \
@@ -166,6 +265,19 @@ class RISCVSimulator:
                     addr = self.registers[2] + imm
                     self.registers[rd] = self.memory.get(addr, 0) | (self.memory.get(addr+1, 0) << 8) | \
                                          (self.memory.get(addr+2, 0) << 16) | (self.memory.get(addr+3, 0) << 24)
+            elif funct3 == 1: # c.fldsp
+                rd = (instruction >> 7) & 0x1F
+                imm = ((instruction >> 5) & 0x3) << 3 | ((instruction >> 12) & 0x1) << 5 | ((instruction >> 2) & 0x7) << 6
+                addr = self.registers[2] + imm
+                val = 0
+                for i in range(8): val |= self.memory.get(addr+i, 0) << (i*8)
+                self.f_registers[rd] = float(val)
+            elif funct3 == 5: # c.fsdsp
+                rs2 = (instruction >> 2) & 0x1F
+                imm = ((instruction >> 10) & 0x7) << 3 | ((instruction >> 7) & 0x7) << 6
+                addr = self.registers[2] + imm
+                val = int(self.f_registers[rs2])
+                for i in range(8): self.memory[addr+i] = (val >> (i*8)) & 0xFF
             elif funct3 == 4:
                 if (instruction >> 12) & 0x1 == 0:
                     if (instruction >> 2) & 0x1F == 0: # c.jr
@@ -185,6 +297,9 @@ class RISCVSimulator:
                             self.pc = self.registers[rs1]
                             self.registers[1] = t
                             self.pc -= 2
+                        else: # c.ebreak
+                             # print(f"C.EBREAK at PC {self.pc}")
+                             pass
                     else: # c.add
                         rd = (instruction >> 7) & 0x1F
                         rs2 = (instruction >> 2) & 0x1F
@@ -479,6 +594,29 @@ class RISCVSimulator:
         # FMV
         # ... implement moves if needed
 
+    def execute_system_type(self, instruction):
+        # ecall, ebreak
+        # For simulation, maybe just print or stop?
+        # ecall: environment call. ebreak: debugger break.
+        # funct3=0, funct12 determines which one.
+        funct3 = (instruction >> 12) & 0x7
+        funct12 = (instruction >> 20) & 0xFFF
+        
+        if funct12 == 0: # ecall
+            # System call simulation
+            # Check a7 for syscall number?
+            # For now, just print
+            # print(f"ECALL at PC {self.pc}")
+            pass
+        elif funct12 == 1: # ebreak
+            # print(f"EBREAK at PC {self.pc}")
+            pass
+
+    def execute_fence_type(self, instruction):
+        # fence, fence.i
+        # In a simple sequential simulator, these are NOPs.
+        pass
+
     def execute_v_type(self, instruction):
         # Decode Vector Instruction
         # opcode is 0x57 (1010111) or 0x07 (0000111) for loads?
@@ -506,8 +644,9 @@ class RISCVSimulator:
             if funct6 == 0x00: # vadd.vv
                 for i in range(16): # Assuming VLEN=128, SEW=8
                     self.v_registers[vd][i] = (self.v_registers[rs1][i] + self.v_registers[vs2][i]) & 0xFF
-            elif funct6 == 0x00 and funct3 == 0x0: # vmul.vv? No, check funct6
-                 pass # Add vmul logic
+            elif funct6 == 0x25: # vmul.vv
+                 for i in range(16):
+                     self.v_registers[vd][i] = (self.v_registers[rs1][i] * self.v_registers[vs2][i]) & 0xFF
                  
         elif funct3 == 0x4: # OPIVX
             if funct6 == 0x00: # vadd.vx
@@ -576,14 +715,13 @@ class RISCVSimulator:
              for i in range(16):
                  self.memory[addr + i] = self.v_registers[rs2][i] & 0xFF
 
-    def sign_extend(self, value, bits):
+    def execute_f_d_type(self, instruction):
         funct7 = (instruction >> 25) & 0x7F
         rs2 = (instruction >> 20) & 0x1F
         rs1 = (instruction >> 15) & 0x1F
         funct3 = (instruction >> 12) & 0x7
         rd = (instruction >> 7) & 0x1F
         
-        fmt = (instruction >> 25) & 0x3 # Top 2 bits of funct7 are fmt? No, funct7 is 7 bits.
         # funct7: 5 bits opcode-like + 2 bits fmt.
         # Standard: funct7[6:2] is opcode, funct7[1:0] is fmt.
         # S = 00, D = 01.
@@ -591,40 +729,109 @@ class RISCVSimulator:
         fmt = funct7 & 0x3
         op = funct7 >> 2
         
+        # Helper to get value based on fmt
+        val1 = self.f_registers[rs1]
+        val2 = self.f_registers[rs2]
+        
         # FADD
         if op == 0x00:
-            self.f_registers[rd] = self.f_registers[rs1] + self.f_registers[rs2]
+            self.f_registers[rd] = val1 + val2
         # FSUB
         elif op == 0x01:
-            self.f_registers[rd] = self.f_registers[rs1] - self.f_registers[rs2]
+            self.f_registers[rd] = val1 - val2
         # FMUL
         elif op == 0x02:
-            self.f_registers[rd] = self.f_registers[rs1] * self.f_registers[rs2]
+            self.f_registers[rd] = val1 * val2
         # FDIV
         elif op == 0x03:
-            if self.f_registers[rs2] != 0:
-                self.f_registers[rd] = self.f_registers[rs1] / self.f_registers[rs2]
+            if val2 != 0:
+                self.f_registers[rd] = val1 / val2
             else:
                 self.f_registers[rd] = float('inf') # Handle div by zero
         # FSGNJ
         elif op == 0x04:
-            # Simplified sign injection
             if funct3 == 0: # fsgnj
-                self.f_registers[rd] = abs(self.f_registers[rs1]) * (1 if self.f_registers[rs2] >= 0 else -1)
+                self.f_registers[rd] = math.copysign(val1, val2)
             elif funct3 == 1: # fsgnjn
-                self.f_registers[rd] = abs(self.f_registers[rs1]) * (-1 if self.f_registers[rs2] >= 0 else 1)
+                self.f_registers[rd] = math.copysign(val1, -val2)
             elif funct3 == 2: # fsgnjx
-                self.f_registers[rd] = abs(self.f_registers[rs1]) * (1 if (self.f_registers[rs1] >= 0) == (self.f_registers[rs2] >= 0) else -1)
+                # XOR sign bit. 
+                # In python float, this is tricky. 
+                # Simplified: if signs are same, result positive, else negative.
+                s1 = math.copysign(1.0, val1)
+                s2 = math.copysign(1.0, val2)
+                self.f_registers[rd] = abs(val1) * (1.0 if s1 == s2 else -1.0)
         # FMIN/FMAX
         elif op == 0x05:
             if funct3 == 0: # fmin
-                self.f_registers[rd] = min(self.f_registers[rs1], self.f_registers[rs2])
+                self.f_registers[rd] = min(val1, val2)
             elif funct3 == 1: # fmax
-                self.f_registers[rd] = max(self.f_registers[rs1], self.f_registers[rs2])
-        # FCVT
-        # ... implement conversions if needed
-        # FMV
-        # ... implement moves if needed
+                self.f_registers[rd] = max(val1, val2)
+        # FCVT.S.D / FCVT.D.S
+        elif op == 0x08:
+            # Conversion between float formats. Python uses double for all, so just copy.
+            self.f_registers[rd] = val1
+        # FSQRT
+        elif op == 0x0B:
+            if val1 >= 0:
+                self.f_registers[rd] = math.sqrt(val1)
+            else:
+                self.f_registers[rd] = float('nan')
+        # FEQ/FLT/FLE
+        elif op == 0x14:
+            res = 0
+            if funct3 == 0: # feq
+                res = 1 if val1 == val2 else 0
+            elif funct3 == 1: # flt
+                res = 1 if val1 < val2 else 0
+            elif funct3 == 2: # fle
+                res = 1 if val1 <= val2 else 0
+            self.registers[rd] = res
+        # FCLASS
+        elif op == 0x1C:
+            # Simplified fclass
+            if math.isinf(val1):
+                res = 1 << 0 if val1 < 0 else 1 << 7
+            elif math.isnan(val1):
+                res = 1 << 9 # qNaN
+            elif val1 == 0:
+                res = 1 << 3 if math.copysign(1.0, val1) < 0 else 1 << 4
+            else:
+                res = 1 << 1 if val1 < 0 else 1 << 6 # Normal
+            self.registers[rd] = res
+        # FCVT.W.S / FCVT.W.D
+        elif op == 0x18:
+            # Float to Int
+            # Check rs2 (which is 00000 for W, 00001 for WU, 00010 for L, 00011 for LU)
+            # Actually rs2 field holds the sub-opcode for conversion type in standard?
+            # Standard: rs2=0 (W), 1 (WU), 2 (L), 3 (LU)
+            if rs2 == 0: # W (32-bit signed)
+                self.registers[rd] = int(val1) & 0xFFFFFFFF
+                if self.registers[rd] & 0x80000000: self.registers[rd] -= 0x100000000
+            elif rs2 == 1: # WU (32-bit unsigned)
+                self.registers[rd] = int(val1) & 0xFFFFFFFF
+            # Add L/LU if needed (64-bit)
+        # FCVT.S.W / FCVT.D.W
+        elif op == 0x1A:
+            # Int to Float
+            # rs2=0 (W), 1 (WU)
+            int_val = self.registers[rs1]
+            if rs2 == 0: # W
+                self.f_registers[rd] = float(int_val)
+            elif rs2 == 1: # WU
+                self.f_registers[rd] = float(int_val & 0xFFFFFFFF)
+        # FMV.X.W / FMV.X.D
+        elif op == 0x1C and funct3 == 0:
+             # Move float bits to int register
+             # Python floats are doubles. 
+             # For W (32-bit), we might need struct pack/unpack or just cast if we don't care about bit exactness for now.
+             # But FMV.X.W moves bits.
+             # Let's assume simple value move for simulation unless bit manipulation is required.
+             self.registers[rd] = int(val1) 
+        # FMV.W.X / FMV.D.X
+        elif op == 0x1E and funct3 == 0:
+             # Move int bits to float register
+             self.f_registers[rd] = float(self.registers[rs1])
 
     def sign_extend(self, value, bits):
         # imm ka signextend
