@@ -42,6 +42,14 @@ def create_txt_file(file_name, content, destination_folder):
         print(f"Error writing file: {e}")
 
 
+def parse_assembler_error(error_str):
+    # Example: "Error in assembly: ins.S:2: Error: no such instruction: `vadd.vv v1,v0,v0`"
+    # Regex to capture line number and message
+    match = re.search(r":(\d+):\s*Error:\s*(.*)", error_str)
+    if match:
+        return match.group(1), match.group(2)
+    return None, error_str
+
 def assemble_code(request):
     if request.method == "POST":
         data = json.loads(request.body)
@@ -54,12 +62,14 @@ def assemble_code(request):
             return JsonResponse({'hex': hex_output ,
                              'is_sudo' : sudo_or_base,
                              'success': True}, )
-        except IP.InstructionError as e:
-            return JsonResponse({'success': False, 'error': str(e)})
-        except ValueError as e:
-            return JsonResponse({'success': False, 'error': str(e)})
-        except Wrong_input_Error as e:
-            return JsonResponse({'success': False, 'error': str(e)})
+        except (IP.InstructionError, ValueError, Wrong_input_Error, Exception) as e:
+            error_str = str(e)
+            line, msg = parse_assembler_error(error_str)
+            if line:
+                return JsonResponse({'success': False, 'error_message': msg, 'error_line': line})
+            else:
+                # Fallback for errors without line numbers or parsing failures
+                return JsonResponse({'success': False, 'error_message': error_str, 'error_line': 'unknown'})
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 

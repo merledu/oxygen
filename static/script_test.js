@@ -204,8 +204,8 @@ setTimeout(hideSplashScreen, 3000);
 
 
 // Simulator Switch Logic
-let useCustomSimulator = false;
-let memoryStartAddr = 0x80000000;
+let useCustomSimulator = true;
+let memoryStartAddr = 0;
 
 function createSimulatorSwitch() {
     const switchContainer = document.createElement('div');
@@ -242,6 +242,9 @@ function createSimulatorSwitch() {
     optionCustom.value = 'custom';
     optionCustom.innerText = 'Custom Interpreter';
     select.appendChild(optionCustom);
+
+    // Set default to custom
+    select.value = 'custom';
 
     select.addEventListener('change', (e) => {
         useCustomSimulator = e.target.value === 'custom';
@@ -447,7 +450,7 @@ function stepInstruction() {
             console.error(error);
         });
 }
-function populate_Stats(total_ins,alu_ins,jump_ins,data_transfer_ins,i_ins,m_ins,f_ins,c_ins,s_ins) {
+function populate_Stats(total_ins, alu_ins, jump_ins, data_transfer_ins, i_ins, m_ins, f_ins, c_ins, s_ins) {
     const tableBody = document.getElementById('statsTableBody');
     const tableHTML = `
               <tbody id="statsTableBody">
@@ -513,15 +516,15 @@ function download_hex() {
 function clear_hex() {
     document.getElementById('dump-box').value = '';
 }
-function reset_editor(){
+function reset_editor() {
     document.getElementById('editor-text-box').value = ''
 }
-function populate_Decoder_Table(code,hex,baseins){
+function populate_Decoder_Table(code, hex, baseins) {
     let instructions = code.split('\n').filter(line => line.trim() !== '');
     instructions = instructions.filter((ins) => !ins.includes(':'));
     console.log(instructions)
     const tableBody = document.getElementById('decoderTableBody');
-    console.log("table" , tableBody);
+    console.log("table", tableBody);
     tableBody.innerHTML = '';
     let count = 0
     instructions.forEach((instruction, index) => {
@@ -529,7 +532,7 @@ function populate_Decoder_Table(code,hex,baseins){
         let hexdumparr = hex.split('\n').filter(line => line.trim() !== '')
         console.log((hexdumparr));
         const machineCode = hexdumparr[count];
-        const basicCode = baseins[count]; 
+        const basicCode = baseins[count];
         const originalCode = instruction;
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -539,23 +542,23 @@ function populate_Decoder_Table(code,hex,baseins){
             <td>${originalCode}</td>
         `;
         tableBody.appendChild(row);
-        count = count +1;
+        count = count + 1;
     });
 }
-function update_Register_Values(data, isHex='true') {
+function update_Register_Values(data, isHex = 'true') {
     console.log(data);
     data.forEach((value, index) => {
         const formattedValue = isHex ? `0x${(value >>> 0).toString(16).padStart(8, '0')}` : value.toString(10);
         document.getElementById(`reg-${index}`).innerText = formattedValue;
     });
-}  
-function update_FRegister_Values(data, isHex='true') {
+}
+function update_FRegister_Values(data, isHex = 'true') {
     data.forEach((value, index) => {
         const formattedValue = isHex ? `0x${(value >>> 0).toString(16).padStart(8, '0')}` : value.toString(10);
         document.getElementById(`freg-${index}`).innerText = formattedValue;
     });
 }
-function update_VRegister_Values(data, isHex='true') {
+function update_VRegister_Values(data, isHex = 'true') {
     data.forEach((value, index) => {
         const formattedValue0 = isHex ? `0x${(value[0] >>> 0).toString(16).padStart(8, '0')}` : value[0].toString(10);
         const formattedValue1 = isHex ? `0x${(value[1] >>> 0).toString(16).padStart(8, '0')}` : value[1].toString(10);
@@ -565,7 +568,7 @@ function update_VRegister_Values(data, isHex='true') {
 }
 function changeNotation(notation) {
     isHex = notation === 'hex';
-    console.log("check reg",reg_value);
+    console.log("check reg", reg_value);
     populate_Memory_Table(memorydic, isHex);
     update_Register_Values(reg_value, isHex);
     update_FRegister_Values(f_reg_value, isHex);
