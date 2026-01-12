@@ -396,6 +396,8 @@ class RISCVSimulator:
         funct3 = (instruction >> 12) & 0x7
         rd = (instruction >> 7) & 0x1F
         opcode = instruction & 0x7F
+        shamt  = imm & 0x1F          # imm[4:0]
+        funct7 = (imm >> 5) & 0x7F   # imm[11:5]  ← "hidden funct7"
         
  
         # ADDI
@@ -414,11 +416,11 @@ class RISCVSimulator:
         elif funct3 == 0x4:
             self.registers[rd] = self.registers[rs1] ^ self.sign_extend(imm, 12)
         # SRLI
-        elif funct3 == 0x5:
-            self.registers[rd] = self.registers[rs1] >> self.sign_extend(imm, 12)
+        elif funct3 == 0x5 and funct7 == 0x00:
+            self.registers[rd] = (self.registers[rs1] & 0xFFFFFFFF) >> shamt
         # SRAI
-        elif funct3 == 0x5 and imm & 0x400 == 0x400:
-            self.registers[rd] = self.registers[rs1] >> self.sign_extend(imm, 12)
+        elif funct3 == 0x5 and funct7 == 0x20:
+            self.registers[rd] = self.registers[rs1] >> shamt
         # ORI
         elif funct3 == 0x6:
             self.registers[rd] = self.registers[rs1] | self.sign_extend(imm, 12)
