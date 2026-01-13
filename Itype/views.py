@@ -42,6 +42,14 @@ def create_txt_file(file_name, content, destination_folder):
         print(f"Error writing file: {e}")
 
 
+def parse_assembler_error(error_str):
+    # Example: "Error in assembly: ins.S:2: Error: no such instruction: `vadd.vv v1,v0,v0`"
+    # Regex to capture line number and message
+    match = re.search(r":(\d+):\s*Error:\s*(.*)", error_str)
+    if match:
+        return match.group(1), match.group(2)
+    return None, error_str
+
 def assemble_code(request):
     if request.method == "POST":
         data = json.loads(request.body)
@@ -50,15 +58,18 @@ def assemble_code(request):
             # hex_output = IP.main(code)
             sudo_or_base  = IP.checkpsudo(code)
             hex_output = get_hex_gcc(code)
+            print('line 53 ', hex_output)
             return JsonResponse({'hex': hex_output ,
                              'is_sudo' : sudo_or_base,
                              'success': True}, )
-        except IP.InstructionError as e:
-            return JsonResponse({'success': False, 'error': str(e)})
-        except ValueError as e:
-            return JsonResponse({'success': False, 'error': str(e)})
-        except Wrong_input_Error as e:
-            return JsonResponse({'success': False, 'error': str(e)})
+        except (IP.InstructionError, ValueError, Wrong_input_Error, Exception) as e:
+            error_str = str(e)
+            line, msg = parse_assembler_error(error_str)
+            if line:
+                return JsonResponse({'success': False, 'error_message': msg, 'error_line': line})
+            else:
+                # Fallback for errors without line numbers or parsing failures
+                return JsonResponse({'success': False, 'error_message': error_str, 'error_line': 'unknown'})
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
@@ -117,15 +128,19 @@ def step_code(request):
             execution.memory = memory
             execution.registers = register
             execution.f_registers = Fregister
+            # execution.v_registers = Vregister # Need to accept vreg from frontend if passed
+        
         register=execution.run(instruction)
         Fregister=execution.f_registers
         memory = execution.memory
         pc = execution.pc
+        v_registers = execution.v_registers
         print(pc)
         return JsonResponse({'memory': memory ,
                              'register' : register,
                              'pc': pc,
-                             'f_reg': Fregister},)
+                             'f_reg': Fregister,
+                             'vreg': v_registers},)
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
@@ -139,12 +154,14 @@ def run_code(request):
         execution2 = DP.RISCVSimulator()
         registers = execution2.run(hex_output)
         f_registers = execution2.f_registers
+        v_registers = execution2.v_registers
         memory = execution2.memory
         return JsonResponse({'hex': hex_output ,
                              'is_sudo': sudo_or_base,
                              'registers': registers,
                              'memory': memory,
-                             'f_reg': f_registers}, )
+                             'f_reg': f_registers,
+                             'vreg': v_registers}, )
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
@@ -155,11 +172,13 @@ def reset(request):
         execution.pc=0
         execution.instruction_memory = {}
         execution.f_registers = [0.0] * 32 
+        execution.v_registers = [[0]*16 for _ in range(32)]
         return JsonResponse({
                              'register': execution.registers,
                              'memory': execution.memory,
                              'pc':execution.pc,
-                             'fregister': execution.f_registers}, )
+                             'fregister': execution.f_registers,
+                             'vreg': execution.v_registers}, )
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 

@@ -11,6 +11,10 @@ FORMATS = {
     'B': '{imm_12}{imm_10_5:06}{rs2:05}{rs1:05}{funct3:03}{imm_4_1:04}{imm_11}{opcode:07}',
     'U': '{imm:020}{rd:05}{opcode:07}',
     'J': '{imm_20}{imm_10_1:010}{imm_11}{imm_19_12:08}{rd:05}{opcode:07}',
+    # Vector Extension Formats
+    'V': '{funct6:06}{vm:01}{vs2:05}{rs1:05}{funct3:03}{vd:05}{opcode:07}', # OPIVV, OPMVV, OPFVV
+    'V_IV': '{funct6:06}{vm:01}{vs2:05}{imm:05}{funct3:03}{vd:05}{opcode:07}', # OPIVI
+    'V_X': '{funct6:06}{vm:01}{vs2:05}{rs1:05}{funct3:03}{vd:05}{opcode:07}', # OPIVX
     # C custom formats
     'CR': '{funct4:04}{rd_rs1:05}{rs2:05}{opcode:02}',#mv,add
     'CR(1)': '{funct6:06}{rd_rs1:03}{funct2:02}{rs2:03}{opcode:02}',#and,or,xor,sub,addw,subw
@@ -110,6 +114,8 @@ INSTRUCTION_SET = {
     'auipc':   ('0010111', None, None, 'U'),
     'ecall':   ('1110011', '000', '0000000', 'I'),
     'ebreak':  ('1110011', '000', '0000001', 'I'),
+    'fence':   ('0001111', '000', None, 'I'),
+    'fence.i': ('0001111', '001', None, 'I'),
     # M extension instructions
     'mul':     ('0110011', '000', '0000001', 'R'),
     'mulh':    ('0110011', '001', '0000001', 'R'),
@@ -142,6 +148,39 @@ INSTRUCTION_SET = {
     'fcvt.s.w':('1010011', '000', '1101000', 'R'),
     'fcvt.s.wu':('1010011', '000', '1101001', 'R'),
     'fmv.w.x': ('1010011', '000', '1111000', 'R'),
+    # D extension instructions (double-precision floating-point)
+    'fld':     ('0000011', '011', None, 'LI'), # Load Double
+    'fsd':     ('0100011', '011', None, 'S'),  # Store Double
+    'fadd.d':  ('1010011', '001', '0000000', 'R'),
+    'fsub.d':  ('1010011', '001', '0000100', 'R'),
+    'fmul.d':  ('1010011', '001', '0001000', 'R'),
+    'fdiv.d':  ('1010011', '001', '0001100', 'R'),
+    'fsqrt.d': ('1010011', '001', '0101100', 'R'),
+    'fsgnj.d': ('1010011', '001', '0010000', 'R'),
+    'fsgnjn.d':('1010011', '001', '0010001', 'R'),
+    'fsgnjx.d':('1010011', '001', '0010010', 'R'),
+    'fmin.d':  ('1010011', '001', '0010100', 'R'),
+    'fmax.d':  ('1010011', '001', '0010101', 'R'),
+    'fcvt.s.d':('1010011', '000', '0100000', 'R'),
+    'fcvt.d.s':('1010011', '001', '0100000', 'R'),
+    'fcvt.w.d':('1010011', '001', '1100000', 'R'),
+    'fcvt.wu.d':('1010011', '001', '1100001', 'R'),
+    'fmv.x.d': ('1010011', '001', '1110000', 'R'),
+    'feq.d':   ('1010011', '001', '1010000', 'R'),
+    'flt.d':   ('1010011', '001', '1010001', 'R'),
+    'fle.d':   ('1010011', '001', '1010010', 'R'),
+    'fclass.d':('1010011', '001', '1110001', 'R'),
+    'fcvt.d.w':('1010011', '001', '1101000', 'R'),
+    'fcvt.d.wu':('1010011', '001', '1101001', 'R'),
+    'fcvt.d.wu':('1010011', '001', '1101001', 'R'),
+    'fmv.d.x': ('1010011', '001', '1111000', 'R'),
+    # Vector extension instructions
+    'vadd.vv': ('1010111', '000', '000000', 'V'),
+    'vadd.vx': ('1010111', '100', '000000', 'V_X'),
+    'vadd.vi': ('1010111', '011', '000000', 'V_IV'),
+    'vle8.v':  ('0000111', '000', '000000', 'V'), # Load Vector
+    'vse8.v':  ('0100111', '000', '000000', 'V'), # Store Vector
+    'vmul.vv': ('1010111', '000', '100101', 'V'),
 }
 
 C_INST_SET  = {
@@ -341,6 +380,11 @@ def register_to_bin(register, bits):
             elif bits == 3:
                 x = '{0:03b}'.format(x)
                 return x
+        elif register.startswith('v'):
+            v = int(register[1:])
+            if bits == 5:
+                v = '{0:05b}'.format(v)
+                return v
         else:
             return 'ERROR'
     except Exception as e:
@@ -554,7 +598,11 @@ def parse_instruction(instruction):
         if inst_type == 'R':
             rd = register_to_bin(parts[1],5)
             rs1 = register_to_bin(parts[2],5)
-            rs2 = register_to_bin(parts[3],5)
+            if len(parts) > 3:
+                rs2 = register_to_bin(parts[3],5)
+            else:
+                rs2 = register_to_bin('x0', 5) # Default to x0 for 2-operand R-type
+                
             if rd == "ERROR" or rs1 == "ERROR" or rs2 == "ERROR":
                 print("Error: Invalid register value provided.")
                 raise ValueError(f"Unknown register")
@@ -562,9 +610,26 @@ def parse_instruction(instruction):
             return FORMATS['R'].format(funct7=funct7, rs2=rs2, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
         
         elif inst_type == 'I':
-            rd = register_to_bin(parts[1],5)
-            rs1 = register_to_bin(parts[2],5)
-            imm = imm_to_bin(parts[3], 12)
+            if inst_name.startswith('fence'):
+                 # Handle fence optional args
+                 if len(parts) == 1:
+                     rd = register_to_bin('x0', 5)
+                     rs1 = register_to_bin('x0', 5)
+                     imm = imm_to_bin('0', 12)
+                 else:
+                     # fence pred, succ?
+                     # For now assume standard I-type format if args provided: fence rd, rs1, imm
+                     # But standard fence is: fence pred, succ
+                     # pred/succ are in imm field.
+                     # Let's just support 'fence' -> 0,0,0
+                     rd = register_to_bin('x0', 5)
+                     rs1 = register_to_bin('x0', 5)
+                     imm = imm_to_bin('0', 12)
+            else:
+                rd = register_to_bin(parts[1],5)
+                rs1 = register_to_bin(parts[2],5)
+                imm = imm_to_bin(parts[3], 12)
+            
             if rd == "ERROR" or rs1 == "ERROR":
                 print("Error: Invalid register value provided.")
                 raise ValueError(f"Unknown register")
@@ -658,6 +723,51 @@ def parse_instruction(instruction):
                 raise ValueError(f"Unknown register")
             
             return FORMATS['I'].format(imm=imm, rs1=rs1, funct3=funct3, rd=rd, opcode=opcode)
+        
+        elif inst_type == 'V':
+             vd = register_to_bin(parts[1], 5)
+             
+             # Check for load/store which have different operand structure
+             if inst_name.startswith('vle') or inst_name.startswith('vse'):
+                 # vle8.v vd, (rs1)
+                 # parts: ['vle8.v', 'v1', '(x1)']
+                 offset_base_str = parts[2]
+                 match_brackets = re.match(r'^([^(]*)\(([^)]+)\)$', offset_base_str)
+                 if match_brackets:
+                     # For vector load/store, rs1 is in the brackets
+                     rs1 = register_to_bin(match_brackets.group(2), 5)
+                     # lumop/sumop are in vm field? No, standard encoding uses rs2 for stride/index?
+                     # For unit-stride: vs2 is 0? 
+                     # vle8.v: opcode=0000111, width in funct3, mop in 26-27 (vm)
+                     # Simplified:
+                     vs2 = '00000'
+                     vm = '1' # Masked? Assume unmasked (1) or 0? 
+                     # Standard: vm=1 means unmasked.
+                     vm = '1'
+                     # funct3 is width. vle8 -> 000
+                     return FORMATS['V'].format(funct6=funct7, vm=vm, vs2=vs2, rs1=rs1, funct3=funct3, vd=vd, opcode=opcode)
+                 else:
+                     raise ValueError("Invalid vector load/store format")
+
+             vs2 = register_to_bin(parts[2], 5)
+             rs1 = register_to_bin(parts[3], 5) # vs1 or rs1
+             vm = '1' # Assume unmasked
+             return FORMATS['V'].format(funct6=funct7, vm=vm, vs2=vs2, rs1=rs1, funct3=funct3, vd=vd, opcode=opcode)
+
+        elif inst_type == 'V_X':
+             vd = register_to_bin(parts[1], 5)
+             vs2 = register_to_bin(parts[2], 5)
+             rs1 = register_to_bin(parts[3], 5)
+             vm = '1'
+             return FORMATS['V_X'].format(funct6=funct7, vm=vm, vs2=vs2, rs1=rs1, funct3=funct3, vd=vd, opcode=opcode)
+             
+        elif inst_type == 'V_IV':
+             vd = register_to_bin(parts[1], 5)
+             vs2 = register_to_bin(parts[2], 5)
+             imm = imm_to_bin(parts[3], 5)
+             vm = '1'
+             return FORMATS['V_IV'].format(funct6=funct7, vm=vm, vs2=vs2, imm=imm, funct3=funct3, vd=vd, opcode=opcode)
+
         else:
             raise InstructionError("Unknown instruction name.")
         
@@ -671,27 +781,40 @@ def convert_to_hex(bin_str):
     hex_str = hex(int(bin_str, 2))[2:].zfill(8)
     return hex_str
 
-def main(instructions_str):
-    instructions_str = replace_labels_with_immediates(instructions_str)
-    if ('(' or ')' in instructions_str):
-       
-        instructions_str=instructions_str.replace('(', ' ')
-        instructions_str=instructions_str.replace(')', ' ')
-        
-    instructions = instructions_str.lower().splitlines()
-    while '' in instructions:
-        instructions.remove('')
-    hex_lines = []
-    for instruction in instructions:
-        
-        bin_str = parse_instruction((instruction))
-        hex_str = convert_to_hex(bin_str)
-        hex_lines.append('0x'+hex_str)
-    
     # Join the hex strings with newline characters
     hex_output = '\n'.join(hex_lines)
     print(hex_output)
     return hex_output
+
+def main(instructions_str):
+    try:
+        instructions_str = replace_labels_with_immediates(instructions_str)
+        # if ('(' in instructions_str or ')' in instructions_str):
+        #     instructions_str=instructions_str.replace('(', ' ')
+        #     instructions_str=instructions_str.replace(')', ' ')
+            
+        instructions = instructions_str.lower().splitlines()
+        # Strip comments
+        instructions = [line.split('#')[0].strip() for line in instructions]
+        while '' in instructions:
+            instructions.remove('')
+        hex_lines = []
+        for i, instruction in enumerate(instructions):
+            try:
+                bin_str = parse_instruction((instruction))
+                hex_str = convert_to_hex(bin_str)
+                hex_lines.append('0x'+hex_str)
+            except Exception as e:
+                print(f"Error on line {i+1}: '{instruction}' -> {str(e)}")
+                hex_lines.append(f"Error on line {i+1}: {str(e)}")
+        
+        # Join the hex strings with newline characters
+        hex_output = '\n'.join(hex_lines)
+        print(hex_output)
+        return hex_output
+    except Exception as e:
+        print(f"Global Error: {str(e)}")
+        return f"Error: {str(e)}"
 
 def checkpsudo (instructions_str):
     instructions_str = replace_labels_with_immediates(instructions_str)

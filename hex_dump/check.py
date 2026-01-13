@@ -6,6 +6,7 @@ from globals import SPIKE,TMP_ELF
 class Simulator:
     def __init__(self):
         self.spike_process = None
+        self.vtype = False
     
     def parse_registers(input_str):
     # Use regex to extract register names and values
@@ -70,6 +71,57 @@ class Simulator:
                 return "Simulation ended"
         except EOF:
             return "Simulation ended unexpectedly"
+
+    async def get_registers_vtype(self):
+        if not self.spike_process:
+            return "Simulator not started"
+        
+        self.spike_process.sendline('vreg 0')
+        # Get the output
+        try:
+        # Capture output until next (spike) prompt
+            vector_pattern = r'VLEN=.*?(?=\(spike\))'
+
+            
+            index = self.spike_process.expect([vector_pattern, TIMEOUT, EOF])
+            
+            if index == 0:
+                
+                raw_output = self.spike_process.after.decode('utf-8').strip()
+                raw_output = raw_output.replace("(spike)", "").strip()
+
+                lines = raw_output.splitlines()
+                
+                result = {}
+
+
+                # First line contains VLEN and ELEN
+                header_match = re.search(r'VLEN=(\d+) bits; ELEN=(\d+) bits', lines[0])
+                if header_match:
+                    result["VLEN"] = int(header_match.group(1))
+                    result["ELEN"] = int(header_match.group(2))
+
+                # Parse each vector register line
+                vector_registers = {}
+                reg_pattern = re.compile(r'v(\d+)\s*:\s*(?:\[1\]:\s*([0-9xa-fA-F]+))\s*\[0\]:\s*([0-9xa-fA-F]+)')
+                for line in lines[1:]:
+                    match = reg_pattern.search(line)
+                    if match:
+                        reg_num = f"v{match.group(1)}"
+                        val1 = match.group(2)
+                        val0 = match.group(3)
+                        vector_registers[reg_num] = [val1, val0]
+
+                result["vector_registers"] = vector_registers
+                print(result)
+                return result
+            elif index == 1:  
+                print(f"Timeout! Buffer before timeout: {self.spike_process.before.decode('utf-8', errors='replace')}")
+                return {"error": "Timeout occurred"}
+            else:  
+                return {"error": "Simulation ended"}
+        except EOF:
+            return {"error": "Simulation ended unexpectedly"}
         
         
     async def get_memory(self,addr):
