@@ -372,8 +372,8 @@ function reset_Registers() {
             }
             const newPc = response.data.pc;
             memorydic = response.data.memory
-            const reg_value = response.data.register
-            const f_reg_value = useCustomSimulator ? response.data.fregister : response.data.fregister // Check key name consistency?
+            reg_value = response.data.register
+            f_reg_value = useCustomSimulator ? response.data.fregister : response.data.fregister // Check key name consistency?
             // Itype reset returns 'fregister', hex_dump reset returns 'fregister'. Consistent.
             // Wait, Itype reset returns 'vreg', hex_dump reset doesn't seem to return vreg?
             // hex_dump reset returns: register, memory, pc, fregister.
@@ -554,7 +554,17 @@ function update_Register_Values(data, isHex = 'true') {
 }
 function update_FRegister_Values(data, isHex = 'true') {
     data.forEach((value, index) => {
-        const formattedValue = isHex ? `0x${(value >>> 0).toString(16).padStart(8, '0')}` : value.toString(10);
+        let formattedValue;
+        if (isHex) {
+            // Create a buffer to interpret float bits as int
+            const buf = new ArrayBuffer(4);
+            const view = new DataView(buf);
+            view.setFloat32(0, value);
+            const intVal = view.getUint32(0);
+            formattedValue = `0x${intVal.toString(16).padStart(8, '0')}`;
+        } else {
+            formattedValue = value.toString(10);
+        }
         document.getElementById(`freg-${index}`).innerText = formattedValue;
     });
 }

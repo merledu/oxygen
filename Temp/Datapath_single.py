@@ -1,4 +1,5 @@
 import math
+import struct
 
 class RISCVSimulatorSingle:
     def __init__(self):
@@ -369,13 +370,15 @@ class RISCVSimulatorSingle:
                 addr = self.registers[rs1] + imm
                 val = 0
                 for i in range(8): val |= self.memory.get(str(addr+i), 0) << (i*8)
-                self.f_registers[rd] = float(val) # Should interpret bits as double
+                # self.f_registers[rd] = float(val) # Should interpret bits as double
+                self.f_registers[rd] = struct.unpack('d', struct.pack('Q', val))[0]
             elif funct3 == 5: # c.fsd
                 rs1 = ((instruction >> 7) & 0x7) + 8
                 rs2 = ((instruction >> 2) & 0x7) + 8
                 imm = ((instruction >> 6) & 0x1) << 3 | ((instruction >> 10) & 0x7) << 4 | ((instruction >> 5) & 0x1) << 7
                 addr = self.registers[rs1] + imm
-                val = int(self.f_registers[rs2])
+                # val = int(self.f_registers[rs2])
+                val = struct.unpack('Q', struct.pack('d', self.f_registers[rs2]))[0]
                 for i in range(8): self.memory[str(addr+i)] = (val >> (i*8)) & 0xFF
             
         elif opcode == 1: # Quadrant 1
@@ -476,12 +479,14 @@ class RISCVSimulatorSingle:
                 addr = self.registers[2] + imm
                 val = 0
                 for i in range(8): val |= self.memory.get(str(addr+i), 0) << (i*8)
-                self.f_registers[rd] = float(val)
+                # self.f_registers[rd] = float(val)
+                self.f_registers[rd] = struct.unpack('d', struct.pack('Q', val))[0]
             elif funct3 == 5: # c.fsdsp
                 rs2 = (instruction >> 2) & 0x1F
                 imm = ((instruction >> 10) & 0x7) << 3 | ((instruction >> 7) & 0x7) << 6
                 addr = self.registers[2] + imm
-                val = int(self.f_registers[rs2])
+                # val = int(self.f_registers[rs2])
+                val = struct.unpack('Q', struct.pack('d', self.f_registers[rs2]))[0]
                 for i in range(8): self.memory[str(addr+i)] = (val >> (i*8)) & 0xFF
             elif funct3 == 4:
                 if (instruction >> 12) & 0x1 == 0:
@@ -557,14 +562,16 @@ class RISCVSimulatorSingle:
         if funct3 == 0x2: # FLW
             val = self.memory.get(str(addr), 0) | (self.memory.get(str(addr+1), 0) << 8) | \
                   (self.memory.get(str(addr+2), 0) << 16) | (self.memory.get(str(addr+3), 0) << 24)
-            self.f_registers[rd] = float(val) 
+            # self.f_registers[rd] = float(val) 
+            self.f_registers[rd] = struct.unpack('f', struct.pack('I', val))[0]
             
         elif funct3 == 0x3: # FLD
             val = self.memory.get(str(addr), 0) | (self.memory.get(str(addr+1), 0) << 8) | \
                   (self.memory.get(str(addr+2), 0) << 16) | (self.memory.get(str(addr+3), 0) << 24) | \
                   (self.memory.get(str(addr+4), 0) << 32) | (self.memory.get(str(addr+5), 0) << 40) | \
                   (self.memory.get(str(addr+6), 0) << 48) | (self.memory.get(str(addr+7), 0) << 56)
-            self.f_registers[rd] = float(val)
+            # self.f_registers[rd] = float(val)
+            self.f_registers[rd] = struct.unpack('d', struct.pack('Q', val))[0]
             
         elif funct3 == 0x0: # VLE8.V
              for i in range(16):
@@ -579,13 +586,15 @@ class RISCVSimulatorSingle:
         addr = self.registers[rs1] + self.sign_extend(imm, 12)
         
         if funct3 == 0x2: # FSW
-            val = int(self.f_registers[rs2])
+            # val = int(self.f_registers[rs2])
+            val = struct.unpack('I', struct.pack('f', self.f_registers[rs2]))[0]
             self.memory[str(addr)] = val & 0xFF
             self.memory[str(addr+1)] = (val >> 8) & 0xFF
             self.memory[str(addr+2)] = (val >> 16) & 0xFF
             self.memory[str(addr+3)] = (val >> 24) & 0xFF
         elif funct3 == 0x3: # FSD
-            val = int(self.f_registers[rs2])
+            # val = int(self.f_registers[rs2])
+            val = struct.unpack('Q', struct.pack('d', self.f_registers[rs2]))[0]
             self.memory[str(addr)] = val & 0xFF
             self.memory[str(addr+1)] = (val >> 8) & 0xFF
             self.memory[str(addr+2)] = (val >> 16) & 0xFF
