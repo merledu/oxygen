@@ -838,11 +838,18 @@ class RISCVSimulator:
              # For W (32-bit), we might need struct pack/unpack or just cast if we don't care about bit exactness for now.
              # But FMV.X.W moves bits.
              # Let's assume simple value move for simulation unless bit manipulation is required.
-             self.registers[rd] = int(val1) 
+             # self.registers[rd] = int(val1) 
+             # Fix: Use struct to interpret float bits as int
+             if rs2 == 0: # W
+                 self.registers[rd] = struct.unpack('I', struct.pack('f', val1))[0]
+             else: 
+                 self.registers[rd] = struct.unpack('I', struct.pack('f', val1))[0] 
         # FMV.W.X / FMV.D.X
         elif op == 0x1E and funct3 == 0:
              # Move int bits to float register
-             self.f_registers[rd] = float(self.registers[rs1])
+             # Fix: Use struct to interpret bits as float
+             self.f_registers[rd] = struct.unpack('f', struct.pack('I', self.registers[rs1] & 0xFFFFFFFF))[0]
+             # self.f_registers[rd] = float(self.registers[rs1])
 
     def sign_extend(self, value, bits):
         # imm ka signextend

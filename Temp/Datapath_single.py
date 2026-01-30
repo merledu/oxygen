@@ -623,6 +623,7 @@ class RISCVSimulatorSingle:
         val2 = self.f_registers[rs2]
         
         if op == 0x00: # FADD
+            print('FADD:', val1 , val2)
             self.f_registers[rd] = val1 + val2
         elif op == 0x01: # FSUB
             self.f_registers[rd] = val1 - val2
@@ -680,7 +681,20 @@ class RISCVSimulatorSingle:
                  # For simulation, we might just cast to int if we don't track bits strictly.
                  # But ideally we should pack/unpack.
                  # For now, let's assume simple value transfer or cast.
-                 self.registers[rd] = int(val1)
+                 # Fix: Use struct to interpret float bits as int
+                 if rs2 == 0: # W
+                     self.registers[rd] = struct.unpack('I', struct.pack('f', val1))[0]
+                 else: # D (if implemented, usually L for 64-bit)
+                     # For now, just W is supported by opcode 0x1C? 
+                     # Actually standard is:
+                     # FMV.X.W: opcode=1010011 (OP-FP), funct7=1110000, rs2=0
+                     # FCLASS.S: funct7=1110000, rs2=1
+                     # My decoder uses op (funct7 >> 2) = 0x1C (11100).
+                     # And funct3.
+                     # Wait, `op` calculation matches. 
+                     # Previous implementation used funct3 to distinguish FMV.X.W (0) and FCLASS (1).
+                     # Standard RISC-V: FMV.X.W is rm=000 (funct3). FCLASS.S is rm=001. Correct.
+                     self.registers[rd] = struct.unpack('I', struct.pack('f', val1))[0]
             elif funct3 == 1: # FCLASS
                 if math.isinf(val1):
                     res = 1 << 0 if val1 < 0 else 1 << 7
@@ -693,7 +707,11 @@ class RISCVSimulatorSingle:
                 self.registers[rd] = res
         elif op == 0x1E: # FMV.W.X
             if funct3 == 0:
-                self.f_registers[rd] = float(self.registers[rs1])
+                
+                # self.f_registers[rd] = float(self.registers[rs1])
+                # Fix: Use struct to interpret bits as float
+                self.f_registers[rd] = struct.unpack('f', struct.pack('I', self.registers[rs1] & 0xFFFFFFFF))[0]
+                print(f"FMV.W.X: x{rs1}={hex(self.registers[rs1])} -> f{rd}={self.f_registers[rd]}")
 
     def execute_system_type(self, instruction):
         funct3 = (instruction >> 12) & 0x7

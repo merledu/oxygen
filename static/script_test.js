@@ -552,18 +552,19 @@ function update_Register_Values(data, isHex = 'true') {
         document.getElementById(`reg-${index}`).innerText = formattedValue;
     });
 }
-function update_FRegister_Values(data, isHex = 'true') {
+function update_FRegister_Values(data, isHex = true) {
     data.forEach((value, index) => {
         let formattedValue;
         if (isHex) {
-            // Create a buffer to interpret float bits as int
-            const buf = new ArrayBuffer(4);
-            const view = new DataView(buf);
+            // formattedValue = `0x${(value >>> 0).toString(16).padStart(8, '0')}`;
+            // Fix: Reinterpret float bits as int for IEEE-754 hex
+            const buffer = new ArrayBuffer(4);
+            const view = new DataView(buffer);
             view.setFloat32(0, value);
             const intVal = view.getUint32(0);
             formattedValue = `0x${intVal.toString(16).padStart(8, '0')}`;
         } else {
-            formattedValue = value.toString(10);
+            formattedValue = value.toPrecision(7); // Show float with precision
         }
         document.getElementById(`freg-${index}`).innerText = formattedValue;
     });
