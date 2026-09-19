@@ -1,346 +1,326 @@
 <!DOCTYPE html>
 <html lang="en">
-{% load static %}
-{% csrf_token %}
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oxygen Simulator</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="{% static 'style.css' %}">
-
-
-</head>
-<body>
-    <div id="initial-screen" class="initial-screen">
-        <div class="initial-content">
-            <div class="container">
-                <svg viewBox="0 0 960 300">
-                  <symbol id="s-text">
-                    <text text-anchor="middle" x="50%" y="80%">Oxygen</text>
-                  </symbol>
-              
-                  <g class = "g-ants">
-                    <use xlink:href="#s-text" class="text-copy"></use>
-                    <use xlink:href="#s-text" class="text-copy"></use>
-                    <use xlink:href="#s-text" class="text-copy"></use>
-                    <use xlink:href="#s-text" class="text-copy"></use>
-                    <use xlink:href="#s-text" class="text-copy"></use>
-                  </g>
-                </svg>
-              </div>
-            <button class="btn btn-primary" onclick="loadMainContent()">Simulate</button>
-        </div>
+  {% load static %}
+  {% csrf_token %}
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Oxygen RISC-V Simulator</title>
+    <link rel="stylesheet" href="{% static 'style_test.css' %}">
+  </head>
+  <body>
+    <!-- Splash Screen -->
+    <div id="splash_screen">
+      <div class="splash-logo-anim">O</div>
+      <div class="splash-title">Oxygen Simulator</div>
+      <div class="splash-subtitle">RISC-V IMFCDV Execution & Datapath Environment</div>
     </div>
 
-    <header class="bg-primary text-white text-center py-4" id="main-header" style="display: none;">
-        <h1>Oxygen Simulator</h1>
-        <nav>
-            <ul class="nav justify-content-center">
-                <li class="nav-item"><a class="nav-link text-white" href="#editor-tab" data-toggle="tab">Editor</a></li>
-                <li class="nav-item"><a class="nav-link text-white" href="#datapath-tab" data-toggle="tab">Data Path</a></li>
-                <li class="nav-item"><a class="nav-link text-white" href="#decoder-tab" data-toggle="tab">Decoder</a></li>
-            </ul>
-        </nav>
+    <!-- Top Navigation Bar -->
+    <header class="navbar">
+      <div class="brand-section">
+        <a href="#" class="brand-logo">
+          <div class="brand-icon">O</div>
+          <span class="brand-title">Oxygen</span>
+        </a>
+        <span class="brand-badge">RISC-V IMFCDV</span>
+      </div>
+
+      <!-- Simulator Selector -->
+      <div class="simulator-switcher">
+        <button id="sim-spike-btn" class="sim-btn active" onclick="setSimulator('spike')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          Spike (Standard)
+        </button>
+        <button id="sim-custom-btn" class="sim-btn" onclick="setSimulator('custom')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Custom Datapath
+        </button>
+      </div>
+
+      <!-- Architecture & Extensions -->
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <select id="varient-drop" class="arch-select">
+          <option value="RV32" selected>RV32</option>
+          <option value="RV64">RV64</option>
+        </select>
+
+        <div class="extensions-group">
+          <span class="ext-badge locked" title="Base Integer (Always Enabled)">I</span>
+          <input type="checkbox" id="I-type" value="I-type" checked style="display: none;" />
+
+          <span class="ext-badge active" id="badge-M" onclick="toggleExtension('M')">M</span>
+          <input type="checkbox" id="M-type" name="M-type" checked style="display: none;" />
+
+          <span class="ext-badge active" id="badge-C" onclick="toggleExtension('C')">C</span>
+          <input type="checkbox" id="C-type" name="C-type" checked style="display: none;" />
+
+          <span class="ext-badge active" id="badge-F" onclick="toggleExtension('F')">F</span>
+          <input type="checkbox" id="F-type" name="F-type" checked style="display: none;" />
+
+          <span class="ext-badge active" id="badge-D" onclick="toggleExtension('D')">D</span>
+          <input type="checkbox" id="D-type" name="D-type" checked style="display: none;" />
+
+          <span class="ext-badge active" id="badge-V" onclick="toggleExtension('V')">V</span>
+          <input type="checkbox" id="V-type" name="V-type" checked style="display: none;" />
+        </div>
+      </div>
     </header>
 
-    <main id="main-content" class="container_my-5">
-        <div class="tab-content">
-            <div class="tab-pane fade show active" id="editor-tab">
-                <section id="editor" class="mb-5">
-                    <h2>Editor</h2>
-                    <div class="editor-container row">
-                        <textarea class="codeEditor col-md-7 form-control" placeholder="Write your RISC V Assembly code here..."></textarea> 
-                        
-
-                        <div class="side-box col-md-5">
-                            <div id="configBox" class="config-box p-3 mb-3 bg-white">
-                                <h3>Configuration</h3>
-                                <label for="variantSelect">Variant:</label>
-                                <select id="variantSelect" class="form-control" onchange="updateConfig('variant', this.value)">
-                                    <option value="RV32">RV32</option>
-                                    <option value="RV64">RV64</option>
-                                </select>
-                            </div>
-                            <div class="hex-dump-box p-3 bg-white">
-                                <h3>Hex Dump</h3>
-                                <textarea id="hexDump" class="form-control mb-3" readonly placeholder="Hex dump will appear here..."></textarea>
-                                <div class="hex-dump-buttons">
-                                    <button class="btn btn-primary mr-2" onclick="dump_hex()">Dump</button>
-                                    <button class="btn btn-secondary mr-2" onclick="copy_hex()">Copy</button>
-                                    <button class="btn btn-success mr-2" onclick="download_hex()">Download</button>
-                                    <button class="btn btn-danger" onclick="clear_hex()">Clear</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                     <div class="assemble-container text-center mt-4">
-                        <button class="assemble-button btn btn-primary" onclick="assemble_code()">Assemble</button>
-                    </div> 
-                </section> 
-            </div>
-            <div class="tab-pane fade" id="datapath-tab">
-                <section id="datapath" class="mb-5">
-                    <!-- Content for Data Path -->
-                    <section id="data-path">
-                        <h2>Data Path</h2>
-                        <div class="timeline-box">
-                            <h3>Timeline</h3>
-                            <table id="pipeline-table">
-                                <thead>
-                                    <tr>
-                                        <th>Fetch</th>
-                                        <th>Decode</th>
-                                        <th>Execute</th>
-                                        <th>Memory</th>
-                                        <th>Write Back</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td id="fetch-step">Step 1</td>
-                                        <td id="decode-step">Step 2</td>
-                                        <td id="execute-step">Step 3</td>
-                                        <td id="memory-step">Step 4</td>
-                                        <td id="writeback-step">Step 5</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <button onclick="advanceCycle()">Next Cycle</button>
-                        <div class="stats-box">
-                            <h3>Stats</h3>
-                             <div class="col-md-7">
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>PC</th>
-                                            <th>Machine Code</th>
-                                            <th>Basic Code</th>
-                                            <th>Original Code</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="adecoderTableBody">
-                                        <!-- Rows will be populated by JavaScript -->
-                                    </tbody>
-                                </table>
-                            </div>
-                            <table id = 'stats_table'>
-                                <tr>
-                                    <th>Type</th>
-                                    <th>Value</th>
-                                </tr>
-                                <tr>
-                                    <td>Total Cycles</td>
-                                    <td>0</td>
-                                </tr>
-                                <tr>
-                                    <td>Total Instructions</td>
-                                    <td>0</td>
-                                </tr>
-                                <tr>
-                                    <td>CPI</td>
-                                    <td>0</td>
-                                </tr>
-                                <tr>
-                                    <td>Data-transfer Instructions</td>
-                                    <td>0</td>
-                                </tr>
-                                <tr>
-                                    <td>ALU Instructions</td>
-                                    <td>0</td>
-                                </tr>
-                                <tr>
-                                    <td>Control Instructions</td>
-                                    <td>0</td>
-                                </tr>
-                                <tr>
-                                    <td>Data Hazards</td>
-                                    <td>0</td>
-                                </tr>
-                                <tr>
-                                    <td>Control Hazards</td>
-                                    <td>0</td>
-                                </tr>
-                                <tr>
-                                    <td>Branch Mispredictions</td>
-                                    <td>0</td>
-                                </tr>
-                                <tr>
-                                    <td>Total Stalls</td>
-                                    <td>0</td>
-                                </tr>
-                            </table>
-                        </div>
-                        
-                    </section>
-                    {% comment %} <div class="col-md-7">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>PC</th>
-                                    <th>Machine Code</th>
-                                    <th>Basic Code</th>
-                                    <th>Original Code</th>
-                                </tr>
-                            </thead>
-                            <tbody id="decoderTableBody">
-                                <!-- Rows will be populated by JavaScript -->
-                            </tbody>
-                        </table>
-                    </div> {% endcomment %}
-                    
-                </section>
-            </div>
-            <div class="tab-pane fade" id="decoder-tab">
-                <section id="decoder" class="mb-5">
-                    <!-- Content for Decoder -->
-                    <section id="decoder">
-                        <h2>Decoder</h2>
-                        <div class="decoder-container row">
-                            <div class="col-md-7">
-                                <div class="assemble-container text-center mt-4">
-                                    <button class="assemble-button btn btn-primary" onclick="run_code()">Run</button>
-                                    <button class="assemble-button btn btn-primary" onclick="assemble_code()">Assemble</button>
-                                    <button class="assemble-button btn btn-primary" onclick="stepInstruction()">Step</button>
-                                    <button class="assemble-button btn btn-primary" onclick="reset()">Reset</button>
-                                </div>
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>PC</th>
-                                            <th>Machine Code</th>
-                                            <th>Base Instruction</th>
-                                            <th>Original Instruction</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="decoderTableBody">
-                                        <!-- Rows will be populated by JavaScript -->
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div class="col-md-5">
-                                <ul class="nav nav-tabs" id="myTab" role="tablist">
-                                    <li class="nav-item">
-                                        <a class="nav-link active" id="registers-tab" data-toggle="tab" href="#registers" role="tab">Registers</a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link" id="ftype-registers-tab" data-toggle="tab" href="#ftype-registers" role="tab">F-Type Registers</a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link" id="memory-tab" data-toggle="tab" href="#memory" role="tab">Memory</a>
-                                    </li>
-                                </ul>
-                                <div class="tab-content" id="myTabContent">
-                                    <div class="tab-pane fade show active" id="registers" role="tabpanel">
-                                        <!-- Registers content -->
-                                        <div id="registers-content">
-                                            <table class="registers-table">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Register</th>
-                                                        <th>ABI Name</th>
-                                                        <th>Value</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <!-- Dynamically populate RISC-V registers -->
-                                                    <script>
-                                                        const registers = [
-                                                            { number: 0, name: "zero" }, { number: 1, name: "ra" }, { number: 2, name: "sp" },
-                                                            { number: 3, name: "gp" }, { number: 4, name: "tp" }, { number: 5, name: "t0" },
-                                                            { number: 6, name: "t1" }, { number: 7, name: "t2" }, { number: 8, name: "s0/fp" },
-                                                            { number: 9, name: "s1" }, { number: 10, name: "a0" }, { number: 11, name: "a1" },
-                                                            { number: 12, name: "a2" }, { number: 13, name: "a3" }, { number: 14, name: "a4" },
-                                                            { number: 15, name: "a5" }, { number: 16, name: "a6" }, { number: 17, name: "a7" },
-                                                            { number: 18, name: "s2" }, { number: 19, name: "s3" }, { number: 20, name: "s4" },
-                                                            { number: 21, name: "s5" }, { number: 22, name: "s6" }, { number: 23, name: "s7" },
-                                                            { number: 24, name: "s8" }, { number: 25, name: "s9" }, { number: 26, name: "s10" },
-                                                            { number: 27, name: "s11" }, { number: 28, name: "t3" }, { number: 29, name: "t4" },
-                                                            { number: 30, name: "t5" }, { number: 31, name: "t6" }
-                                                        ];
-                                                        registers.forEach(register => {
-                                                            document.write(`
-                                                                <tr>
-                                                                    <td>x${register.number}</td>
-                                                                    <td>${register.name}</td>
-                                                                    <td id="reg-${register.number}">0x00000000</td>
-                                                                </tr>
-                                                            `);
-                                                        });
-                                                    </script>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                    <div class="tab-pane fade" id="ftype-registers" role="tabpanel">
-                                        <!-- F-Type Registers content -->
-                                        <div id="ftype-registers-content">
-                                            <table class="ftype-registers-table">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Register</th>
-                                                        <th>Value</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <!-- Dynamically populate F-Type registers -->
-                                                    <script>
-                                                        for (let i = 0; i < 32; i++) {
-                                                            document.write(`
-                                                                <tr>
-                                                                    <td>f${i}</td>
-                                                                    <td id="freg-${i}">0.0</td>
-                                                                </tr>
-                                                            `);
-                                                        }
-                                                    </script>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                    <div class="tab-pane fade" id="memory" role="tabpanel">
-                                        <!-- Memory content -->
-                                        <div id="memory-content">
-                                            <table class="memory-table">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Address</th>
-                                                        <th>+0</th>
-                                                        <th>+1</th>
-                                                        <th>+2</th>
-                                                        <th>+3</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="memoryTableBody">
-                                                    <!-- Rows will be populated by JavaScript -->
-                                                </tbody>
-                                            </table>
-                                            <button id="scrollUpBtn">Scroll Up</button>
-                                            <button id="scrollDownBtn">Scroll Down</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                    </section>
-                </section>
-            </div>            
+    <!-- Main Workspace (3 Columns) -->
+    <div class="app-container">
+      <!-- Column 1: Assembly Code Editor & Hex Dump -->
+      <div class="column">
+        <div class="panel-header">
+          <div class="title-group">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            <span>Assembly Editor</span>
+          </div>
+          <select id="sample-code-select" class="sample-selector" onchange="loadSampleCode(this.value)">
+            <option value="" disabled selected>Load Sample Code...</option>
+            <option value="arithmetic">Basic Arithmetic (RV32I)</option>
+            <option value="float_double">Double-Precision Float (RV32IFD)</option>
+            <option value="vector">Vector Operations (RV32IV)</option>
+            <option value="memory">Sub-Word Memory Stores (sb, sh, sw)</option>
+            <option value="loop">Branch Loop Counter</option>
+          </select>
         </div>
-    </main>
 
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+        <div class="code-editor-wrapper">
+          <textarea id="editor-text-box" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false"
+            placeholder="# Write or paste your RISC-V Assembly code here&#10;addi x1, x0, 10&#10;addi x2, x0, 20&#10;add x3, x1, x2"></textarea>
+        </div>
+
+        <!-- Controls / Actions Toolbar -->
+        <div class="toolbar-actions">
+          <button id="assemble-btn" class="btn btn-primary" onclick="assemble_code()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Assemble
+          </button>
+          <button id="run-btn" class="btn btn-success" onclick="run_Code()" disabled>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+            Run
+          </button>
+          <button id="step-btn" class="btn btn-secondary" onclick="stepInstruction()" disabled>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            Step
+          </button>
+          <button id="reset-btn" class="btn btn-secondary" onclick="reset_Registers()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 2v6h6M21.5 22v-6h-6"/><path d="M22 11.5A10 10 0 0 0 3.2 7.2L2.5 8M2 12.5a10 10 0 0 0 18.8 4.2l.7-.7"/></svg>
+            Reset
+          </button>
+          <button class="btn btn-danger btn-icon" onclick="reset_editor()" title="Clear Editor">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </div>
+
+        <!-- Hex Dump Drawer -->
+        <div class="hex-dump-section">
+          <div class="panel-header" style="background: transparent; border-top: none;">
+            <span>Machine Code (Hex Dump)</span>
+            <div style="display: flex; gap: 6px;">
+              <button class="btn btn-secondary btn-icon" onclick="copy_hex()" title="Copy Hex">Copy</button>
+              <button class="btn btn-secondary btn-icon" onclick="download_hex()" title="Download Hex">Download</button>
+              <button class="btn btn-secondary btn-icon" onclick="clear_hex()" title="Clear Hex">Clear</button>
+            </div>
+          </div>
+          <textarea readonly id="dump-box" placeholder="Assembled machine code appears here..."></textarea>
+        </div>
+      </div>
+
+      <!-- Column 2: Instruction Decoder & Stepper View -->
+      <div class="column">
+        <div class="panel-header">
+          <div class="title-group">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            <span>Instruction Decoder & Stepper</span>
+          </div>
+          <span id="instruction-count-badge" class="v-pill">0 Instructions</span>
+        </div>
+
+        <div class="decoder-wrapper">
+          <table class="table-modern" id="decodetable">
+            <thead>
+              <tr>
+                <th style="width: 100px;">PC</th>
+                <th style="width: 110px;">Machine Code</th>
+                <th>Base / Disassembly</th>
+                <th>Source Code</th>
+              </tr>
+            </thead>
+            <tbody id="decoderTableBody">
+              <tr>
+                <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 40px 0;">
+                  Click "Assemble" to compile and decode instructions.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Column 3: Register & Memory Inspector -->
+      <div class="column">
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+          <button class="tab-nav-btn active" data-tab="integer" onclick="switchInspectorTab('integer')">Integer (X)</button>
+          <button class="tab-nav-btn" data-tab="float" onclick="switchInspectorTab('float')">Float / Double (F)</button>
+          <button class="tab-nav-btn" data-tab="vector" onclick="switchInspectorTab('vector')">Vector (V)</button>
+          <button class="tab-nav-btn" data-tab="memory" onclick="switchInspectorTab('memory')">Memory</button>
+          <button class="tab-nav-btn" data-tab="stats" onclick="switchInspectorTab('stats')">Stats</button>
+        </div>
+
+        <!-- Sub-Header: Format Toggle -->
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 6px 14px; background: var(--bg-surface); border-bottom: 1px solid var(--border-color);">
+          <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Register Inspector</span>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <label for="notation" style="font-size: 11px; color: var(--text-secondary);">Notation:</label>
+            <select id="notation" class="arch-select" onchange="changeNotation(this.value)" style="padding: 2px 6px; font-size: 11px;">
+              <option value="hex" selected>Hex</option>
+              <option value="decimal">Decimal</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Tab 1: Integer Registers (x0 - x31) -->
+        <div id="tab-integer" class="tab-pane active">
+          <table class="reg-table">
+            <thead>
+              <tr>
+                <th>Reg</th>
+                <th>ABI</th>
+                <th style="text-align: right;">Value</th>
+              </tr>
+            </thead>
+            <tbody id="integer-reg-tbody">
+              <!-- Populated via script -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Tab 2: Float & Double Registers (f0 - f31) -->
+        <div id="tab-float" class="tab-pane">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; background: var(--bg-elevated); border-bottom: 1px solid var(--border-color);">
+            <span style="font-size: 11px; color: var(--text-muted);">View Mode:</span>
+            <div class="sew-selector">
+              <button class="sew-btn active" id="fview-double-btn" onclick="setFloatViewMode('double')">Double (64-bit)</button>
+              <button class="sew-btn" id="fview-single-btn" onclick="setFloatViewMode('single')">Single (32-bit)</button>
+              <button class="sew-btn" id="fview-hex-btn" onclick="setFloatViewMode('hex')">Hex (64-bit)</button>
+            </div>
+          </div>
+          <table class="reg-table">
+            <thead>
+              <tr>
+                <th>Reg</th>
+                <th>ABI</th>
+                <th style="text-align: right;">Value</th>
+              </tr>
+            </thead>
+            <tbody id="float-reg-tbody">
+              <!-- Populated via script -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Tab 3: Vector Registers (v0 - v31) -->
+        <div id="tab-vector" class="tab-pane">
+          <!-- Vector Status Bar -->
+          <div class="vector-status-bar">
+            <div class="v-status-pills">
+              <span class="v-pill">VL: <b id="v-status-vl">0</b></span>
+              <span class="v-pill">SEW: <b id="v-status-sew">32</b>-bit</span>
+              <span class="v-pill">LMUL: <b id="v-status-lmul">m1</b></span>
+            </div>
+            <div class="sew-selector">
+              <button class="sew-btn" id="sew-8-btn" onclick="setVectorSEW(8)">8b</button>
+              <button class="sew-btn" id="sew-16-btn" onclick="setVectorSEW(16)">16b</button>
+              <button class="sew-btn active" id="sew-32-btn" onclick="setVectorSEW(32)">32b</button>
+              <button class="sew-btn" id="sew-64-btn" onclick="setVectorSEW(64)">64b</button>
+              <button class="sew-btn" id="sew-raw-btn" onclick="setVectorSEW('raw')">Raw</button>
+            </div>
+          </div>
+          <div id="vector-reg-tbody" style="flex: 1; overflow-y: auto;">
+            <!-- Dynamic Vector Rows -->
+          </div>
+        </div>
+
+        <!-- Tab 4: Memory Inspector -->
+        <div id="tab-memory" class="tab-pane">
+          <div class="memory-controls">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <input type="text" id="mem-jump-input" class="mem-jump-input" placeholder="0x80000000" />
+              <button class="btn btn-secondary btn-icon" onclick="jumpToMemoryAddress()">Go</button>
+            </div>
+            <div style="display: flex; gap: 6px;">
+              <button class="btn btn-secondary btn-icon" id="scrollUpBtn">▲ Prev</button>
+              <button class="btn btn-secondary btn-icon" id="scrollDownBtn">▼ Next</button>
+            </div>
+          </div>
+          <table class="reg-table">
+            <thead>
+              <tr>
+                <th>Address</th>
+                <th>+0</th>
+                <th>+1</th>
+                <th>+2</th>
+                <th>+3</th>
+              </tr>
+            </thead>
+            <tbody id="memoryTableBody">
+              <!-- Memory Rows -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Tab 5: Statistics -->
+        <div id="tab-stats" class="tab-pane">
+          <div class="stats-container">
+            <div class="stat-card">
+              <span class="stat-label">Total Instructions</span>
+              <span class="stat-value" id="total_instructions">0</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Total Cycles</span>
+              <span class="stat-value" id="Total_cycles">0</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">ALU Instructions</span>
+              <span class="stat-value" id="ALU_instructions">0</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Jump Instructions</span>
+              <span class="stat-value" id="Jump_instructions">0</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Data Transfer</span>
+              <span class="stat-value" id="Data_transfer">0</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">I Extension</span>
+              <span class="stat-value" id="I_ins">0</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">M Extension</span>
+              <span class="stat-value" id="M_ins">0</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">F Extension</span>
+              <span class="stat-value" id="F_ins">0</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">C Extension</span>
+              <span class="stat-value" id="C_ins">0</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Supplementary</span>
+              <span class="stat-value" id="s_ins">0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="{% static 'script.js' %}"></script>
-    <script>
-        function loadMainContent() {
-            document.getElementById('initial-screen').style.display = 'none';
-            document.getElementById('main-header').style.display = 'block';
-            document.getElementById('main-content').style.display = 'block';
-        }
-    </script>
-</body>
+    <script src="{% static 'script_test.js' %}"></script>
+  </body>
 </html>

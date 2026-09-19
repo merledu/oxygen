@@ -20,7 +20,10 @@ from django.conf import settings
 from django.conf.urls.static import static
 from Itype.views import *
 
+from django.views.generic import RedirectView
+
 urlpatterns = [
+    path('', RedirectView.as_view(url='/oxygen/', permanent=False)),
     path('oxygen/admin/', admin.site.urls),
     path('oxygen/' , include('Itype.urls')),
     path('oxygen/gen-hex/' , include(('hex_dump.urls','hex_dump'),namespace = 'hex_dump')),

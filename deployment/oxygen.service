@@ -1,0 +1,20 @@
+[Unit]
+Description=Oxygen RISC-V Simulator Production Server
+After=network.target
+
+[Service]
+Type=forking
+User=ar
+Group=ar
+WorkingDirectory=/home/ar/oxygen/oxygen
+PIDFile=/home/ar/oxygen/oxygen/deployment/oxygen.pid
+ExecStart=/home/ar/oxygen/oxygen/deployment/start_oxygen.sh
+ExecStop=/home/ar/oxygen/oxygen/deployment/stop_oxygen.sh
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=always
+RestartSec=5
+KillMode=mixed
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

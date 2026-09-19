@@ -28,6 +28,21 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
 
+CSRF_TRUSTED_ORIGINS = [
+    "http://oxygen.merledupk.org",
+    "https://oxygen.merledupk.org",
+    "http://116.213.35.22:8016",
+    "http://116.213.35.22",
+    "http://103.4.93.50:8016",
+    "http://103.4.93.50:8000",
+    "http://103.4.93.50",
+    "http://192.168.200.56:8016",
+    "http://192.168.200.56:8000",
+    "http://localhost:8016",
+    "http://localhost:8000",
+    "http://127.0.0.1:8016",
+    "http://127.0.0.1:8000",
+]
 
 # Application definition
 
@@ -38,6 +53,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'whitenoise.runserver_nostatic',
     'Itype',
     'hex_dump',
     'stats',
@@ -45,12 +61,12 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
 ]
 
 ROOT_URLCONF = 'oxygen.urls'
@@ -119,10 +135,11 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
-STATIC_URL = 'oxygen/static/'
+STATIC_URL = '/oxygen/static/'
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR/"static"),
+    os.path.join(BASE_DIR / "static"),
 ]
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field

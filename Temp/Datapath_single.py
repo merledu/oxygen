@@ -46,17 +46,9 @@ class RISCVSimulatorSingle:
             self.pc+=4
         elif opcode == 0x6F:  # Jtype 
             self.execute_j_type(instruction)
-        elif opcode == 0x43:  # Mtype
-            self.execute_m_type(instruction)
-            self.pc+=4
-        elif opcode == 0x67:  # Ftype (JALR? No, 0x67 is JALR in my previous code? Wait. 0x67 is JALR. Ftype is usually 0x53)
-            # In original Datapath_single.py, opcode 0x67 was handled in execute_i_type as JALR.
-            # But here in execute_instruction dispatch it was listed as:
-            # elif opcode == 0x7:  # Flw
-            # elif opcode == 0x27:  # Fsw
-            # elif opcode == 0x53:  # Ftype
-            # Wait, let's look at the original code I'm replacing.
-            pass
+        elif opcode == 0x67:  # JALR
+            self.execute_i_type(instruction)
+            # PC is set by JALR inside execute_i_type
         # Correct dispatching based on Datapath.py and standard RISC-V
         elif opcode == 0x53: # Ftype / Dtype
              self.execute_f_d_type(instruction)
@@ -723,7 +715,9 @@ class RISCVSimulatorSingle:
         # while self.pc < len(instructions) * 4:
             # instruction = self.instruction_memory[self.pc]
             # self.execute_instruction(instruction)
-        self.registers[0]=0
+        for i in range(32):
+            self.registers[i] &= 0xFFFFFFFF
+        self.registers[0] = 0
         return self.registers
     
 

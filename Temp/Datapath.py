@@ -61,12 +61,8 @@ class RISCVSimulator:
             self.pc+=4
         elif opcode == 0x6F:  # Jtype 
             self.execute_j_type(instruction)
-        elif opcode == 0x43:  # Mtype
-            self.execute_m_type(instruction)
-            self.pc+=4
-        elif opcode == 0x67:  # Ftype
-            self.execute_f_type(instruction)
-            self.pc+=4
+        elif opcode == 0x67:  # JALR
+            self.execute_i_type(instruction)
         elif opcode == 0x53: # Ftype / Dtype
              self.execute_f_d_type(instruction)
              self.pc+=4

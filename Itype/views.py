@@ -1,211 +1,330 @@
-import re
 import json
 import os
-from pathlib import Path
-import sys
-import time
-
-import pexpect
+import re
+import subprocess
+import tempfile
 import globals
 from django.http import JsonResponse
 from django.shortcuts import render
-from Temp import Datapath as DP
-from Temp import Datapath_single as DPS  
+from Temp import Datapath_single as DPS
 from Temp import interperator as IP
-from hex_dump.views import last_reg
-from django.views.decorators.csrf import csrf_exempt
-import subprocess
-from globals import SPIKE,TMP_ELF
-
-execution = DPS.RISCVSimulatorSingle()
-class Wrong_input_Error(Exception):
-    pass
 
 
 def editor(request):
-    return render(request,'index.html')
+    return render(request, 'index.html')
 
 
 def testpage(request):
-    return render(request,'index_test.html')
+    return render(request, 'index_test.html')
 
 
-def create_txt_file(file_name, content, destination_folder):
-    if not os.path.exists(destination_folder):
-        os.makedirs(destination_folder)
-    file_path = os.path.join(destination_folder, f"{file_name}.txt")
-    try:
-        with open(file_path, 'w') as file:
-            file.write(content)
-        print(f"File created at {file_path}")
-    except Exception as e:
-        print(f"Error writing file: {e}")
+class AssemblyException(Exception):
+    def __init__(self, line, msg):
+        super().__init__(msg)
+        self.line = line
+        self.msg = msg
 
 
-def parse_assembler_error(error_str):
-    # Example: "Error in assembly: ins.S:2: Error: no such instruction: `vadd.vv v1,v0,v0`"
-    # Regex to capture line number and message
-    match = re.search(r":(\d+):\s*Error:\s*(.*)", error_str)
+def parse_assembler_error(error_str, offset=0):
+    match = re.search(r":(\d+):\s*Error:\s*(.*)", error_str, re.IGNORECASE)
     if match:
-        return match.group(1), match.group(2)
-    return None, error_str
+        line_num = max(1, int(match.group(1)) - offset)
+        return line_num, match.group(2).strip()
+    ld_match = re.search(r":(\d+):(?:\([^)]+\))?:\s*(.+)", error_str)
+    if ld_match:
+        line_num = max(1, int(ld_match.group(1)) - offset)
+        return line_num, ld_match.group(2).strip()
+    return None, error_str.strip()
+
+
+def normalize_pc_relative_targets(code):
+    """
+    Normalizes numeric branch and jump offsets in RISC-V assembly.
+    In GNU as, writing `beq x1, x2, 8` treats `8` as absolute symbol 0x8 (triggering
+    relocation truncation when linked at 0x80000000). Prepending `.` makes it PC-relative: `.+8`.
+    Labels (e.g. `loop`, `.L1`) are preserved unchanged.
+    """
+    def fix_branch(match):
+        op = match.group(1)
+        r1 = match.group(2)
+        r2 = match.group(3)
+        target = match.group(4).strip()
+        if re.match(r'^[+-]?(?:0x[0-9a-fA-F]+|\d+)$', target):
+            sign = '+' if not target.startswith('-') and not target.startswith('+') else ''
+            return f"{op} {r1}, {r2}, .{sign}{target}"
+        return match.group(0)
+
+    def fix_jal(match):
+        op = match.group(1)
+        rest = match.group(2).strip()
+        parts = [p.strip() for p in rest.split(',')]
+        target = parts[-1]
+        if re.match(r'^[+-]?(?:0x[0-9a-fA-F]+|\d+)$', target):
+            sign = '+' if not target.startswith('-') and not target.startswith('+') else ''
+            parts[-1] = f".{sign}{target}"
+            return f"{op} {', '.join(parts)}"
+        return match.group(0)
+
+    code = re.sub(r'\b(beq|bne|blt|bge|bltu|bgeu)\s+([a-zA-Z0-9_]+)\s*,\s*([a-zA-Z0-9_]+)\s*,\s*([^#\n\r]+)', fix_branch, code, flags=re.IGNORECASE)
+    code = re.sub(r'\b(jal|j)\s+([^#\n\r]+)', fix_jal, code, flags=re.IGNORECASE)
+    return code
+
+
+def compile_and_disassemble(code, mtype='', ctype='', ftype='', dtype='', vtype='', rvtype='rv32'):
+    """
+    Safely compiles and disassembles RISC-V assembly using an isolated temporary directory.
+    Thread-safe, multi-tenant, and never modifies the process working directory.
+    """
+    code = normalize_pc_relative_targets(code)
+    canon_order = ['m', 'a', 'f', 'd', 'c', 'v']
+    enabled = set()
+    for ext_flag in (mtype, ctype, ftype, dtype, vtype):
+        val = str(ext_flag).lower().strip()
+        if val in canon_order:
+            enabled.add(val)
+    if 'd' in enabled:
+        enabled.add('f')
+
+    ext_suffix = "".join([x for x in canon_order if x in enabled])
+    isa_ext = "i" + ext_suffix
+
+    if rvtype == "rv64":
+        toolchain_bin = globals.RISCV64_GNU_TOOLCHAIN
+        prefix = "riscv64-unknown-elf"
+        march = f"rv64{isa_ext}"
+        if 'd' in isa_ext:
+            abi = "lp64d"
+        elif 'f' in isa_ext:
+            abi = "lp64f"
+        else:
+            abi = "lp64"
+    else:
+        toolchain_bin = globals.RISCV32_GNU_TOOLCHAIN
+        prefix = "riscv32-unknown-elf"
+        march = f"rv32{isa_ext}"
+        if 'd' in isa_ext:
+            abi = "ilp32d"
+        elif 'f' in isa_ext:
+            abi = "ilp32f"
+        else:
+            abi = "ilp32"
+
+    gcc_cmd = os.path.join(toolchain_bin, f"{prefix}-gcc")
+    objdump_cmd = os.path.join(toolchain_bin, f"{prefix}-objdump")
+
+    has_start = "_start" in code or "main:" in code
+    if not has_start:
+        prepended = ".globl _start\n_start:\n"
+        full_code = prepended + code + "\n"
+        line_offset = 2
+    else:
+        full_code = code + "\n"
+        line_offset = 0
+
+    with tempfile.TemporaryDirectory() as td:
+        asm_path = os.path.join(td, "code.S")
+        elf_path = os.path.join(td, "code.elf")
+
+        with open(asm_path, "w") as f:
+            f.write(full_code)
+
+        gcc_args = [
+            gcc_cmd,
+            f"-march={march}",
+            f"-mabi={abi}",
+            "-T", globals.LINKER_SCRIPT,
+            "-static",
+            "-mcmodel=medany",
+            "-fvisibility=hidden",
+            "-nostdlib",
+            "-nostartfiles",
+            "-g",
+            "-o", elf_path,
+            asm_path,
+        ]
+
+        assemble_res = subprocess.run(gcc_args, capture_output=True, text=True)
+        if assemble_res.returncode != 0:
+            line, msg = parse_assembler_error(assemble_res.stderr, offset=line_offset)
+            raise AssemblyException(line, msg or assemble_res.stderr)
+
+        objdump_args = [objdump_cmd, "-M", "no-aliases", "-d", elf_path]
+        objdump_res = subprocess.run(objdump_args, capture_output=True, text=True)
+        if objdump_res.returncode != 0:
+            raise ValueError(f"Disassembly Error: {objdump_res.stderr}")
+
+        decoded_instructions = []
+        for line in objdump_res.stdout.splitlines():
+            m = re.match(r'^\s*([0-9a-fA-F]+):\s+([0-9a-fA-F]+)\s+(.*)', line)
+            if m:
+                inst_pc = int(m.group(1), 16)
+                inst_hex = m.group(2).strip().lower()
+                inst_disasm = m.group(3).strip()
+                decoded_instructions.append({
+                    'pc': f"0x{inst_pc:08x}",
+                    'hex': f"0x{inst_hex}",
+                    'disasm': inst_disasm
+                })
+
+        hex_lines = [item['hex'] for item in decoded_instructions]
+        return "\n".join(hex_lines), decoded_instructions
+
+
+def get_hex_gcc(code, mtype='', ctype='', ftype='', dtype='', vtype='', rvtype='rv32'):
+    return compile_and_disassemble(code, mtype, ctype, ftype, dtype, vtype, rvtype)
+
 
 def assemble_code(request):
     if request.method == "POST":
-        data = json.loads(request.body)
-        code = data.get('code', '')
         try:
-            # hex_output = IP.main(code)
-            sudo_or_base  = IP.checkpsudo(code)
-            hex_output = get_hex_gcc(code)
-            print('line 53 ', hex_output)
-            return JsonResponse({'hex': hex_output ,
-                             'is_sudo' : sudo_or_base,
-                             'success': True}, )
-        except (IP.InstructionError, ValueError, Wrong_input_Error, Exception) as e:
-            error_str = str(e)
-            line, msg = parse_assembler_error(error_str)
-            if line:
-                return JsonResponse({'success': False, 'error_message': msg, 'error_line': line})
-            else:
-                # Fallback for errors without line numbers or parsing failures
-                return JsonResponse({'success': False, 'error_message': error_str, 'error_line': 'unknown'})
+            data = json.loads(request.body)
+            code = data.get('code', '')
+            mtype = data.get('mtype', '')
+            ctype = data.get('ctype', '')
+            ftype = data.get('ftype', '')
+            dtype = data.get('dtype', '')
+            vtype = data.get('vtype', '')
+            rvtype = data.get('rvtype', 'rv32')
+
+            try:
+                sudo_or_base = IP.checkpsudo(code)
+            except Exception:
+                sudo_or_base = [line.strip() for line in code.splitlines() if line.strip() and not line.strip().endswith(':')]
+
+            hex_output, decoded_instructions = get_hex_gcc(code, mtype, ctype, ftype, dtype, vtype, rvtype)
+            return JsonResponse({
+                'hex': hex_output,
+                'is_sudo': sudo_or_base,
+                'instructions': decoded_instructions,
+                'success': True
+            })
+        except AssemblyException as e:
+            return JsonResponse({
+                'success': False,
+                'error_message': e.msg,
+                'error_line': e.line if e.line is not None else 'unknown'
+            })
+        except ValueError as e:
+            err_msg = str(e)
+            line, msg = parse_assembler_error(err_msg)
+            return JsonResponse({
+                'success': False,
+                'error_message': msg or err_msg,
+                'error_line': line if line is not None else 'unknown'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error_message': str(e),
+                'error_line': 'unknown'
+            })
     return JsonResponse({'error': 'Invalid request'}, status=400)
-
-
-def extract_first_error_line(output):
-    error_pattern = re.compile(r"^(.*?Error:.*)$")
-    lines = output.splitlines()
-    for line in lines:
-        if error_pattern.match(line):
-            print(line.split(':', 1)[1].strip())
-            return line.split(':', 1)[1].strip()
-    return None  
-
-
-def get_hex_gcc(code):
-    hex_lines = []
-    file_name = "ins"
-    destination_folder = globals.RISCV32_GNU_TOOLCHAIN
-    create_txt_file(file_name, code, destination_folder)
-    file_name = 'ins.txt'
-    
-    try:
-        disassembly_file = simulate_bash_script(file_name)
-    except Exception as e:
-        raise Wrong_input_Error(str(e))
-    
-    pc_hex = extract_pc_hex(disassembly_file)
-    for i in pc_hex:
-        hex_lines.append('0x'+pc_hex[i])
-    hex_output = '\n'.join(hex_lines)
-    return hex_output
-    
-
-def extract_pc_hex(filename):
-    pc_hex_dict = {}
-    with open(filename, 'r') as file:
-        for line in file:
-            parts = line.split(':')
-            if len(parts) > 1 and parts[1].strip(): 
-                pc, hex_value = parts[0].strip(), parts[1].split()[0]
-                if (pc!='ins'):
-                    pc_hex_dict[pc] = hex_value    
-    return pc_hex_dict
 
 
 def step_code(request):
     if request.method == "POST":
-        print("check")
-        data = json.loads(request.body)
-        instruction = data.get('instruction', '')
-        pc = data.get('pc', '')
-        memory = data.get('memory', '')
-        register = data.get('register', '')
-        Fregister = data.get('f_register', '')
-        execution.pc = pc
-        if (pc != 0):
-            execution.memory = memory
-            execution.registers = register
-            execution.f_registers = Fregister
-            # execution.v_registers = Vregister # Need to accept vreg from frontend if passed
-        
-        register=execution.run(instruction)
-        Fregister=execution.f_registers
-        memory = execution.memory
-        pc = execution.pc
-        v_registers = execution.v_registers
-        print(pc)
-        return JsonResponse({'memory': memory ,
-                             'register' : register,
-                             'pc': pc,
-                             'f_reg': Fregister,
-                             'vreg': v_registers},)
+        try:
+            data = json.loads(request.body)
+            instruction = data.get('instruction', '')
+            pc = data.get('pc', 0)
+            memory = data.get('memory', {})
+            register = data.get('register', [0] * 32)
+            fregister = data.get('f_register', [0.0] * 32)
+            vreg = data.get('vreg', [[0] * 16 for _ in range(32)])
+
+            # Create stateless simulator instance per request
+            sim = DPS.RISCVSimulatorSingle()
+            try:
+                sim.pc = int(pc)
+            except (ValueError, TypeError):
+                sim.pc = 0
+
+            sim.memory = dict(memory) if isinstance(memory, dict) else {}
+            sim.registers = list(register) if isinstance(register, list) and len(register) == 32 else [0] * 32
+            sim.f_registers = list(fregister) if isinstance(fregister, list) and len(fregister) == 32 else [0.0] * 32
+            sim.v_registers = list(vreg) if isinstance(vreg, list) and len(vreg) == 32 else [[0] * 16 for _ in range(32)]
+
+            is_ended = False
+            if instruction:
+                # Instruction can be e.g. "0x00a00093" or "00a00093"
+                clean_hex = instruction.strip().lower()
+                if not clean_hex.startswith("0x"):
+                    clean_hex = "0x" + clean_hex
+                sim.run(clean_hex)
+            else:
+                is_ended = True
+
+            return JsonResponse({
+                'memory': sim.memory,
+                'register': sim.registers,
+                'pc': sim.pc,
+                'f_reg': sim.f_registers,
+                'vreg': sim.v_registers,
+                'ended': is_ended,
+                'message': 'Program execution completed.' if is_ended else '',
+                'success': True
+            })
+        except Exception as e:
+            return JsonResponse({'error': str(e), 'success': False}, status=400)
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
 def run_code(request):
     if request.method == "POST":
-        data = json.loads(request.body)
-        code = data.get('code', '')
-        hex_output = get_hex_gcc(code)
-        sudo_or_base  = IP.checkpsudo(code)
-        registers = last_reg
-        execution2 = DP.RISCVSimulator()
-        registers = execution2.run(hex_output)
-        f_registers = execution2.f_registers
-        v_registers = execution2.v_registers
-        memory = execution2.memory
-        return JsonResponse({'hex': hex_output ,
-                             'is_sudo': sudo_or_base,
-                             'registers': registers,
-                             'memory': memory,
-                             'f_reg': f_registers,
-                             'vreg': v_registers}, )
+        try:
+            data = json.loads(request.body)
+            code = data.get('code', '')
+            mtype = data.get('mtype', '')
+            ctype = data.get('ctype', '')
+            ftype = data.get('ftype', '')
+            dtype = data.get('dtype', '')
+            vtype = data.get('vtype', '')
+            rvtype = data.get('rvtype', 'rv32')
+
+            hex_output, _ = get_hex_gcc(code, mtype, ctype, ftype, dtype, vtype, rvtype)
+            try:
+                sudo_or_base = IP.checkpsudo(code)
+            except Exception:
+                sudo_or_base = [line.strip() for line in code.splitlines() if line.strip() and not line.strip().endswith(':')]
+
+            hex_lines = [h.strip() for h in hex_output.splitlines() if h.strip()]
+
+            sim = DPS.RISCVSimulatorSingle()
+            # Execute all instructions
+            max_cycles = 10000
+            cycles = 0
+            for h in hex_lines:
+                clean_hex = h if h.startswith("0x") else f"0x{h}"
+                sim.run(clean_hex)
+                cycles += 1
+                if cycles >= max_cycles:
+                    break
+
+            return JsonResponse({
+                'hex': hex_output,
+                'is_sudo': sudo_or_base,
+                'registers': sim.registers,
+                'memory': sim.memory,
+                'f_reg': sim.f_registers,
+                'vreg': sim.v_registers,
+                'pc': sim.pc,
+                'ended': True,
+                'message': 'Program execution completed.',
+                'success': True
+            })
+        except Exception as e:
+            return JsonResponse({'error': str(e), 'success': False}, status=400)
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
 def reset(request):
     if request.method == "POST":
-        execution.memory={}
-        execution.registers=[0]*32
-        execution.pc=0
-        execution.instruction_memory = {}
-        execution.f_registers = [0.0] * 32 
-        execution.v_registers = [[0]*16 for _ in range(32)]
         return JsonResponse({
-                             'register': execution.registers,
-                             'memory': execution.memory,
-                             'pc':execution.pc,
-                             'fregister': execution.f_registers,
-                             'vreg': execution.v_registers}, )
+            'register': [0] * 32,
+            'memory': {},
+            'pc': 0,
+            'fregister': [0.0] * 32,
+            'vreg': [[0] * 16 for _ in range(32)],
+            'success': True
+        })
     return JsonResponse({'error': 'Invalid request'}, status=400)
-
-
-def simulate_bash_script(file_name):
-    # Extract the filename without the extension
-    filename = os.path.splitext(file_name)[0]
-
-    # Change directory
-    os.chdir(globals.RISCV32_GNU_TOOLCHAIN)
-    
-    # Convert the .txt file to .S
-    new_file_name = f"{filename}.S"
-    os.rename(file_name, new_file_name)
-
-    # Assemble the .S file to produce an object file using RISC-V assembler
-    assemble_cmd = ["./riscv32-unknown-elf-as", "-o", filename, new_file_name]
-    assemble_result = subprocess.run(assemble_cmd, capture_output=True, text=True)
-    if assemble_result.returncode != 0:
-        raise Exception(f"Error in assembly: {assemble_result.stderr}")
-
-    # Disassemble the object file to produce a .S disassembly file
-    disassembly_file = f"{filename}_disassembly.S"
-    disassemble_cmd = ["./riscv32-unknown-elf-objdump", "-d", filename]
-    with open(disassembly_file, 'w') as disassemble_output:
-        disassemble_result = subprocess.run(disassemble_cmd, stdout=disassemble_output, text=True)
-    if disassemble_result.returncode != 0:
-        raise Exception(f"Error in disassembly: {disassemble_result.stderr}")
-
-    print(f"Disassembly file created: {disassembly_file}")
-    return disassembly_file
