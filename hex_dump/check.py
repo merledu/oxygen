@@ -23,6 +23,8 @@ ABI_FREG_MAP = {name: i for i, name in enumerate(ABI_FREG_LIST)}
 for i in range(32):
     ABI_FREG_MAP[f'f{i}'] = i
 
+PROMPT_PATTERNS = [r'\r\n\(spike\)', TIMEOUT, EOF]
+
 
 class Simulator:
     def __init__(self):
@@ -52,6 +54,11 @@ class Simulator:
         }
         self.memory = {}
         self.is_ended = False
+        self.is_completed = False
+        self.last_error = ""
+        self.end_pc = None
+        self.user_tmp = None
+        self.lock = asyncio.Lock()
 
     def is_alive(self):
         return bool(self.spike_process and self.spike_process.isalive() and not self.is_ended)
@@ -61,12 +68,37 @@ class Simulator:
         if self.spike_process:
             try:
                 self.spike_process.terminate(force=True)
+                self.spike_process.close()
             except Exception:
                 pass
             self.spike_process = None
         self.is_ended = True
 
-    async def start(self, command, vtype=False, ftype=False, dtype=False, setup_steps=0, end_pc=None):
+    def _sync_start(self, command, setup_steps):
+        self.spike_process = spawn(command, timeout=5)
+        time.sleep(0.05)
+
+        # Wait for initial prompt
+        try:
+            self.spike_process.expect([r'\r\n\(spike\)', r'\(spike\)', TIMEOUT, EOF])
+        except Exception:
+            self.is_ended = True
+            return False
+
+        # Step through the 5 bootrom instructions (0x1000 -> 0x1010)
+        # plus any setup instructions (e.g. enabling mstatus.FS/VS)
+        for _ in range(5 + setup_steps):
+            self.spike_process.sendline('')
+            idx = self.spike_process.expect(PROMPT_PATTERNS)
+            if idx != 0:
+                self.is_ended = True
+                return False
+
+        # Initialize register state
+        self._sync_get_registers()
+        return True
+
+    async def start(self, command, vtype=False, ftype=False, dtype=False, setup_steps=0, end_pc=None, user_tmp=None):
         self.terminate()
         self.vtype = bool(vtype)
         self.ftype = bool(ftype or dtype)
@@ -96,37 +128,18 @@ class Simulator:
         self.is_completed = False
         self.last_error = ""
         self.end_pc = end_pc
+        self.user_tmp = user_tmp
 
-        self.spike_process = spawn(command, timeout=5)
-        await asyncio.sleep(0.05)
+        await asyncio.to_thread(self._sync_start, command, setup_steps)
 
-        # Wait for initial prompt
-        try:
-            self.spike_process.expect([r'\r\n\(spike\)', r'\(spike\)', TIMEOUT, EOF])
-        except Exception:
-            self.is_ended = True
-            return
-
-        # Step through the 5 bootrom instructions (0x1000 -> 0x1010)
-        # plus any setup instructions (e.g. enabling mstatus.FS/VS)
-        for _ in range(5 + setup_steps):
-            self.spike_process.sendline('')
-            idx = self.spike_process.expect([r'\r\n\(spike\)', TIMEOUT, EOF])
-            if idx != 0:
-                self.is_ended = True
-                return
-
-        # Initialize register state
-        await self.get_registers()
-
-    async def step(self):
+    def _sync_step(self):
         self.last_accessed = time.time()
         if not self.is_alive():
             return "Simulation ended"
 
         self.spike_process.sendline('')
         try:
-            idx = self.spike_process.expect([r'\r\n\(spike\)', TIMEOUT, EOF])
+            idx = self.spike_process.expect(PROMPT_PATTERNS)
             if idx != 0:
                 self.is_ended = True
                 return "Simulation ended"
@@ -187,7 +200,7 @@ class Simulator:
                     self.is_completed = True
 
             # Update integer registers
-            await self.get_registers()
+            self._sync_get_registers()
 
             # 1. Check for memory store instructions (sb, sh, sw, sd, fsw, fsd, c.sw, c.sd)
             store_match = re.search(r'\b(s[wbh]|c\.sw|c\.swsp|sd|c\.sd|c\.sdsp|fsw|fsd)\s+(\w+),\s*(-?\d+)\((\w+)\)', current_disasm)
@@ -203,7 +216,7 @@ class Simulator:
 
                 if 0 <= base_idx < 32:
                     target_addr = self.registers[base_idx] + offset
-                    mem_val = await self.get_memory(hex(target_addr))
+                    mem_val = self._sync_get_memory(hex(target_addr))
                     if mem_val:
                         self.memory[hex(target_addr)] = mem_val
 
@@ -221,12 +234,12 @@ class Simulator:
                             'fsd' in current_disasm
                         )
                         if is_double_op:
-                            d_val, h_val = await self.get_dregister(fp_idx)
+                            d_val, h_val = self._sync_get_dregister(fp_idx)
                             self.d_registers[fp_idx] = d_val
                             self.f_registers[fp_idx] = float(d_val)
                             self.f_hex[fp_idx] = h_val
                         else:
-                            f_val, h_val = await self.get_fregister(fp_idx)
+                            f_val, h_val = self._sync_get_fregister(fp_idx)
                             self.f_registers[fp_idx] = f_val
                             self.d_registers[fp_idx] = float(f_val)
                             self.f_hex[fp_idx] = h_val
@@ -250,23 +263,24 @@ class Simulator:
                     self.vector_status['sew'] = int(sew_str[1:])
                     self.vector_status['lmul'] = lmul_str
 
-                await self.get_registers_vtype()
+                self._sync_get_registers_vtype()
 
             return current_disasm or raw_output
 
-        except EOF:
+        except (EOF, TIMEOUT):
             self.is_ended = True
             return "Simulation ended"
-        except TIMEOUT:
-            return "Timeout occurred"
 
-    async def get_registers(self):
+    async def step(self):
+        return await asyncio.to_thread(self._sync_step)
+
+    def _sync_get_registers(self):
         if not self.is_alive():
             return self.registers
 
         self.spike_process.sendline('reg 0')
         try:
-            idx = self.spike_process.expect([r'\r\n\(spike\)', TIMEOUT, EOF])
+            idx = self.spike_process.expect(PROMPT_PATTERNS)
             if idx == 0:
                 reg_output = self.spike_process.before.decode('utf-8', errors='replace')
                 matches = re.findall(r'(\w+):\s+(0x[0-9a-fA-F]+)', reg_output)
@@ -286,7 +300,10 @@ class Simulator:
         except (EOF, TIMEOUT):
             return self.registers
 
-    async def get_fregister(self, reg_num):
+    async def get_registers(self):
+        return await asyncio.to_thread(self._sync_get_registers)
+
+    def _sync_get_fregister(self, reg_num):
         if not self.is_alive() or not (0 <= reg_num < 32):
             return 0.0, "0x0000000000000000"
         abi_name = ABI_FREG_LIST[reg_num]
@@ -295,10 +312,10 @@ class Simulator:
         self.spike_process.sendline(f'fregs 0 {abi_name}')
         f_val = 0.0
         try:
-            idx = self.spike_process.expect([r'\r\n\(spike\)', TIMEOUT, EOF])
+            idx = self.spike_process.expect(PROMPT_PATTERNS)
             if idx == 0:
                 out = self.spike_process.before.decode('utf-8', errors='replace')
-                last_line = out.splitlines()[-1].strip()
+                last_line = out.splitlines()[-1].strip() if out.splitlines() else ""
                 try:
                     f_val = float(last_line)
                 except ValueError:
@@ -310,10 +327,10 @@ class Simulator:
         self.spike_process.sendline(f'freg 0 {abi_name}')
         h_val = "0x0000000000000000"
         try:
-            idx = self.spike_process.expect([r'\r\n\(spike\)', TIMEOUT, EOF])
+            idx = self.spike_process.expect(PROMPT_PATTERNS)
             if idx == 0:
                 out = self.spike_process.before.decode('utf-8', errors='replace')
-                last_line = out.splitlines()[-1].strip()
+                last_line = out.splitlines()[-1].strip() if out.splitlines() else ""
                 if last_line.startswith("0x"):
                     h_val = last_line
         except (EOF, TIMEOUT):
@@ -321,7 +338,10 @@ class Simulator:
 
         return f_val, h_val
 
-    async def get_dregister(self, reg_num):
+    async def get_fregister(self, reg_num):
+        return await asyncio.to_thread(self._sync_get_fregister, reg_num)
+
+    def _sync_get_dregister(self, reg_num):
         if not self.is_alive() or not (0 <= reg_num < 32):
             return 0.0, "0x0000000000000000"
         abi_name = ABI_FREG_LIST[reg_num]
@@ -330,10 +350,10 @@ class Simulator:
         self.spike_process.sendline(f'fregd 0 {abi_name}')
         d_val = 0.0
         try:
-            idx = self.spike_process.expect([r'\r\n\(spike\)', TIMEOUT, EOF])
+            idx = self.spike_process.expect(PROMPT_PATTERNS)
             if idx == 0:
                 out = self.spike_process.before.decode('utf-8', errors='replace')
-                last_line = out.splitlines()[-1].strip()
+                last_line = out.splitlines()[-1].strip() if out.splitlines() else ""
                 try:
                     d_val = float(last_line)
                 except ValueError:
@@ -345,10 +365,10 @@ class Simulator:
         self.spike_process.sendline(f'freg 0 {abi_name}')
         h_val = "0x0000000000000000"
         try:
-            idx = self.spike_process.expect([r'\r\n\(spike\)', TIMEOUT, EOF])
+            idx = self.spike_process.expect(PROMPT_PATTERNS)
             if idx == 0:
                 out = self.spike_process.before.decode('utf-8', errors='replace')
-                last_line = out.splitlines()[-1].strip()
+                last_line = out.splitlines()[-1].strip() if out.splitlines() else ""
                 if last_line.startswith("0x"):
                     h_val = last_line
         except (EOF, TIMEOUT):
@@ -356,13 +376,16 @@ class Simulator:
 
         return d_val, h_val
 
-    async def get_registers_vtype(self):
+    async def get_dregister(self, reg_num):
+        return await asyncio.to_thread(self._sync_get_dregister, reg_num)
+
+    def _sync_get_registers_vtype(self):
         if not self.is_alive():
             return self.v_registers
 
         self.spike_process.sendline('vreg 0')
         try:
-            idx = self.spike_process.expect([r'\r\n\(spike\)', TIMEOUT, EOF])
+            idx = self.spike_process.expect(PROMPT_PATTERNS)
             if idx == 0:
                 raw_output = self.spike_process.before.decode('utf-8', errors='replace')
                 reg_pattern = re.compile(r'v(\d+)\s*:\s*(?:\[1\]:\s*([0-9xa-fA-F]+))\s*\[0\]:\s*([0-9xa-fA-F]+)')
@@ -400,7 +423,10 @@ class Simulator:
         except (EOF, TIMEOUT):
             return self.v_registers
 
-    async def get_memory(self, addr):
+    async def get_registers_vtype(self):
+        return await asyncio.to_thread(self._sync_get_registers_vtype)
+
+    def _sync_get_memory(self, addr):
         if not self.is_alive():
             return None
         try:
@@ -411,15 +437,18 @@ class Simulator:
             return None
         self.spike_process.sendline(f'mem {addr}')
         try:
-            idx = self.spike_process.expect([r'\r\n\(spike\)', TIMEOUT, EOF])
+            idx = self.spike_process.expect(PROMPT_PATTERNS)
             if idx == 0:
                 out = self.spike_process.before.decode('utf-8', errors='replace')
-                last_line = out.splitlines()[-1].strip()
+                last_line = out.splitlines()[-1].strip() if out.splitlines() else ""
                 if re.match(r'^0x[0-9a-fA-F]+$', last_line):
                     return last_line
             return None
         except (EOF, TIMEOUT):
             return None
+
+    async def get_memory(self, addr):
+        return await asyncio.to_thread(self._sync_get_memory, addr)
 
     async def run(self, max_steps=2000):
         steps = 0
@@ -428,4 +457,7 @@ class Simulator:
             steps += 1
             if res == "Simulation ended" or self.is_ended:
                 break
+            # Yield to event loop every 20 steps to ensure low latency for concurrent users
+            if steps % 20 == 0:
+                await asyncio.sleep(0)
         return self.registers

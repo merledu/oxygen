@@ -33,3 +33,6 @@ if [ -n "$PIDS" ]; then
 else
     echo "No running Oxygen process found on port 8016."
 fi
+
+# Clean up any orphaned Spike processes
+pkill -9 -f "tools/spike/bin/spike" 2>/dev/null || true

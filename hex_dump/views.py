@@ -1,7 +1,9 @@
 import asyncio
+import concurrent.futures
 import json
 import os
 import re
+import shutil
 import subprocess
 import time
 from asgiref.sync import sync_to_async
@@ -10,12 +12,42 @@ import globals
 from Temp import interperator as IP
 from .check import Simulator
 
+# High-capacity thread pool executor for 100s of concurrent users
+executor = concurrent.futures.ThreadPoolExecutor(max_workers=256)
+
 # Active simulators keyed by session_key
 session_simulators = {}
+_cleanup_task = None
+
+
+async def _periodic_cleanup_loop():
+    """Background task to regularly prune idle simulators and clean temporary files."""
+    while True:
+        try:
+            await asyncio.sleep(60)
+            cleanup_idle_simulators()
+        except asyncio.CancelledError:
+            break
+        except Exception:
+            pass
+
+
+def ensure_background_cleanup():
+    """Ensures that the threadpool executor and periodic cleanup task are running."""
+    global _cleanup_task
+    try:
+        loop = asyncio.get_running_loop()
+        if not getattr(loop, '_has_oxygen_executor', False):
+            loop.set_default_executor(executor)
+            loop._has_oxygen_executor = True
+        if _cleanup_task is None or _cleanup_task.done():
+            _cleanup_task = loop.create_task(_periodic_cleanup_loop())
+    except RuntimeError:
+        pass
 
 
 def cleanup_idle_simulators():
-    """Terminate and prune simulators idle for more than 5 minutes or terminated."""
+    """Terminate and prune simulators idle for more than 5 minutes or terminated, and clean disk."""
     now = time.time()
     to_delete = []
     for sk, sim in list(session_simulators.items()):
@@ -24,9 +56,27 @@ def cleanup_idle_simulators():
                 sim.terminate()
             except Exception:
                 pass
+            user_tmp = os.path.join(globals.TMP, sk)
+            if os.path.exists(user_tmp):
+                try:
+                    shutil.rmtree(user_tmp, ignore_errors=True)
+                except Exception:
+                    pass
             to_delete.append(sk)
     for sk in to_delete:
         session_simulators.pop(sk, None)
+
+    # Purge any orphaned temporary directories older than 1 hour
+    try:
+        if os.path.exists(globals.TMP):
+            for entry in os.listdir(globals.TMP):
+                path = os.path.join(globals.TMP, entry)
+                if os.path.isdir(path) and entry not in session_simulators:
+                    mtime = os.path.getmtime(path)
+                    if now - mtime > 3600:
+                        shutil.rmtree(path, ignore_errors=True)
+    except Exception:
+        pass
 
 
 def parse_assembler_error(error_str, offset=0):
@@ -91,6 +141,7 @@ def sanitize_isa(rvtype, mtype, ctype, ftype, dtype, vtype):
 
 
 async def assemble_code(request):
+    ensure_background_cleanup()
     await sync_to_async(request.session.save)()
     session_key = request.session.session_key
     if not session_key:
@@ -236,7 +287,8 @@ async def assemble_code(request):
                 ftype=('f' in extensions or 'd' in extensions),
                 dtype=('d' in extensions),
                 setup_steps=setup_steps,
-                end_pc=end_pc
+                end_pc=end_pc,
+                user_tmp=user_tmp
             )
 
             return JsonResponse({
@@ -253,6 +305,7 @@ async def assemble_code(request):
 
 
 async def step_code(request):
+    ensure_background_cleanup()
     await sync_to_async(request.session.save)()
     session_key = request.session.session_key
     if not session_key:
@@ -277,37 +330,60 @@ async def step_code(request):
                     'message': 'Program execution completed.',
                     'success': True
                 })
-            err_msg = simulator.last_error if (simulator and simulator.last_error) else 'Simulator not running or ended'
+            err_msg = simulator.last_error if (simulator and simulator.last_error) else 'Simulator session expired or not initialized. Please click Assemble first.'
             return JsonResponse({'error': err_msg, 'success': False, 'ended': True}, status=400)
 
-        step_res = await simulator.step()
-        if step_res in ("Simulation ended", "Program completed") or simulator.is_ended:
-            if simulator.last_error:
-                return JsonResponse({'error': simulator.last_error, 'success': False, 'ended': True}, status=400)
+        # Protect session against concurrent overlapping steps
+        async with simulator.lock:
+            if not simulator.is_alive():
+                if simulator.is_completed and not simulator.last_error:
+                    vreg_array = simulator.v_registers if simulator.vtype else [[0, 0] for _ in range(32)]
+                    return JsonResponse({
+                        'memory': simulator.memory,
+                        'register': simulator.registers,
+                        'vreg': vreg_array,
+                        'vreg_elements': simulator.vreg_elements,
+                        'vector_status': simulator.vector_status,
+                        'pc': simulator.pc,
+                        'f_reg': simulator.f_registers,
+                        'd_reg': simulator.d_registers,
+                        'f_hex': simulator.f_hex,
+                        'ended': True,
+                        'message': 'Program execution completed.',
+                        'success': True
+                    })
+                err_msg = simulator.last_error if simulator.last_error else 'Simulator session ended. Please click Assemble.'
+                return JsonResponse({'error': err_msg, 'success': False, 'ended': True}, status=400)
 
-        # Format vreg for frontend
-        vreg_array = simulator.v_registers if simulator.vtype else [[0, 0] for _ in range(32)]
-        is_ended = bool(simulator.is_ended or simulator.is_completed)
+            step_res = await simulator.step()
+            if step_res in ("Simulation ended", "Program completed") or simulator.is_ended:
+                if simulator.last_error:
+                    return JsonResponse({'error': simulator.last_error, 'success': False, 'ended': True}, status=400)
 
-        return JsonResponse({
-            'memory': simulator.memory,
-            'register': simulator.registers,
-            'vreg': vreg_array,
-            'vreg_elements': simulator.vreg_elements,
-            'vector_status': simulator.vector_status,
-            'pc': simulator.pc,
-            'f_reg': simulator.f_registers,
-            'd_reg': simulator.d_registers,
-            'f_hex': simulator.f_hex,
-            'ended': is_ended,
-            'message': 'Program execution completed.' if is_ended else '',
-            'success': True
-        })
+            # Format vreg for frontend
+            vreg_array = simulator.v_registers if simulator.vtype else [[0, 0] for _ in range(32)]
+            is_ended = bool(simulator.is_ended or simulator.is_completed)
+
+            return JsonResponse({
+                'memory': simulator.memory,
+                'register': simulator.registers,
+                'vreg': vreg_array,
+                'vreg_elements': simulator.vreg_elements,
+                'vector_status': simulator.vector_status,
+                'pc': simulator.pc,
+                'f_reg': simulator.f_registers,
+                'd_reg': simulator.d_registers,
+                'f_hex': simulator.f_hex,
+                'ended': is_ended,
+                'message': 'Program execution completed.' if is_ended else '',
+                'success': True
+            })
 
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
 async def run_code(request):
+    ensure_background_cleanup()
     await sync_to_async(request.session.save)()
     session_key = request.session.session_key
     if not session_key:
@@ -325,25 +401,26 @@ async def run_code(request):
             err_msg = simulator.last_error if simulator.last_error else 'Simulator not running or ended'
             return JsonResponse({'error': err_msg, 'success': False, 'ended': True}, status=400)
 
-        await simulator.run()
+        async with simulator.lock:
+            await simulator.run()
 
-        vreg_array = simulator.v_registers if simulator.vtype else [[0, 0] for _ in range(32)]
+            vreg_array = simulator.v_registers if simulator.vtype else [[0, 0] for _ in range(32)]
 
-        return JsonResponse({
-            'memory': simulator.memory,
-            'register': simulator.registers,
-            'registers': simulator.registers,
-            'vreg': vreg_array,
-            'vreg_elements': simulator.vreg_elements,
-            'vector_status': simulator.vector_status,
-            'pc': simulator.pc,
-            'f_reg': simulator.f_registers,
-            'd_reg': simulator.d_registers,
-            'f_hex': simulator.f_hex,
-            'ended': True,
-            'message': 'Program execution completed.',
-            'success': True
-        })
+            return JsonResponse({
+                'memory': simulator.memory,
+                'register': simulator.registers,
+                'registers': simulator.registers,
+                'vreg': vreg_array,
+                'vreg_elements': simulator.vreg_elements,
+                'vector_status': simulator.vector_status,
+                'pc': simulator.pc,
+                'f_reg': simulator.f_registers,
+                'd_reg': simulator.d_registers,
+                'f_hex': simulator.f_hex,
+                'ended': True,
+                'message': 'Program execution completed.',
+                'success': True
+            })
 
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
@@ -355,6 +432,9 @@ def reset(request):
             simulator = session_simulators.pop(session_key, None)
             if simulator:
                 simulator.terminate()
+            user_tmp = os.path.join(globals.TMP, session_key)
+            if os.path.exists(user_tmp):
+                shutil.rmtree(user_tmp, ignore_errors=True)
 
         return JsonResponse({
             'register': [0] * 32,

@@ -13,9 +13,14 @@ let currentIntRegisters = new Array(32).fill(0);
 let currentFRegisters = new Array(32).fill(0.0);
 let currentDRegisters = new Array(32).fill(0.0);
 let currentFHex = new Array(32).fill('0x0000000000000000');
+let prevFRegisters = new Array(32).fill(0.0);
+let prevDRegisters = new Array(32).fill(0.0);
+let prevFHex = new Array(32).fill('0x0000000000000000');
 
 let currentVRegisters = Array.from({ length: 32 }, () => [0, 0]);
 let currentVElements = { '8': [], '16': [], '32': [], '64': [] };
+let prevVRegisters = Array.from({ length: 32 }, () => [0, 0]);
+let prevVElements = { '8': [], '16': [], '32': [], '64': [] };
 let vectorStatus = { vl: 0, sew: 32, lmul: 'm1' };
 
 let memoryDict = {};
@@ -280,19 +285,29 @@ function renderFloatRegisterTable() {
   tbody.innerHTML = '';
   for (let i = 0; i < 32; i++) {
     let displayVal = '0.0';
+    let isChanged = false;
     if (floatViewMode === 'double') {
-      displayVal = (currentDRegisters[i] !== undefined) ? currentDRegisters[i] : (currentFRegisters[i] || 0.0);
+      const val = (currentDRegisters[i] !== undefined) ? currentDRegisters[i] : (currentFRegisters[i] || 0.0);
+      const prev = (prevDRegisters[i] !== undefined) ? prevDRegisters[i] : (prevFRegisters[i] || 0.0);
+      isChanged = (val !== prev);
+      displayVal = val;
     } else if (floatViewMode === 'single') {
-      displayVal = (currentFRegisters[i] !== undefined) ? currentFRegisters[i] : 0.0;
+      const val = (currentFRegisters[i] !== undefined) ? currentFRegisters[i] : 0.0;
+      const prev = (prevFRegisters[i] !== undefined) ? prevFRegisters[i] : 0.0;
+      isChanged = (val !== prev);
+      displayVal = val;
     } else if (floatViewMode === 'hex') {
-      displayVal = currentFHex[i] || '0x0000000000000000';
+      const val = currentFHex[i] || '0x0000000000000000';
+      const prev = prevFHex[i] || '0x0000000000000000';
+      isChanged = (val !== prev);
+      displayVal = val;
     }
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="reg-name">f${i}</td>
       <td class="reg-abi">${ABI_FLOAT_NAMES[i]}</td>
-      <td class="reg-val" id="freg-${i}">${displayVal}</td>
+      <td class="reg-val ${isChanged ? 'changed' : ''}" id="freg-${i}">${displayVal}</td>
     `;
     tbody.appendChild(tr);
   }
@@ -316,18 +331,23 @@ function renderVectorRegisterTable() {
 
     if (currentSEW === 'raw') {
       const pair = currentVRegisters[i] || [0, 0];
+      const prevPair = (prevVRegisters && prevVRegisters[i]) ? prevVRegisters[i] : [0, 0];
+      const isChanged0 = pair[0] !== prevPair[0];
+      const isChanged1 = pair[1] !== prevPair[1];
+
       const h0 = `0x${(BigInt(pair[0]) & 0xFFFFFFFFFFFFFFFFn).toString(16).padStart(16, '0')}`;
       const h1 = `0x${(BigInt(pair[1]) & 0xFFFFFFFFFFFFFFFFn).toString(16).padStart(16, '0')}`;
       contentHTML += `<span style="color: var(--text-muted); font-size: 10px;">[1]:[0]</span></div>`;
       contentHTML += `
         <div class="v-elements-grid" style="grid-template-columns: 1fr 1fr;">
-          <div class="v-element-cell">${h1}</div>
-          <div class="v-element-cell">${h0}</div>
+          <div class="v-element-cell ${isChanged1 ? 'changed' : ''}">${h1}</div>
+          <div class="v-element-cell ${isChanged0 ? 'changed' : ''}">${h0}</div>
         </div>
       `;
     } else {
       const sewKey = String(currentSEW);
       const elems = (currentVElements[sewKey] && currentVElements[sewKey][i]) ? currentVElements[sewKey][i] : [];
+      const prevElems = (prevVElements && prevVElements[sewKey] && prevVElements[sewKey][i]) ? prevVElements[sewKey][i] : [];
       const numElems = (currentSEW === 8 ? 16 : (currentSEW === 16 ? 8 : (currentSEW === 32 ? 4 : 2)));
       const cols = currentSEW === 8 ? 8 : (currentSEW === 16 ? 4 : (currentSEW === 32 ? 4 : 2));
 
@@ -336,11 +356,13 @@ function renderVectorRegisterTable() {
 
       for (let e = 0; e < numElems; e++) {
         const val = elems[e] || 0;
+        const prevVal = prevElems[e] !== undefined ? prevElems[e] : 0;
+        const isChanged = (val !== prevVal);
         const hexChars = currentSEW / 4;
         const formatted = isHexNotation
           ? `0x${(val >>> 0).toString(16).padStart(hexChars, '0')}`
           : val.toString(10);
-        contentHTML += `<div class="v-element-cell" title="Elem [${e}]">${formatted}</div>`;
+        contentHTML += `<div class="v-element-cell ${isChanged ? 'changed' : ''}" title="Elem [${e}]">${formatted}</div>`;
       }
       contentHTML += `</div>`;
     }
@@ -548,14 +570,19 @@ function stepInstruction() {
         return;
       }
 
-      // Save previous integer registers to detect delta
+      // Save previous registers to detect delta
       prevIntRegisters = [...currentIntRegisters];
       currentIntRegisters = d.register || d.registers || currentIntRegisters;
 
+      prevFRegisters = [...currentFRegisters];
+      prevDRegisters = [...currentDRegisters];
+      prevFHex = [...currentFHex];
       currentFRegisters = d.f_reg || d.fregister || currentFRegisters;
       if (d.d_reg) currentDRegisters = d.d_reg;
       if (d.f_hex) currentFHex = d.f_hex;
 
+      prevVRegisters = currentVRegisters.map(r => [...r]);
+      prevVElements = JSON.parse(JSON.stringify(currentVElements));
       if (d.vreg) currentVRegisters = d.vreg;
       if (d.vreg_elements) currentVElements = d.vreg_elements;
       if (d.vector_status) vectorStatus = d.vector_status;
@@ -604,10 +631,16 @@ function run_Code() {
 
       prevIntRegisters = [...currentIntRegisters];
       currentIntRegisters = d.register || d.registers || currentIntRegisters;
+
+      prevFRegisters = [...currentFRegisters];
+      prevDRegisters = [...currentDRegisters];
+      prevFHex = [...currentFHex];
       currentFRegisters = d.f_reg || d.fregister || currentFRegisters;
       if (d.d_reg) currentDRegisters = d.d_reg;
       if (d.f_hex) currentFHex = d.f_hex;
 
+      prevVRegisters = currentVRegisters.map(r => [...r]);
+      prevVElements = JSON.parse(JSON.stringify(currentVElements));
       if (d.vreg) currentVRegisters = d.vreg;
       if (d.vreg_elements) currentVElements = d.vreg_elements;
       if (d.vector_status) vectorStatus = d.vector_status;
@@ -640,9 +673,14 @@ function reset_Registers() {
       currentFRegisters = d.fregister || new Array(32).fill(0.0);
       currentDRegisters = d.d_reg || new Array(32).fill(0.0);
       currentFHex = d.f_hex || new Array(32).fill('0x0000000000000000');
+      prevFRegisters = [...currentFRegisters];
+      prevDRegisters = [...currentDRegisters];
+      prevFHex = [...currentFHex];
 
       currentVRegisters = d.vreg || Array.from({ length: 32 }, () => [0, 0]);
       currentVElements = { '8': [], '16': [], '32': [], '64': [] };
+      prevVRegisters = currentVRegisters.map(r => [...r]);
+      prevVElements = { '8': [], '16': [], '32': [], '64': [] };
       vectorStatus = { vl: 0, sew: 32, lmul: 'm1' };
 
       memoryDict = d.memory || {};
