@@ -6,6 +6,11 @@ let currentSimulator = 'spike'; // 'spike' or 'custom'
 let isHexNotation = true;
 let floatViewMode = 'double'; // 'double', 'single', 'hex'
 let currentSEW = 32; // 8, 16, 32, 64, or 'raw'
+let activeInspectorTab = 'integer';
+
+let isPlaying = false;
+let playTimer = null;
+let breakpoints = new Set();
 
 let prevIntRegisters = new Array(32).fill(0);
 let currentIntRegisters = new Array(32).fill(0);
@@ -42,15 +47,60 @@ const ABI_FLOAT_NAMES = [
   "fs8", "fs9", "fs10", "fs11", "ft8", "ft9", "ft10", "ft11"
 ];
 
+// Toast Notification System (Non-blocking replacement for window.alert)
+function showToast(message, type = 'error') {
+  const container = document.getElementById('toast-container');
+  if (!container) {
+    alert(message);
+    return;
+  }
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  const icon = type === 'error' ? '❌' : (type === 'success' ? '✅' : 'ℹ️');
+  toast.innerHTML = `<span style="font-size: 14px;">${icon}</span><span style="flex: 1; word-break: break-word;">${message}</span>`;
+  toast.addEventListener('click', () => {
+    toast.classList.add('toast-closing');
+    setTimeout(() => toast.remove(), 200);
+  });
+  container.appendChild(toast);
+  setTimeout(() => {
+    if (toast.parentNode) {
+      toast.classList.add('toast-closing');
+      setTimeout(() => toast.remove(), 200);
+    }
+  }, 4000);
+}
+
 // 2. Initialization on Load
 document.addEventListener('DOMContentLoaded', () => {
-  // Initialize register tables
-  renderIntegerRegisterTable();
-  renderFloatRegisterTable();
-  renderVectorRegisterTable();
-  renderMemoryTable();
+  // Initialize register tables once
+  initIntegerRegisterTable();
+  initFloatRegisterTable();
+  initVectorRegisterTable();
+  initMemoryTable();
 
-  // Hide splash screen smoothly
+  // Restore saved editor code if present
+  try {
+    const savedCode = localStorage.getItem('oxygen_editor_code');
+    if (savedCode) {
+      const editor = document.getElementById('editor-text-box');
+      if (editor) {
+        editor.value = savedCode;
+      }
+    }
+  } catch (e) {}
+
+  // Save editor code on input
+  const editorBox = document.getElementById('editor-text-box');
+  if (editorBox) {
+    editorBox.addEventListener('input', () => {
+      try {
+        localStorage.setItem('oxygen_editor_code', editorBox.value);
+      } catch (e) {}
+    });
+  }
+
+  // Preserve 1.8s splash screen smoothly (user requested)
   const splash = document.getElementById('splash_screen');
   if (splash) {
     setTimeout(() => {
@@ -59,35 +109,75 @@ document.addEventListener('DOMContentLoaded', () => {
     splash.addEventListener('click', () => splash.classList.add('hidden'));
   }
 
-  // Keyboard shortcuts
-  document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+  // Universal Keyboard Shortcuts (F5, Alt+R, Ctrl+R, F10, F9, Ctrl+Enter)
+  function handleGlobalShortcuts(e) {
+    // 1. Run shortcuts: F5, Alt+R, Ctrl+R, Ctrl+Shift+Enter, Shift+Enter
+    const isRun = (
+      e.key === 'F5' ||
+      (e.altKey && (e.key === 'r' || e.key === 'R')) ||
+      ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R')) ||
+      ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Enter')
+    );
+
+    if (isRun) {
       e.preventDefault();
-      assemble_code();
-    } else if (e.key === 'F10') {
-      e.preventDefault();
-      const stepBtn = document.getElementById('step-btn');
-      if (stepBtn && !stepBtn.disabled) stepInstruction();
-    } else if (e.key === 'F5') {
-      e.preventDefault();
-      const runBtn = document.getElementById('run-btn');
-      if (runBtn && !runBtn.disabled) run_Code();
+      e.stopPropagation();
+      run_Code();
+      return;
     }
-  });
+
+    // 2. Assemble shortcut: Ctrl+Enter / Cmd+Enter (without Shift)
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      assemble_code();
+      return;
+    }
+
+    // 3. Step shortcut: F10 or Alt+S
+    if (e.key === 'F10' || (e.altKey && (e.key === 's' || e.key === 'S'))) {
+      e.preventDefault();
+      e.stopPropagation();
+      stepInstruction();
+      return;
+    }
+
+    // 4. Reset shortcut: Alt+X
+    if (e.altKey && (e.key === 'x' || e.key === 'X')) {
+      e.preventDefault();
+      e.stopPropagation();
+      reset_Registers();
+      return;
+    }
+
+    // 5. Toggle breakpoint on selected row: F9
+    if (e.key === 'F9') {
+      e.preventDefault();
+      e.stopPropagation();
+      const activeRow = document.querySelector('#decoderTableBody tr.highlight');
+      if (activeRow && activeRow.dataset.pc) {
+        toggleBreakpoint(activeRow.dataset.pc);
+      }
+      return;
+    }
+  }
+
+  // Use capture phase so shortcuts work inside textareas and before browser defaults
+  window.addEventListener('keydown', handleGlobalShortcuts, true);
 
   // Memory scroll buttons
   const upBtn = document.getElementById('scrollUpBtn');
   const downBtn = document.getElementById('scrollDownBtn');
   if (upBtn) {
     upBtn.addEventListener('click', () => {
-      currentMemoryBase = Math.max(0, currentMemoryBase - 16);
-      renderMemoryTable();
+      currentMemoryBase = Math.max(0, currentMemoryBase - 16) >>> 0;
+      updateMemoryTable();
     });
   }
   if (downBtn) {
     downBtn.addEventListener('click', () => {
-      currentMemoryBase += 16;
-      renderMemoryTable();
+      currentMemoryBase = (currentMemoryBase + 16) >>> 0;
+      updateMemoryTable();
     });
   }
 
@@ -222,20 +312,22 @@ function enableExt(ext) {
 
 // 5. Inspector Tabs & View Mode
 function switchInspectorTab(tabId) {
+  activeInspectorTab = tabId;
   document.querySelectorAll('.tab-nav-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === tabId);
   });
   document.querySelectorAll('.tab-pane').forEach(pane => {
     pane.classList.toggle('active', pane.id === `tab-${tabId}`);
   });
+  updateAllInspectors();
 }
 
 function changeNotation(val) {
   isHexNotation = (val === 'hex');
-  renderIntegerRegisterTable();
-  renderFloatRegisterTable();
-  renderVectorRegisterTable();
-  renderMemoryTable();
+  updateIntegerRegisters();
+  updateFloatRegisters();
+  updateVectorRegisters();
+  updateMemoryTable();
 }
 
 function setFloatViewMode(mode) {
@@ -243,7 +335,7 @@ function setFloatViewMode(mode) {
   document.getElementById('fview-double-btn').classList.toggle('active', mode === 'double');
   document.getElementById('fview-single-btn').classList.toggle('active', mode === 'single');
   document.getElementById('fview-hex-btn').classList.toggle('active', mode === 'hex');
-  renderFloatRegisterTable();
+  updateFloatRegisters();
 }
 
 function setVectorSEW(sew) {
@@ -252,37 +344,66 @@ function setVectorSEW(sew) {
     const btn = document.getElementById(`sew-${s}-btn`);
     if (btn) btn.classList.toggle('active', s === sew);
   });
-  renderVectorRegisterTable();
+  initVectorRegisterTable();
 }
 
-// 6. Register Rendering Functions
-function renderIntegerRegisterTable() {
+// 6. Persistent DOM Register & Memory Tables with Targeted Diffing
+function initIntegerRegisterTable() {
   const tbody = document.getElementById('integer-reg-tbody');
   if (!tbody) return;
-
   tbody.innerHTML = '';
   for (let i = 0; i < 32; i++) {
-    const val = currentIntRegisters[i] || 0;
-    const isChanged = (val !== prevIntRegisters[i]);
-    const formatted = isHexNotation
-      ? `0x${(val >>> 0).toString(16).padStart(8, '0')}`
-      : (val | 0).toString(10);
-
     const tr = document.createElement('tr');
+    tr.id = `int-row-${i}`;
     tr.innerHTML = `
       <td class="reg-name">x${i}</td>
       <td class="reg-abi">${ABI_INT_NAMES[i]}</td>
-      <td class="reg-val ${isChanged ? 'changed' : ''}" id="reg-${i}">${formatted}</td>
+      <td class="reg-val" id="reg-${i}">0x00000000</td>
     `;
     tbody.appendChild(tr);
   }
 }
 
-function renderFloatRegisterTable() {
+function updateIntegerRegisters() {
+  if (!document.getElementById('reg-0')) {
+    initIntegerRegisterTable();
+  }
+  for (let i = 0; i < 32; i++) {
+    const val = currentIntRegisters[i] || 0;
+    const isChanged = (val !== prevIntRegisters[i]);
+    const cell = document.getElementById(`reg-${i}`);
+    if (cell) {
+      const formatted = isHexNotation
+        ? `0x${(val >>> 0).toString(16).padStart(8, '0')}`
+        : (val | 0).toString(10);
+      if (cell.textContent !== formatted) {
+        cell.textContent = formatted;
+      }
+      cell.classList.toggle('changed', isChanged);
+    }
+  }
+}
+
+function initFloatRegisterTable() {
   const tbody = document.getElementById('float-reg-tbody');
   if (!tbody) return;
-
   tbody.innerHTML = '';
+  for (let i = 0; i < 32; i++) {
+    const tr = document.createElement('tr');
+    tr.id = `float-row-${i}`;
+    tr.innerHTML = `
+      <td class="reg-name">f${i}</td>
+      <td class="reg-abi">${ABI_FLOAT_NAMES[i]}</td>
+      <td class="reg-val" id="freg-${i}">0.0</td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+function updateFloatRegisters() {
+  if (!document.getElementById('freg-0')) {
+    initFloatRegisterTable();
+  }
   for (let i = 0; i < 32; i++) {
     let displayVal = '0.0';
     let isChanged = false;
@@ -303,32 +424,75 @@ function renderFloatRegisterTable() {
       displayVal = val;
     }
 
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="reg-name">f${i}</td>
-      <td class="reg-abi">${ABI_FLOAT_NAMES[i]}</td>
-      <td class="reg-val ${isChanged ? 'changed' : ''}" id="freg-${i}">${displayVal}</td>
-    `;
-    tbody.appendChild(tr);
+    const cell = document.getElementById(`freg-${i}`);
+    if (cell) {
+      if (cell.textContent !== String(displayVal)) {
+        cell.textContent = displayVal;
+      }
+      cell.classList.toggle('changed', isChanged);
+    }
   }
 }
 
-function renderVectorRegisterTable() {
+function initVectorRegisterTable() {
   const container = document.getElementById('vector-reg-tbody');
   if (!container) return;
 
-  // Update status bar
-  document.getElementById('v-status-vl').innerText = vectorStatus.vl;
-  document.getElementById('v-status-sew').innerText = vectorStatus.sew;
-  document.getElementById('v-status-lmul').innerText = vectorStatus.lmul;
+  const vlEl = document.getElementById('v-status-vl');
+  const sewEl = document.getElementById('v-status-sew');
+  const lmulEl = document.getElementById('v-status-lmul');
+  if (vlEl) vlEl.innerText = vectorStatus.vl;
+  if (sewEl) sewEl.innerText = vectorStatus.sew;
+  if (lmulEl) lmulEl.innerText = vectorStatus.lmul;
 
   container.innerHTML = '';
   for (let i = 0; i < 32; i++) {
     const row = document.createElement('div');
     row.className = 'v-reg-row';
+    row.id = `v-row-${i}`;
 
     let contentHTML = `<div class="v-reg-header"><span>v${i}</span>`;
 
+    if (currentSEW === 'raw') {
+      contentHTML += `<span style="color: var(--text-muted); font-size: 10px;">[1]:[0]</span></div>`;
+      contentHTML += `
+        <div class="v-elements-grid" style="grid-template-columns: 1fr 1fr;">
+          <div class="v-element-cell" id="v-cell-${i}-1">0x0000000000000000</div>
+          <div class="v-element-cell" id="v-cell-${i}-0">0x0000000000000000</div>
+        </div>
+      `;
+    } else {
+      const numElems = (currentSEW === 8 ? 16 : (currentSEW === 16 ? 8 : (currentSEW === 32 ? 4 : 2)));
+      const cols = currentSEW === 8 ? 8 : (currentSEW === 16 ? 4 : (currentSEW === 32 ? 4 : 2));
+
+      contentHTML += `<span style="color: var(--text-muted); font-size: 10px;">${numElems} elements</span></div>`;
+      contentHTML += `<div class="v-elements-grid" style="grid-template-columns: repeat(${cols}, 1fr);">`;
+
+      for (let e = 0; e < numElems; e++) {
+        contentHTML += `<div class="v-element-cell" id="v-cell-${i}-${e}" title="Elem [${e}]">0</div>`;
+      }
+      contentHTML += `</div>`;
+    }
+
+    row.innerHTML = contentHTML;
+    container.appendChild(row);
+  }
+  updateVectorRegisters();
+}
+
+function updateVectorRegisters() {
+  if (!document.getElementById('v-cell-0-0')) {
+    initVectorRegisterTable();
+    return;
+  }
+  const vlEl = document.getElementById('v-status-vl');
+  const sewEl = document.getElementById('v-status-sew');
+  const lmulEl = document.getElementById('v-status-lmul');
+  if (vlEl) vlEl.innerText = vectorStatus.vl;
+  if (sewEl) sewEl.innerText = vectorStatus.sew;
+  if (lmulEl) lmulEl.innerText = vectorStatus.lmul;
+
+  for (let i = 0; i < 32; i++) {
     if (currentSEW === 'raw') {
       const pair = currentVRegisters[i] || [0, 0];
       const prevPair = (prevVRegisters && prevVRegisters[i]) ? prevVRegisters[i] : [0, 0];
@@ -337,22 +501,22 @@ function renderVectorRegisterTable() {
 
       const h0 = `0x${(BigInt(pair[0]) & 0xFFFFFFFFFFFFFFFFn).toString(16).padStart(16, '0')}`;
       const h1 = `0x${(BigInt(pair[1]) & 0xFFFFFFFFFFFFFFFFn).toString(16).padStart(16, '0')}`;
-      contentHTML += `<span style="color: var(--text-muted); font-size: 10px;">[1]:[0]</span></div>`;
-      contentHTML += `
-        <div class="v-elements-grid" style="grid-template-columns: 1fr 1fr;">
-          <div class="v-element-cell ${isChanged1 ? 'changed' : ''}">${h1}</div>
-          <div class="v-element-cell ${isChanged0 ? 'changed' : ''}">${h0}</div>
-        </div>
-      `;
+
+      const cell0 = document.getElementById(`v-cell-${i}-0`);
+      const cell1 = document.getElementById(`v-cell-${i}-1`);
+      if (cell0) {
+        if (cell0.textContent !== h0) cell0.textContent = h0;
+        cell0.classList.toggle('changed', isChanged0);
+      }
+      if (cell1) {
+        if (cell1.textContent !== h1) cell1.textContent = h1;
+        cell1.classList.toggle('changed', isChanged1);
+      }
     } else {
       const sewKey = String(currentSEW);
       const elems = (currentVElements[sewKey] && currentVElements[sewKey][i]) ? currentVElements[sewKey][i] : [];
       const prevElems = (prevVElements && prevVElements[sewKey] && prevVElements[sewKey][i]) ? prevVElements[sewKey][i] : [];
       const numElems = (currentSEW === 8 ? 16 : (currentSEW === 16 ? 8 : (currentSEW === 32 ? 4 : 2)));
-      const cols = currentSEW === 8 ? 8 : (currentSEW === 16 ? 4 : (currentSEW === 32 ? 4 : 2));
-
-      contentHTML += `<span style="color: var(--text-muted); font-size: 10px;">${numElems} elements</span></div>`;
-      contentHTML += `<div class="v-elements-grid" style="grid-template-columns: repeat(${cols}, 1fr);">`;
 
       for (let e = 0; e < numElems; e++) {
         const val = elems[e] || 0;
@@ -362,44 +526,92 @@ function renderVectorRegisterTable() {
         const formatted = isHexNotation
           ? `0x${(val >>> 0).toString(16).padStart(hexChars, '0')}`
           : val.toString(10);
-        contentHTML += `<div class="v-element-cell ${isChanged ? 'changed' : ''}" title="Elem [${e}]">${formatted}</div>`;
-      }
-      contentHTML += `</div>`;
-    }
 
-    row.innerHTML = contentHTML;
-    container.appendChild(row);
+        const cell = document.getElementById(`v-cell-${i}-${e}`);
+        if (cell) {
+          if (cell.textContent !== formatted) cell.textContent = formatted;
+          cell.classList.toggle('changed', isChanged);
+        }
+      }
+    }
   }
 }
 
-function renderMemoryTable() {
+function initMemoryTable() {
   const tbody = document.getElementById('memoryTableBody');
   if (!tbody) return;
-
   tbody.innerHTML = '';
   for (let i = 0; i < 8; i++) {
-    const rowAddr = currentMemoryBase + (i * 16);
     const tr = document.createElement('tr');
-
-    let rowHTML = `<td style="color: var(--color-primary); font-weight: 600;">0x${rowAddr.toString(16).padStart(8, '0')}</td>`;
-
+    tr.id = `mem-row-${i}`;
+    let rowHTML = `<td id="mem-addr-${i}" style="color: var(--color-primary); font-weight: 600;">0x00000000</td>`;
     for (let col = 0; col < 4; col++) {
-      const wordAddr = rowAddr + (col * 4);
-      const addrHex = `0x${wordAddr.toString(16)}`;
-      const valStr = memoryDict[addrHex];
-      const isWritten = (valStr !== undefined);
-
-      let cellText = '00 00 00 00';
-      if (isWritten) {
-        const clean = valStr.replace('0x', '').padStart(8, '0');
-        cellText = `${clean.slice(6, 8)} ${clean.slice(4, 6)} ${clean.slice(2, 4)} ${clean.slice(0, 2)}`;
-      }
-
-      rowHTML += `<td class="${isWritten ? 'mem-cell-written' : ''}" style="text-align: center;">${cellText}</td>`;
+      rowHTML += `<td id="mem-cell-${i}-${col}" style="text-align: center;">00 00 00 00</td>`;
     }
-
     tr.innerHTML = rowHTML;
     tbody.appendChild(tr);
+  }
+  updateMemoryTable();
+}
+
+function updateMemoryTable() {
+  // If memory has written addresses that are outside visible view, auto-snap currentMemoryBase
+  const writtenAddrs = Object.keys(memoryDict).map(a => parseInt(a, 16)).filter(a => !isNaN(a));
+  if (writtenAddrs.length > 0) {
+    const lastAddr = writtenAddrs[writtenAddrs.length - 1];
+    if (lastAddr < currentMemoryBase || lastAddr >= ((currentMemoryBase + 128) >>> 0)) {
+      currentMemoryBase = ((lastAddr & ~0xF) >>> 0);
+      const input = document.getElementById('mem-jump-input');
+      if (input && !input.matches(':focus')) {
+        input.value = `0x${currentMemoryBase.toString(16).padStart(8, '0')}`;
+      }
+    }
+  }
+
+  for (let i = 0; i < 8; i++) {
+    const rowAddr = ((currentMemoryBase + (i * 16)) >>> 0);
+    const addrCell = document.getElementById(`mem-addr-${i}`);
+    if (addrCell) {
+      addrCell.textContent = `0x${rowAddr.toString(16).padStart(8, '0')}`;
+    }
+
+    for (let col = 0; col < 4; col++) {
+      const wordAddr = ((rowAddr + (col * 4)) >>> 0);
+      let isWritten = false;
+      const byteStrs = [];
+
+      for (let b = 0; b < 4; b++) {
+        const byteAddr = ((wordAddr + b) >>> 0);
+        const bHex = `0x${byteAddr.toString(16)}`;
+        if (memoryDict[bHex] !== undefined) {
+          isWritten = true;
+          byteStrs.push(memoryDict[bHex].padStart(2, '0'));
+        } else {
+          byteStrs.push('00');
+        }
+      }
+
+      const cellText = byteStrs.join(' ');
+      const cell = document.getElementById(`mem-cell-${i}-${col}`);
+      if (cell) {
+        if (cell.textContent !== cellText) {
+          cell.textContent = cellText;
+        }
+        cell.className = isWritten ? 'mem-cell-written' : '';
+      }
+    }
+  }
+}
+
+function updateAllInspectors() {
+  if (activeInspectorTab === 'integer') {
+    updateIntegerRegisters();
+  } else if (activeInspectorTab === 'float') {
+    updateFloatRegisters();
+  } else if (activeInspectorTab === 'vector') {
+    updateVectorRegisters();
+  } else if (activeInspectorTab === 'memory') {
+    updateMemoryTable();
   }
 }
 
@@ -409,12 +621,89 @@ function jumpToMemoryAddress() {
   let parsed = parseInt(input.value.trim(), 16);
   if (isNaN(parsed)) parsed = parseInt(input.value.trim(), 10);
   if (!isNaN(parsed)) {
-    currentMemoryBase = parsed & ~0xF; // 16-byte align
-    renderMemoryTable();
+    currentMemoryBase = ((parsed & ~0xF) >>> 0); // 16-byte align as unsigned 32-bit!
+    updateMemoryTable();
   }
 }
 
-// 7. Core Simulator Actions
+// 7. Auto-Step Playback & Breakpoint Management
+function togglePlay() {
+  if (isPlaying) {
+    stopPlay();
+  } else {
+    startPlay();
+  }
+}
+
+function startPlay() {
+  const stepBtn = document.getElementById('step-btn');
+  if (!stepBtn || stepBtn.disabled) return;
+
+  isPlaying = true;
+  const playBtn = document.getElementById('play-btn');
+  const playText = document.getElementById('play-btn-text');
+  const playIcon = document.getElementById('play-icon');
+  if (playBtn) playBtn.classList.add('btn-warning');
+  if (playText) playText.innerText = 'Pause';
+  if (playIcon) playIcon.innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+
+  const speedSelect = document.getElementById('play-speed-select');
+  const intervalMs = speedSelect ? parseInt(speedSelect.value, 10) : 200;
+
+  function autoStep() {
+    if (!isPlaying) return;
+    const btn = document.getElementById('step-btn');
+    if (!btn || btn.disabled) {
+      stopPlay();
+      return;
+    }
+    stepInstruction(true).then(shouldContinue => {
+      if (shouldContinue && isPlaying) {
+        // Check if next PC hit a breakpoint
+        const nextPCHex = `0x${(currentPC >>> 0).toString(16).padStart(8, '0')}`.toLowerCase();
+        if (breakpoints.has(nextPCHex)) {
+          showToast(`Breakpoint hit at ${nextPCHex}`, 'info');
+          stopPlay();
+          return;
+        }
+        playTimer = setTimeout(autoStep, intervalMs);
+      } else {
+        stopPlay();
+      }
+    }).catch(() => stopPlay());
+  }
+  autoStep();
+}
+
+function stopPlay() {
+  isPlaying = false;
+  if (playTimer) {
+    clearTimeout(playTimer);
+    playTimer = null;
+  }
+  const playBtn = document.getElementById('play-btn');
+  const playText = document.getElementById('play-btn-text');
+  const playIcon = document.getElementById('play-icon');
+  if (playBtn) playBtn.classList.remove('btn-warning');
+  if (playText) playText.innerText = 'Play';
+  if (playIcon) playIcon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"/>';
+}
+
+function toggleBreakpoint(pcHex) {
+  const clean = pcHex.toLowerCase();
+  if (breakpoints.has(clean)) {
+    breakpoints.delete(clean);
+    showToast(`Breakpoint removed at ${clean}`, 'info');
+  } else {
+    breakpoints.add(clean);
+    showToast(`Breakpoint set at ${clean}`, 'info');
+  }
+  document.querySelectorAll(`#dec-row-${clean}`).forEach(row => {
+    row.classList.toggle('has-breakpoint', breakpoints.has(clean));
+  });
+}
+
+// 8. Core Simulator Actions
 function assemble_code() {
   const code = document.getElementById('editor-text-box').value;
   const mtype = document.getElementById('M-type').checked ? 'm' : '';
@@ -426,14 +715,14 @@ function assemble_code() {
 
   const assembleUrl = (currentSimulator === 'spike') ? 'gen-hex/assemble-code' : 'assemble-code';
 
-  axios.all([
+  return axios.all([
     axios.post(assembleUrl, { code, mtype, ctype, ftype, dtype, vtype, rvtype }),
     axios.post('gen-stats/assemble-code', { code })
   ])
     .then(axios.spread((data1, data2) => {
       if (data1 && data1.data && data1.data.success === false) {
-        alert(`${data1.data.error_message} at line ${data1.data.error_line}`);
-        return;
+        showToast(`${data1.data.error_message} (line ${data1.data.error_line})`, 'error');
+        return false;
       }
       if (data1 && data1.data) {
         const hex = data1.data.hex || '';
@@ -445,19 +734,31 @@ function assemble_code() {
         // Enable buttons
         document.getElementById('run-btn').disabled = false;
         document.getElementById('step-btn').disabled = false;
+        const playBtn = document.getElementById('play-btn');
+        if (playBtn) playBtn.disabled = false;
         document.getElementById('assemble-btn').disabled = true;
+
+        if (instructions.length > 0) {
+          currentPC = parseInt(instructions[0].pc, 16);
+          highlightDecoderRow(currentPC);
+        }
+
+        showToast('Assembled successfully', 'success');
+        return true;
       }
       if (data2 && data2.data) {
         populate_Stats(data2.data);
       }
+      return true;
     }))
     .catch(error => {
       if (error.response && error.response.data) {
         const d = error.response.data;
-        alert(d.error_message || d.error || 'Unknown assembly error');
+        showToast(d.error_message || d.error || 'Assembly error', 'error');
       } else {
-        alert(error.message || error);
+        showToast(error.message || String(error), 'error');
       }
+      return false;
     });
 }
 
@@ -482,16 +783,22 @@ function populate_Decoder_Table(code, hex, baseins, instructions = []) {
       const tr = document.createElement('tr');
       tr.id = `dec-row-${pcHex}`;
       tr.setAttribute('data-pc', pcHex);
+      if (breakpoints.has(pcHex)) tr.classList.add('has-breakpoint');
       tr.innerHTML = `
-        <td style="color: var(--color-primary); font-weight: 600;">${inst.pc}</td>
+        <td class="pc-cell" style="color: var(--color-primary); font-weight: 600; cursor: pointer;" title="Click to toggle Breakpoint">${inst.pc}</td>
         <td style="color: var(--color-accent);">${machineCode}</td>
         <td>${disasm}</td>
         <td style="color: var(--text-primary); font-weight: 500;">${orig}</td>
       `;
+      const pcCell = tr.querySelector('.pc-cell');
+      if (pcCell) {
+        pcCell.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleBreakpoint(pcHex);
+        });
+      }
       tbody.appendChild(tr);
     });
-
-    // Note: Do NOT highlight any row here. Highlighting occurs on the first click of "Step".
   } else {
     // Fallback if instructions not provided
     const hexLines = hex.split('\n').filter(line => line.trim() !== '');
@@ -507,12 +814,20 @@ function populate_Decoder_Table(code, hex, baseins, instructions = []) {
       const tr = document.createElement('tr');
       tr.id = `dec-row-${pcHex}`;
       tr.setAttribute('data-pc', pcHex);
+      if (breakpoints.has(pcHex)) tr.classList.add('has-breakpoint');
       tr.innerHTML = `
-        <td style="color: var(--color-primary); font-weight: 600;">${pcHex}</td>
+        <td class="pc-cell" style="color: var(--color-primary); font-weight: 600; cursor: pointer;" title="Click to toggle Breakpoint">${pcHex}</td>
         <td style="color: var(--color-accent);">${machineCode}</td>
         <td>${disasm}</td>
         <td style="color: var(--text-primary); font-weight: 500;">${instruction}</td>
       `;
+      const pcCell = tr.querySelector('.pc-cell');
+      if (pcCell) {
+        pcCell.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleBreakpoint(pcHex);
+        });
+      }
       tbody.appendChild(tr);
     });
   }
@@ -521,8 +836,13 @@ function populate_Decoder_Table(code, hex, baseins, instructions = []) {
 }
 
 function disableExecutionControls(completed = false) {
+  stopPlay();
   document.getElementById('step-btn').disabled = true;
-  document.getElementById('run-btn').disabled = true;
+  // Keep run-btn enabled so user can re-run directly without friction!
+  const runBtn = document.getElementById('run-btn');
+  if (runBtn) runBtn.disabled = false;
+  const playBtn = document.getElementById('play-btn');
+  if (playBtn) playBtn.disabled = true;
   document.getElementById('assemble-btn').disabled = false;
   document.getElementById('reset-btn').disabled = false;
 
@@ -535,7 +855,7 @@ function disableExecutionControls(completed = false) {
   }
 }
 
-function stepInstruction() {
+function stepInstruction(isAuto = false) {
   const stepUrl = (currentSimulator === 'spike') ? 'gen-hex/step' : 'step';
 
   let currentInstHex = '';
@@ -544,7 +864,6 @@ function stepInstruction() {
     if (activeRow && activeRow.cells && activeRow.cells[1]) {
       currentInstHex = activeRow.cells[1].textContent.trim();
     } else {
-      // First step on custom simulator: pick row 0
       const firstRow = document.querySelector('#decoderTableBody tr');
       if (firstRow && firstRow.cells && firstRow.cells[1]) {
         currentInstHex = firstRow.cells[1].textContent.trim();
@@ -552,7 +871,7 @@ function stepInstruction() {
     }
   }
 
-  axios.post(stepUrl, {
+  return axios.post(stepUrl, {
     pc: currentPC,
     instruction: currentInstHex,
     memory: memoryDict,
@@ -563,11 +882,11 @@ function stepInstruction() {
       const d = response.data;
       if (!d || d.success === false) {
         const errMsg = d?.error || 'Simulation step ended.';
-        alert(errMsg);
+        showToast(errMsg, 'info');
         if (d && d.ended) {
           disableExecutionControls(true);
         }
-        return;
+        return false;
       }
 
       // Save previous registers to detect delta
@@ -591,26 +910,36 @@ function stepInstruction() {
       currentPC = d.pc;
 
       // Highlight active instruction row
-      highlightDecoderRow(currentPC);
+      highlightDecoderRow(currentPC, isAuto);
 
-      // Render updated values
-      renderIntegerRegisterTable();
-      renderFloatRegisterTable();
-      renderVectorRegisterTable();
-      renderMemoryTable();
+      // Render updated values only for active tab
+      updateAllInspectors();
 
       if (d.ended) {
         disableExecutionControls(true);
+        return false;
       }
+      return true;
     })
     .catch(error => {
       console.error(error);
       const errMsg = error.response?.data?.error || error.message;
-      alert('Error during step: ' + errMsg);
+      showToast('Error during step: ' + errMsg, 'error');
+      return false;
     });
 }
 
-function run_Code() {
+async function run_Code() {
+  const runBtn = document.getElementById('run-btn');
+
+  // If not assembled yet or previous execution completed, auto-assemble first!
+  const countBadge = document.getElementById('instruction-count-badge');
+  const isCompleted = countBadge && countBadge.innerText.includes('Completed');
+  if (decoderInstructions.length === 0 || isCompleted) {
+    const asmSuccess = await assemble_code();
+    if (!asmSuccess) return;
+  }
+
   const code = document.getElementById('editor-text-box').value;
   const mtype = document.getElementById('M-type').checked ? 'm' : '';
   const ctype = document.getElementById('C-type').checked ? 'c' : '';
@@ -619,13 +948,43 @@ function run_Code() {
   const vtype = document.getElementById('V-type').checked ? 'v' : '';
   const rvtype = document.getElementById('varient-drop').value.toLowerCase();
 
+  // Find nearest breakpoint ahead of currentPC
+  let targetBreakpoint = null;
+  if (breakpoints.size > 0) {
+    const sortedBps = Array.from(breakpoints)
+      .map(bp => parseInt(bp, 16))
+      .filter(bp => !isNaN(bp) && bp > currentPC)
+      .sort((a, b) => a - b);
+    if (sortedBps.length > 0) {
+      targetBreakpoint = `0x${sortedBps[0].toString(16)}`;
+    }
+  }
+
   const runUrl = (currentSimulator === 'spike') ? 'gen-hex/run-code' : 'run-code';
 
-  axios.post(runUrl, { code, mtype, ctype, ftype, dtype, vtype, rvtype })
+  if (runBtn) {
+    runBtn.disabled = true;
+    if (!runBtn.dataset.origHtml) runBtn.dataset.origHtml = runBtn.innerHTML;
+    runBtn.innerHTML = `
+      <svg class="spinner" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+      </svg>
+      Running...
+    `;
+  }
+
+  axios.post(runUrl, {
+    code, mtype, ctype, ftype, dtype, vtype, rvtype,
+    breakpoint_pc: targetBreakpoint
+  })
     .then(response => {
       const d = response.data;
       if (!d || d.success === false) {
-        alert(d.error || 'Simulation failed to run.');
+        showToast(d?.error || 'Simulation failed to run.', 'error');
+        if (runBtn) {
+          runBtn.disabled = false;
+          if (runBtn.dataset.origHtml) runBtn.innerHTML = runBtn.dataset.origHtml;
+        }
         return;
       }
 
@@ -648,20 +1007,33 @@ function run_Code() {
       if (d.memory) memoryDict = d.memory;
       currentPC = d.pc;
 
-      renderIntegerRegisterTable();
-      renderFloatRegisterTable();
-      renderVectorRegisterTable();
-      renderMemoryTable();
+      highlightDecoderRow(currentPC, true);
+      updateAllInspectors();
 
-      disableExecutionControls(true);
+      if (runBtn) {
+        runBtn.disabled = false;
+        if (runBtn.dataset.origHtml) runBtn.innerHTML = runBtn.dataset.origHtml;
+      }
+
+      if (targetBreakpoint && currentPC === parseInt(targetBreakpoint, 16)) {
+        showToast(`Stopped at Breakpoint: ${targetBreakpoint}`, 'info');
+      } else if (d.ended) {
+        disableExecutionControls(true);
+        showToast('Program execution completed.', 'success');
+      }
     })
     .catch(error => {
       console.error(error);
-      alert('Error during run: ' + (error.response?.data?.error || error.message));
+      if (runBtn) {
+        runBtn.disabled = false;
+        if (runBtn.dataset.origHtml) runBtn.innerHTML = runBtn.dataset.origHtml;
+      }
+      showToast('Error during run: ' + (error.response?.data?.error || error.message), 'error');
     });
 }
 
 function reset_Registers() {
+  stopPlay();
   const resetUrl = (currentSimulator === 'spike') ? 'gen-hex/reset' : 'reset';
 
   axios.post(resetUrl, {})
@@ -697,22 +1069,25 @@ function reset_Registers() {
         countBadge.style.borderColor = '';
       }
 
-      renderIntegerRegisterTable();
-      renderFloatRegisterTable();
-      renderVectorRegisterTable();
-      renderMemoryTable();
+      updateIntegerRegisters();
+      updateFloatRegisters();
+      updateVectorRegisters();
+      updateMemoryTable();
 
       document.getElementById('assemble-btn').disabled = false;
       document.getElementById('step-btn').disabled = true;
       document.getElementById('run-btn').disabled = true;
+      const playBtn = document.getElementById('play-btn');
+      if (playBtn) playBtn.disabled = true;
       document.getElementById('reset-btn').disabled = false;
+      showToast('Registers reset', 'info');
     })
     .catch(error => {
       console.error(error);
     });
 }
 
-function highlightDecoderRow(pc) {
+function highlightDecoderRow(pc, isAuto = false) {
   document.querySelectorAll('#decoderTableBody tr').forEach(r => r.classList.remove('highlight'));
   if (pc === undefined || pc === null) return;
   let pcNum = (typeof pc === 'string') ? parseInt(pc, 16) : Number(pc);
@@ -721,7 +1096,7 @@ function highlightDecoderRow(pc) {
   const row = document.getElementById(`dec-row-${pcHex}`) || document.querySelector(`[data-pc="${pcHex}"]`);
   if (row) {
     row.classList.add('highlight');
-    row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    row.scrollIntoView({ behavior: isAuto ? 'auto' : 'smooth', block: 'nearest' });
   }
 }
 

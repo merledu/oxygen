@@ -60,8 +60,11 @@ class Simulator:
         self.user_tmp = None
         self.lock = asyncio.Lock()
 
+    def is_process_alive(self):
+        return bool(self.spike_process and self.spike_process.isalive())
+
     def is_alive(self):
-        return bool(self.spike_process and self.spike_process.isalive() and not self.is_ended)
+        return bool(self.is_process_alive() and not self.is_ended)
 
     def terminate(self):
         """Terminate the running Spike process and clean up."""
@@ -93,6 +96,10 @@ class Simulator:
             if idx != 0:
                 self.is_ended = True
                 return False
+            raw_output = self.spike_process.before.decode('utf-8', errors='replace')
+            step_match = re.search(r'core\s+\d+:\s*(0x[0-9a-fA-F]+)', raw_output)
+            if step_match:
+                self.pc = int(step_match.group(1), 16)
 
         # Initialize register state
         self._sync_get_registers()
@@ -203,22 +210,27 @@ class Simulator:
             self._sync_get_registers()
 
             # 1. Check for memory store instructions (sb, sh, sw, sd, fsw, fsd, c.sw, c.sd)
-            store_match = re.search(r'\b(s[wbh]|c\.sw|c\.swsp|sd|c\.sd|c\.sdsp|fsw|fsd)\s+(\w+),\s*(-?\d+)\((\w+)\)', current_disasm)
-            if store_match:
-                offset = int(store_match.group(3))
-                base_reg_name = store_match.group(4)
-                base_idx = ABI_REG_MAP.get(base_reg_name.lower(), -1)
-                if base_idx == -1 and base_reg_name.startswith('x'):
-                    try:
-                        base_idx = int(base_reg_name[1:])
-                    except ValueError:
-                        base_idx = -1
+            # Fast-path: check if --log-commits already printed the written address & value
+            log_mem_match = re.search(r'\bmem\s+(0x[0-9a-fA-F]+)\s+(0x[0-9a-fA-F]+)', raw_output)
+            if log_mem_match:
+                self._record_memory_write(log_mem_match.group(1), log_mem_match.group(2))
+            else:
+                store_match = re.search(r'\b(s[wbh]|c\.sw|c\.swsp|sd|c\.sd|c\.sdsp|fsw|fsd)\s+(\w+),\s*(-?\d+)\((\w+)\)', current_disasm)
+                if store_match:
+                    offset = int(store_match.group(3))
+                    base_reg_name = store_match.group(4)
+                    base_idx = ABI_REG_MAP.get(base_reg_name.lower(), -1)
+                    if base_idx == -1 and base_reg_name.startswith('x'):
+                        try:
+                            base_idx = int(base_reg_name[1:])
+                        except ValueError:
+                            base_idx = -1
 
-                if 0 <= base_idx < 32:
-                    target_addr = self.registers[base_idx] + offset
-                    mem_val = self._sync_get_memory(hex(target_addr))
-                    if mem_val:
-                        self.memory[hex(target_addr)] = mem_val
+                    if 0 <= base_idx < 32:
+                        target_addr = self.registers[base_idx] + offset
+                        mem_val = self._sync_get_memory(hex(target_addr))
+                        if mem_val:
+                            self._record_memory_write(hex(target_addr), mem_val)
 
             # 2. Check for floating point update (Single or Double)
             if self.ftype:
@@ -275,7 +287,7 @@ class Simulator:
         return await asyncio.to_thread(self._sync_step)
 
     def _sync_get_registers(self):
-        if not self.is_alive():
+        if not self.is_process_alive():
             return self.registers
 
         self.spike_process.sendline('reg 0')
@@ -304,7 +316,7 @@ class Simulator:
         return await asyncio.to_thread(self._sync_get_registers)
 
     def _sync_get_fregister(self, reg_num):
-        if not self.is_alive() or not (0 <= reg_num < 32):
+        if not self.is_process_alive() or not (0 <= reg_num < 32):
             return 0.0, "0x0000000000000000"
         abi_name = ABI_FREG_LIST[reg_num]
 
@@ -342,7 +354,7 @@ class Simulator:
         return await asyncio.to_thread(self._sync_get_fregister, reg_num)
 
     def _sync_get_dregister(self, reg_num):
-        if not self.is_alive() or not (0 <= reg_num < 32):
+        if not self.is_process_alive() or not (0 <= reg_num < 32):
             return 0.0, "0x0000000000000000"
         abi_name = ABI_FREG_LIST[reg_num]
 
@@ -380,7 +392,7 @@ class Simulator:
         return await asyncio.to_thread(self._sync_get_dregister, reg_num)
 
     def _sync_get_registers_vtype(self):
-        if not self.is_alive():
+        if not self.is_process_alive():
             return self.v_registers
 
         self.spike_process.sendline('vreg 0')
@@ -427,7 +439,7 @@ class Simulator:
         return await asyncio.to_thread(self._sync_get_registers_vtype)
 
     def _sync_get_memory(self, addr):
-        if not self.is_alive():
+        if not self.is_process_alive():
             return None
         try:
             addr_int = int(str(addr), 16) if str(addr).startswith('0x') else int(str(addr))
@@ -450,14 +462,105 @@ class Simulator:
     async def get_memory(self, addr):
         return await asyncio.to_thread(self._sync_get_memory, addr)
 
-    async def run(self, max_steps=2000):
+    def _record_memory_write(self, addr_str, val_str):
+        try:
+            addr = int(str(addr_str), 16) if str(addr_str).startswith('0x') else int(str(addr_str))
+            val_hex = str(val_str).lower().replace('0x', '')
+            if len(val_hex) % 2 != 0:
+                val_hex = '0' + val_hex
+            num_bytes = len(val_hex) // 2
+            for b in range(num_bytes):
+                byte_hex = val_hex[len(val_hex) - 2 * (b + 1) : len(val_hex) - 2 * b]
+                byte_addr = addr + b
+                self.memory[f"0x{byte_addr:x}"] = byte_hex.lower()
+        except Exception:
+            self.memory[str(addr_str).lower()] = str(val_str).lower()
+
+    def _sync_run(self, target_pc=None, max_steps=5000):
+        self.last_accessed = time.time()
+        if not self.is_alive():
+            return self.registers
+
         steps = 0
         while self.is_alive() and steps < max_steps:
-            res = await self.step()
-            steps += 1
-            if res == "Simulation ended" or self.is_ended:
+            self.spike_process.sendline('')
+            try:
+                idx = self.spike_process.expect(PROMPT_PATTERNS)
+                if idx != 0:
+                    self.is_ended = True
+                    break
+
+                raw_output = self.spike_process.before.decode('utf-8', errors='replace').strip()
+
+                # Check for explicit CPU traps
+                trap_match = re.search(r'exception\s+(trap_[a-z_]+),\s*epc\s+(0x[0-9a-fA-F]+)', raw_output)
+                if trap_match:
+                    trap_name = trap_match.group(1)
+                    epc_str = trap_match.group(2)
+                    epc_int = int(epc_str, 16)
+                    self.is_ended = True
+
+                    is_normal_exit = (
+                        trap_name == "trap_illegal_instruction" and (
+                            "c.unimp" in raw_output or
+                            "unimp" in raw_output or
+                            (self.end_pc is not None and epc_int >= self.end_pc)
+                        )
+                    )
+                    if is_normal_exit:
+                        self.is_completed = True
+                        self.last_error = ""
+                    else:
+                        self.last_error = f"CPU Trap ({trap_name})"
+                    break
+
+                if "trap_illegal_instruction" in raw_output or "trap_instruction_access_fault" in raw_output:
+                    self.is_ended = True
+                    if "c.unimp" in raw_output or "unimp" in raw_output:
+                        self.is_completed = True
+                        self.last_error = ""
+                    else:
+                        self.last_error = "CPU Trap: Execution halted."
+                    break
+
+                # Parse PC
+                step_match = re.search(r'core\s+\d+:\s*(0x[0-9a-fA-F]+)', raw_output)
+                if step_match:
+                    exec_pc = int(step_match.group(1), 16)
+                    self.pc = exec_pc
+                    if self.end_pc is not None and exec_pc >= self.end_pc:
+                        self.is_completed = True
+
+                # Parse register commit from --log-commits
+                for m in re.finditer(r'\b(x\d+)\s+(0x[0-9a-fA-F]+)', raw_output):
+                    reg_num = int(m.group(1)[1:])
+                    if 0 < reg_num < 32:
+                        self.registers[reg_num] = int(m.group(2), 16)
+
+                # Parse memory commit from --log-commits
+                for mem_match in re.finditer(r'\bmem\s+(0x[0-9a-fA-F]+)\s+(0x[0-9a-fA-F]+)', raw_output):
+                    self._record_memory_write(mem_match.group(1), mem_match.group(2))
+
+                steps += 1
+
+                if target_pc is not None and self.pc == target_pc:
+                    break
+
+                if self.is_completed:
+                    break
+
+            except (EOF, TIMEOUT):
+                self.is_ended = True
                 break
-            # Yield to event loop every 20 steps to ensure low latency for concurrent users
-            if steps % 20 == 0:
-                await asyncio.sleep(0)
+
+        # Sync all registers from Spike once at completion
+        if self.is_process_alive():
+            self._sync_get_registers()
+
+        if self.vtype and self.is_process_alive():
+            self._sync_get_registers_vtype()
+
         return self.registers
+
+    async def run(self, target_pc=None, max_steps=5000):
+        return await asyncio.to_thread(self._sync_run, target_pc, max_steps)

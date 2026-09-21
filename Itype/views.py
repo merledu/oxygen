@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import re
@@ -8,6 +9,8 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from Temp import Datapath_single as DPS
 from Temp import interperator as IP
+
+_itype_compilation_cache = {}
 
 
 def editor(request):
@@ -121,6 +124,11 @@ def compile_and_disassemble(code, mtype='', ctype='', ftype='', dtype='', vtype=
         full_code = code + "\n"
         line_offset = 0
 
+    cache_key = hashlib.sha256(f"{code}:{march}:{abi}".encode('utf-8')).hexdigest()
+    if cache_key in _itype_compilation_cache:
+        cached = _itype_compilation_cache[cache_key]
+        return cached['hex'], cached['instructions']
+
     with tempfile.TemporaryDirectory() as td:
         asm_path = os.path.join(td, "code.S")
         elf_path = os.path.join(td, "code.elf")
@@ -167,7 +175,16 @@ def compile_and_disassemble(code, mtype='', ctype='', ftype='', dtype='', vtype=
                 })
 
         hex_lines = [item['hex'] for item in decoded_instructions]
-        return "\n".join(hex_lines), decoded_instructions
+        hex_output = "\n".join(hex_lines)
+
+        if len(_itype_compilation_cache) > 200:
+            _itype_compilation_cache.pop(next(iter(_itype_compilation_cache)))
+        _itype_compilation_cache[cache_key] = {
+            'hex': hex_output,
+            'instructions': decoded_instructions
+        }
+
+        return hex_output, decoded_instructions
 
 
 def get_hex_gcc(code, mtype='', ctype='', ftype='', dtype='', vtype='', rvtype='rv32'):

@@ -1,5 +1,6 @@
 import asyncio
 import concurrent.futures
+import hashlib
 import json
 import os
 import re
@@ -11,6 +12,9 @@ from django.http import JsonResponse
 import globals
 from Temp import interperator as IP
 from .check import Simulator
+
+# In-memory compilation cache: hash(code, isa_str) -> parsed assembly dict
+_compilation_cache = {}
 
 # High-capacity thread pool executor for 100s of concurrent users
 executor = concurrent.futures.ThreadPoolExecutor(max_workers=256)
@@ -33,15 +37,14 @@ async def _periodic_cleanup_loop():
 
 
 def ensure_background_cleanup():
-    """Ensures that the threadpool executor and periodic cleanup task are running."""
+    """Ensures that the periodic cleanup task is running."""
     global _cleanup_task
     try:
         loop = asyncio.get_running_loop()
-        if not getattr(loop, '_has_oxygen_executor', False):
-            loop.set_default_executor(executor)
-            loop._has_oxygen_executor = True
         if _cleanup_task is None or _cleanup_task.done():
             _cleanup_task = loop.create_task(_periodic_cleanup_loop())
+    except RuntimeError:
+        pass
     except RuntimeError:
         pass
 
@@ -51,7 +54,7 @@ def cleanup_idle_simulators():
     now = time.time()
     to_delete = []
     for sk, sim in list(session_simulators.items()):
-        if not sim.is_alive() or (now - sim.last_accessed > 300):
+        if not sim.is_process_alive() or (now - sim.last_accessed > 300):
             try:
                 sim.terminate()
             except Exception:
@@ -154,6 +157,14 @@ async def assemble_code(request):
         try:
             data = json.loads(request.body)
             code = data.get('code', '')
+            if not code.strip():
+                code = request.session.get('last_code', '')
+            if not code.strip():
+                return JsonResponse({'success': False, 'error_message': 'No code provided to assemble.', 'error_line': 1})
+
+            request.session['last_code'] = code
+            await sync_to_async(request.session.save)()
+
             mtype = data.get('mtype', '')
             ctype = data.get('ctype', '')
             ftype = data.get('ftype', '')
@@ -169,9 +180,11 @@ async def assemble_code(request):
             # User temp directory isolated per session
             user_tmp = os.path.join(globals.TMP, session_key)
             os.makedirs(user_tmp, exist_ok=True)
-            tmp_asm = os.path.join(user_tmp, 'asm.S')
-            tmp_elf = os.path.join(user_tmp, 'elf')
-            tmp_disasm = os.path.join(user_tmp, 'disasm.S')
+
+            cache_key = hashlib.sha256(f"{code}:{isa_str}".encode('utf-8')).hexdigest()[:16]
+            tmp_asm = os.path.join(user_tmp, f"asm_{cache_key}.S")
+            tmp_elf = os.path.join(user_tmp, f"elf_{cache_key}")
+            tmp_disasm = os.path.join(user_tmp, f"disasm_{cache_key}.S")
 
             setup_steps = 0
             has_start = "_start" in code or "main:" in code
@@ -188,91 +201,110 @@ async def assemble_code(request):
                 full_code = code + "\n"
                 offset = 0
 
-            with open(tmp_asm, 'w') as f:
-                f.write(full_code)
+            cache_key = hashlib.sha256(f"{code}:{isa_str}".encode('utf-8')).hexdigest()
+            cached_compilation = _compilation_cache.get(cache_key)
 
-            if valid_rv == "rv64":
-                toolchain_bin = globals.RISCV64_GNU_TOOLCHAIN
-                prefix = "riscv64-unknown-elf"
-                if 'd' in extensions:
-                    abi = "lp64d"
-                elif 'f' in extensions:
-                    abi = "lp64f"
-                else:
-                    abi = "lp64"
+            if cached_compilation and os.path.exists(tmp_elf):
+                decoded_instructions = cached_compilation['instructions']
+                hex_output = cached_compilation['hex']
+                sudo_or_base = cached_compilation['is_sudo']
+                setup_steps = cached_compilation['setup_steps']
             else:
-                toolchain_bin = globals.RISCV32_GNU_TOOLCHAIN
-                prefix = "riscv32-unknown-elf"
-                if 'd' in extensions:
-                    abi = "ilp32d"
-                elif 'f' in extensions:
-                    abi = "ilp32f"
+                with open(tmp_asm, 'w') as f:
+                    f.write(full_code)
+
+                if valid_rv == "rv64":
+                    toolchain_bin = globals.RISCV64_GNU_TOOLCHAIN
+                    prefix = "riscv64-unknown-elf"
+                    if 'd' in extensions:
+                        abi = "lp64d"
+                    elif 'f' in extensions:
+                        abi = "lp64f"
+                    else:
+                        abi = "lp64"
                 else:
-                    abi = "ilp32"
+                    toolchain_bin = globals.RISCV32_GNU_TOOLCHAIN
+                    prefix = "riscv32-unknown-elf"
+                    if 'd' in extensions:
+                        abi = "ilp32d"
+                    elif 'f' in extensions:
+                        abi = "ilp32f"
+                    else:
+                        abi = "ilp32"
 
-            gcc_cmd = os.path.join(toolchain_bin, f"{prefix}-gcc")
-            objdump_cmd = os.path.join(toolchain_bin, f"{prefix}-objdump")
+                gcc_cmd = os.path.join(toolchain_bin, f"{prefix}-gcc")
+                objdump_cmd = os.path.join(toolchain_bin, f"{prefix}-objdump")
 
-            assemble_cmd = [
-                gcc_cmd,
-                f"-march={isa_str}",
-                f"-mabi={abi}",
-                "-T", globals.LINKER_SCRIPT,
-                "-static",
-                "-mcmodel=medany",
-                "-fvisibility=hidden",
-                "-nostdlib",
-                "-nostartfiles",
-                "-g",
-                "-o", tmp_elf,
-                tmp_asm
-            ]
+                assemble_cmd = [
+                    gcc_cmd,
+                    f"-march={isa_str}",
+                    f"-mabi={abi}",
+                    "-T", globals.LINKER_SCRIPT,
+                    "-static",
+                    "-mcmodel=medany",
+                    "-fvisibility=hidden",
+                    "-nostdlib",
+                    "-nostartfiles",
+                    "-g",
+                    "-o", tmp_elf,
+                    tmp_asm
+                ]
 
-            assemble_result = await asyncio.to_thread(subprocess.run, assemble_cmd, capture_output=True, text=True)
-            if assemble_result.returncode != 0:
-                line, msg = parse_assembler_error(assemble_result.stderr, offset=offset)
-                return JsonResponse({
-                    'success': False,
-                    'error_message': msg or assemble_result.stderr,
-                    'error_line': line or 'unknown'
-                })
-
-            disassemble_cmd = [objdump_cmd, "-M", "no-aliases", "-d", tmp_elf]
-            disassemble_result = await asyncio.to_thread(subprocess.run, disassemble_cmd, capture_output=True, text=True)
-            if disassemble_result.returncode != 0:
-                return JsonResponse({
-                    'success': False,
-                    'error_message': disassemble_result.stderr,
-                    'error_line': 'unknown'
-                })
-
-            decoded_instructions = []
-            for line in disassemble_result.stdout.splitlines():
-                m = re.match(r'^\s*([0-9a-fA-F]+):\s+([0-9a-fA-F]+)\s+(.*)', line)
-                if m:
-                    inst_pc = int(m.group(1), 16)
-                    inst_hex = m.group(2).strip().lower()
-                    inst_disasm = m.group(3).strip()
-                    decoded_instructions.append({
-                        'pc': f"0x{inst_pc:08x}",
-                        'hex': f"0x{inst_hex}",
-                        'disasm': inst_disasm
+                assemble_result = await asyncio.to_thread(subprocess.run, assemble_cmd, capture_output=True, text=True)
+                if assemble_result.returncode != 0:
+                    line, msg = parse_assembler_error(assemble_result.stderr, offset=offset)
+                    return JsonResponse({
+                        'success': False,
+                        'error_message': msg or assemble_result.stderr,
+                        'error_line': line or 'unknown'
                     })
 
-            # Slice off setup instructions if present
-            if setup_steps > 0 and len(decoded_instructions) >= setup_steps:
-                decoded_instructions = decoded_instructions[setup_steps:]
-            hex_lines = [item['hex'] for item in decoded_instructions]
-            hex_output = "\n".join(hex_lines)
+                disassemble_cmd = [objdump_cmd, "-M", "no-aliases", "-d", tmp_elf]
+                disassemble_result = await asyncio.to_thread(subprocess.run, disassemble_cmd, capture_output=True, text=True)
+                if disassemble_result.returncode != 0:
+                    return JsonResponse({
+                        'success': False,
+                        'error_message': disassemble_result.stderr,
+                        'error_line': 'unknown'
+                    })
 
-            try:
-                sudo_or_base = IP.checkpsudo(code)
-            except Exception:
-                sudo_or_base = [l.strip() for l in code.splitlines() if l.strip() and not l.strip().endswith(':')]
+                decoded_instructions = []
+                for line in disassemble_result.stdout.splitlines():
+                    m = re.match(r'^\s*([0-9a-fA-F]+):\s+([0-9a-fA-F]+)\s+(.*)', line)
+                    if m:
+                        inst_pc = int(m.group(1), 16)
+                        inst_hex = m.group(2).strip().lower()
+                        inst_disasm = m.group(3).strip()
+                        decoded_instructions.append({
+                            'pc': f"0x{inst_pc:08x}",
+                            'hex': f"0x{inst_hex}",
+                            'disasm': inst_disasm
+                        })
 
-            # Spawn Spike process
+                # Slice off setup instructions if present
+                if setup_steps > 0 and len(decoded_instructions) >= setup_steps:
+                    decoded_instructions = decoded_instructions[setup_steps:]
+                hex_lines = [item['hex'] for item in decoded_instructions]
+                hex_output = "\n".join(hex_lines)
+
+                try:
+                    sudo_or_base = IP.checkpsudo(code)
+                except Exception:
+                    sudo_or_base = [l.strip() for l in code.splitlines() if l.strip() and not l.strip().endswith(':')]
+
+                # Cache compilation result (limit cache to 200 items)
+                if len(_compilation_cache) > 200:
+                    _compilation_cache.pop(next(iter(_compilation_cache)))
+                _compilation_cache[cache_key] = {
+                    'instructions': decoded_instructions,
+                    'hex': hex_output,
+                    'is_sudo': sudo_or_base,
+                    'setup_steps': setup_steps,
+                }
+
+            # Spawn Spike process with --log-commits for zero-overhead store tracking
             spike_bin = os.path.join(globals.SPIKE, "spike")
-            spike_cmd = f"{spike_bin} -d --isa={isa_str} {tmp_elf}"
+            spike_cmd = f"{spike_bin} -d --log-commits --isa={isa_str} {tmp_elf}"
 
             simulator = session_simulators.get(session_key)
             if simulator is None:
@@ -390,8 +422,22 @@ async def run_code(request):
         return JsonResponse({'error': 'No active session'}, status=400)
 
     if request.method == "POST":
+        data = {}
+        try:
+            if request.body:
+                data = json.loads(request.body)
+        except Exception:
+            pass
+
+        code = data.get('code', '')
+        if not code:
+            code = request.session.get('last_code', '')
+            if code:
+                data['code'] = code
+                request._body = json.dumps(data).encode('utf-8')
+
         simulator = session_simulators.get(session_key)
-        if not simulator:
+        if not simulator or not simulator.is_alive() or getattr(simulator, 'is_completed', False):
             asm_resp = await assemble_code(request)
             simulator = session_simulators.get(session_key)
             if not simulator:
@@ -401,10 +447,19 @@ async def run_code(request):
             err_msg = simulator.last_error if simulator.last_error else 'Simulator not running or ended'
             return JsonResponse({'error': err_msg, 'success': False, 'ended': True}, status=400)
 
+        breakpoint_pc = None
+        bp_raw = data.get('breakpoint_pc')
+        if bp_raw:
+            try:
+                breakpoint_pc = int(str(bp_raw), 16) if str(bp_raw).startswith('0x') else int(str(bp_raw))
+            except Exception:
+                breakpoint_pc = None
+
         async with simulator.lock:
-            await simulator.run()
+            await simulator.run(target_pc=breakpoint_pc)
 
             vreg_array = simulator.v_registers if simulator.vtype else [[0, 0] for _ in range(32)]
+            is_ended = bool(simulator.is_ended or simulator.is_completed)
 
             return JsonResponse({
                 'memory': simulator.memory,
@@ -417,8 +472,8 @@ async def run_code(request):
                 'f_reg': simulator.f_registers,
                 'd_reg': simulator.d_registers,
                 'f_hex': simulator.f_hex,
-                'ended': True,
-                'message': 'Program execution completed.',
+                'ended': is_ended,
+                'message': 'Program execution completed.' if is_ended else '',
                 'success': True
             })
 

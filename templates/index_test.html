@@ -105,19 +105,30 @@
 
         <!-- Controls / Actions Toolbar -->
         <div class="toolbar-actions">
-          <button id="assemble-btn" class="btn btn-primary" onclick="assemble_code()">
+          <button id="assemble-btn" class="btn btn-primary" onclick="assemble_code()" title="Assemble (Ctrl+Enter)">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             Assemble
           </button>
-          <button id="run-btn" class="btn btn-success" onclick="run_Code()" disabled>
+          <button id="run-btn" class="btn btn-success" onclick="run_Code()" title="Run (F5, Alt+R, or Ctrl+R)">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
             Run
           </button>
-          <button id="step-btn" class="btn btn-secondary" onclick="stepInstruction()" disabled>
+          <button id="play-btn" class="btn btn-secondary" onclick="togglePlay()" disabled title="Auto-Step through instructions">
+            <svg id="play-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <span id="play-btn-text">Play</span>
+          </button>
+          <select id="play-speed-select" class="arch-select" title="Auto-Step Speed" style="padding: 2px 6px; font-size: 11px; height: 28px;">
+            <option value="1000">1 Hz</option>
+            <option value="400">2.5 Hz</option>
+            <option value="200" selected>5 Hz</option>
+            <option value="100">10 Hz</option>
+            <option value="40">25 Hz</option>
+          </select>
+          <button id="step-btn" class="btn btn-secondary" onclick="stepInstruction()" disabled title="Step (F10 or Alt+S)">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             Step
           </button>
-          <button id="reset-btn" class="btn btn-secondary" onclick="reset_Registers()">
+          <button id="reset-btn" class="btn btn-secondary" onclick="reset_Registers()" title="Reset (Alt+X)">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 2v6h6M21.5 22v-6h-6"/><path d="M22 11.5A10 10 0 0 0 3.2 7.2L2.5 8M2 12.5a10 10 0 0 0 18.8 4.2l.7-.7"/></svg>
             Reset
           </button>
@@ -282,9 +293,9 @@
               <tr>
                 <th>Address</th>
                 <th>+0</th>
-                <th>+1</th>
-                <th>+2</th>
-                <th>+3</th>
+                <th>+4</th>
+                <th>+8</th>
+                <th>+C</th>
               </tr>
             </thead>
             <tbody id="memoryTableBody">
@@ -341,7 +352,9 @@
       </div>
     </div>
 
+    <div id="toast-container" class="toast-container"></div>
+
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="{% static 'script_test.js' %}"></script>
+    <script src="{% static 'script_test.js' %}?v={% now 'U' %}"></script>
   </body>
 </html>

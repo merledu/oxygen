@@ -321,6 +321,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="{% static 'script_test.js' %}"></script>
+    <script src="{% static 'script_test.js' %}?v={% now 'U' %}"></script>
   </body>
 </html>

@@ -105,6 +105,15 @@ DATABASES = {
     }
 }
 
+# In-memory session cache to eliminate synchronous disk I/O on every step
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'oxygen-session-cache',
+    }
+}
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
