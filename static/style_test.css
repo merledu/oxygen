@@ -202,8 +202,19 @@ body, html {
   border: 1px solid var(--border-hover);
 }
 
-.sim-btn:hover:not(.active) {
+.sim-btn:hover:not(.active):not(:disabled):not(.sim-btn-disabled) {
   color: var(--text-primary);
+}
+
+.sim-btn:disabled,
+.sim-btn[disabled],
+.sim-btn-disabled {
+  pointer-events: none !important;
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+  user-select: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 /* Extension Selector */

@@ -1,135 +1,118 @@
-def count_instructions(instruction_string):
-    lines = instruction_string.splitlines()
-    total_instructions = 0
-    for line in lines:
-        stripped_line = line.strip()
-        if stripped_line.endswith(":") and len(stripped_line.split(":")[1].strip()) == 0:
+"""
+RISC-V instruction statistics counter.
+Single-pass O(n) implementation — previously did 7 separate passes over the same lines.
+"""
+
+import re
+
+# Pre-compiled: matches the first mnemonic token on a line (ignores labels, comments, blank lines)
+_MNEMONIC_RE = re.compile(r'^\s*([a-zA-Z][a-zA-Z0-9_.]*)')
+
+# Instruction classification sets (first-token exact match)
+_I_OPS = frozenset([
+    'add', 'addi', 'sub', 'lui', 'auipc', 'xor', 'xori', 'or', 'ori', 'and', 'andi',
+    'slt', 'slti', 'sltu', 'sltiu', 'beq', 'bne', 'blt', 'bge', 'bltu', 'bgeu',
+    'jal', 'jalr', 'lb', 'lh', 'lw', 'lbu', 'lhu', 'sb', 'sh', 'sw',
+    'sll', 'slli', 'srl', 'srli', 'sra', 'srai', 'li', 'fence', 'ecall', 'ebreak',
+    # RV64I
+    'addiw', 'slliw', 'srliw', 'sraiw', 'addw', 'subw', 'sllw', 'srlw', 'sraw',
+    'lwu', 'ld', 'sd',
+])
+
+_M_OPS = frozenset([
+    'mul', 'mulh', 'mulhsu', 'mulhu', 'div', 'divu', 'rem', 'remu',
+    # RV64M
+    'mulw', 'divw', 'divuw', 'remw', 'remuw',
+])
+
+_F_OPS = frozenset([
+    'flw', 'fsw', 'fld', 'fsd',
+    'fadd.s', 'fsub.s', 'fmul.s', 'fdiv.s', 'fsqrt.s',
+    'fadd.d', 'fsub.d', 'fmul.d', 'fdiv.d', 'fsqrt.d',
+    'fmadd.s', 'fmsub.s', 'fnmsub.s', 'fnmadd.s',
+    'fmadd.d', 'fmsub.d', 'fnmsub.d', 'fnmadd.d',
+    'fsgnj.s', 'fsgnjn.s', 'fsgnjx.s', 'fsgnj.d', 'fsgnjn.d', 'fsgnjx.d',
+    'fmin.s', 'fmax.s', 'fmin.d', 'fmax.d',
+    'feq.s', 'flt.s', 'fle.s', 'feq.d', 'flt.d', 'fle.d',
+    'fclass.s', 'fclass.d',
+    'fcvt.w.s', 'fcvt.wu.s', 'fcvt.s.w', 'fcvt.s.wu',
+    'fcvt.w.d', 'fcvt.wu.d', 'fcvt.d.w', 'fcvt.d.wu',
+    'fcvt.l.s', 'fcvt.lu.s', 'fcvt.s.l', 'fcvt.s.lu',
+    'fcvt.l.d', 'fcvt.lu.d', 'fcvt.d.l', 'fcvt.d.lu',
+    'fcvt.d.s', 'fcvt.s.d',
+    'fmv.x.w', 'fmv.w.x', 'fmv.x.d', 'fmv.d.x',
+])
+
+_ALU_OPS = frozenset([
+    'add', 'addi', 'sub', 'xor', 'xori', 'or', 'ori', 'and', 'andi',
+    'sll', 'slli', 'srl', 'srli', 'sra', 'srai', 'slt', 'slti', 'sltu', 'sltiu',
+    'lui', 'auipc', 'li',
+    'mul', 'mulh', 'mulhsu', 'mulhu', 'div', 'divu', 'rem', 'remu',
+    # RV64
+    'addiw', 'slliw', 'srliw', 'sraiw', 'addw', 'subw', 'sllw', 'srlw', 'sraw',
+    'mulw', 'divw', 'divuw', 'remw', 'remuw',
+])
+
+_LOAD_STORE_OPS = frozenset([
+    'lb', 'lh', 'lw', 'lbu', 'lhu', 'sb', 'sh', 'sw',
+    'flw', 'fsw', 'fld', 'fsd',
+    # RV64
+    'lwu', 'ld', 'sd',
+])
+
+_JUMP_OPS = frozenset([
+    'beq', 'bne', 'blt', 'bge', 'bltu', 'bgeu', 'jal', 'jalr', 'j', 'jr', 'ret', 'call', 'tail',
+])
+
+_UPPER_OPS = frozenset(['lui', 'auipc'])
+
+
+def get_instruction_stats(code: str):
+    """
+    Single O(n) pass over all lines — counts all instruction categories simultaneously.
+    Returns: (total, jump, data_transfer, alu, i_ext, m_ext, upper, f_ext, c_ext)
+    """
+    total = jump = data_transfer = alu = i_ext = m_ext = upper = f_ext = c_ext = 0
+
+    for raw_line in code.splitlines():
+        line = raw_line.strip()
+        # Skip blank lines, pure comments, and label-only lines
+        if not line or line.startswith('#') or (line.endswith(':') and ' ' not in line):
             continue
-        total_instructions += 1
-    return total_instructions
 
+        m = _MNEMONIC_RE.match(line)
+        if not m:
+            continue
 
+        mnem = m.group(1).lower()
 
-def count_jump_instructions(instruction_string):
-    lines = instruction_string.splitlines()
-    jump_instructions = 0
-    for line in lines:
-        stripped_line = line.strip()
-        if ":" in stripped_line:
-            jump_instructions += 1
-    return jump_instructions
+        # Skip labels that appear inline (e.g. "loop: addi x1, x0, 1")
+        if mnem.endswith(':'):
+            rest = line[m.end():].strip()
+            m2 = _MNEMONIC_RE.match(rest)
+            if not m2:
+                continue
+            mnem = m2.group(1).lower()
 
+        total += 1
 
+        if mnem in _JUMP_OPS:
+            jump += 1
+        if mnem in _LOAD_STORE_OPS:
+            data_transfer += 1
+        if mnem in _ALU_OPS:
+            alu += 1
+        if mnem in _I_OPS:
+            i_ext += 1
+        if mnem in _M_OPS:
+            m_ext += 1
+        if mnem in _UPPER_OPS:
+            upper += 1
+        if mnem in _F_OPS:
+            f_ext += 1
+        if mnem.startswith('c.') or mnem.startswith('c_'):
+            c_ext += 1
 
-def count_data_transfer_instructions(instruction_string):
-    data_transfer_ops = ["sw", "sb", "sh", "lb", "lh", "lw", "lbu", "lhu"]
-    lines = instruction_string.splitlines()
-    data_transfer_instructions = 0
-    for line in lines:
-        stripped_line = line.strip()
-        if any(op in stripped_line for op in data_transfer_ops):
-            data_transfer_instructions += 1
-    return data_transfer_instructions
+    total_cycles = total  # Approximate: 1 cycle per instruction (CPI=1)
 
-
-def count_alu_instructions(instruction_string):
-    alu_ops = [
-        "add", "sub", "xor", "sll", "srl", "sra", "slt", "addi", "xori", "ori", "andi", 
-        "slli", "srli", "srai", "slti", "sltiu", "sltu", "li", "lui", "mul", "mulh", 
-        "auipc", "mulhsu", "mulhu", "div", "divu", "rem", "remu"
-    ]
-    lines = instruction_string.splitlines()
-    alu_instructions = 0
-    for line in lines:
-        stripped_line = line.strip()
-        if any(op in stripped_line for op in alu_ops):
-            alu_instructions += 1
-    return alu_instructions
-
-
-def count_i_ins(instruction_string):
-    i_ops = [
-        "add", "addi", "sub", "lui", "auipc", "xor", "xori", "or", "ori", "and", "andi", "slt", "slti", "sltu"
-        , "sltiu", "beq", "bne", "blt", "bge", "bltu", "bgeu", "jal", "jalr", "lb", "lh", "lw", "lbu", "lhu"
-        , "sb", "sh", "sw", "sll", "slli", "srl", "srli", "sra", "srai", "li"
-    ]
-    lines = instruction_string.splitlines()
-    i_instruction=0
-    for line in lines:
-        stripped_line = line.strip()
-        if any(op in stripped_line for op in i_ops):
-            i_instruction += 1
-    return i_instruction
-
-
-def count_m_ins(instruction_string):
-    m_ops = [
-        "mul", "mulh", "mulhsu", "mulhu", "div", "divu", "rem", "remu"
-    ]
-    lines = instruction_string.splitlines()
-    m_instruction = 0
-    for line in lines:
-        stripped_line = line.strip()
-        if any(op in stripped_line for op in m_ops):
-            m_instruction += 1
-    return m_instruction
-
-
-def count_sup_ins(instruction_string):
-    s_ops = [
-        "lui", "auipc", "C.lui"
-    ]
-    lines = instruction_string.splitlines()
-    s_instruction = 0
-    for line in lines:
-        stripped_line = line.strip()
-        if any(op in stripped_line for op in s_ops):
-            s_instruction += 1
-    return s_instruction
-
-
-def count_f_ins(instruction_string):
-    f_ops = [
-        "fmv", "fcvt", "fl", "fs", "fadd", "fsub", "fmul", "fdiv", "fsqrt", "fmadd", "fmsub", "fnmsub", "fnmadd",
-        "fsgnj", "fsgnjn", "fsgnjx", "fmin", "fmax", "feq", "flt", "fle", "fclass"
-    ]
-    lines = instruction_string.splitlines()
-    f_instruction = 0
-    for line in lines:
-        stripped_line = line.strip()
-        if any(op in stripped_line for op in f_ops):
-            f_instruction += 1
-    return f_instruction
-
-
-def count_c_ins(instruction_string):
-    c_ops = [
-        "c."
-    ]
-    lines = instruction_string.splitlines()
-    c_instruction = 0
-    for line in lines:
-        stripped_line = line.strip()
-        if any(op in stripped_line for op in c_ops):
-            c_instruction += 1
-    return c_instruction
-
-
-def get_instruction_stats(instruction_string):
-    instruction_result = count_instructions(instruction_string)
-    jump_instruction_result = count_jump_instructions(instruction_string)
-    data_transfer_instruction_result = count_data_transfer_instructions(instruction_string)
-    alu_instruction_result = count_alu_instructions(instruction_string)
-    i_instruction_result = count_i_ins(instruction_string)
-    m_instruction_result = count_m_ins(instruction_string)
-    s_instruction_result = count_sup_ins(instruction_string)
-    f_instruction_result = count_f_ins(instruction_string)
-    c_instruction_result = count_c_ins(instruction_string)
-    
-    # print(instruction_result)
-    # print(i_instruction_result)
-    # print(m_instruction_result)
-
-    return instruction_result,jump_instruction_result, data_transfer_instruction_result, alu_instruction_result, i_instruction_result, m_instruction_result, s_instruction_result, f_instruction_result, c_instruction_result
-
-    
+    return total, jump, data_transfer, alu, i_ext, m_ext, upper, f_ext, c_ext

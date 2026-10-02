@@ -5,12 +5,16 @@ PID_FILE="$PROJECT_DIR/deployment/oxygen.pid"
 
 if [ -f "$PID_FILE" ]; then
     PID="$(cat "$PID_FILE")"
-    if kill -0 "$PID" 2>/dev/null; then
+    if ps -p "$PID" >/dev/null 2>&1; then
         echo "Stopping Oxygen (PID: $PID)..."
-        kill -TERM "$PID"
+        if ! kill -TERM "$PID" 2>/dev/null; then
+            echo "Permission denied: process $PID is running under another user (e.g., root)."
+            echo "Please run with sudo: sudo $0"
+            exit 1
+        fi
         # Wait up to 10 seconds for clean shutdown
         for i in {1..10}; do
-            if ! kill -0 "$PID" 2>/dev/null; then
+            if ! ps -p "$PID" >/dev/null 2>&1; then
                 break
             fi
             sleep 1

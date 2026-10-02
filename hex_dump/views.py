@@ -1,11 +1,12 @@
 import asyncio
-import concurrent.futures
+import collections
 import hashlib
 import json
 import os
 import re
 import shutil
 import subprocess
+import threading
 import time
 from asgiref.sync import sync_to_async
 from django.http import JsonResponse
@@ -13,11 +14,28 @@ import globals
 from Temp import interperator as IP
 from .check import Simulator
 
-# In-memory compilation cache: hash(code, isa_str) -> parsed assembly dict
-_compilation_cache = {}
+# Thread-safe LRU compilation cache: hash(code, isa_str) -> parsed assembly dict
+_CACHE_MAX = 500
+_compilation_cache = collections.OrderedDict()
+_cache_lock = threading.Lock()
 
-# High-capacity thread pool executor for 100s of concurrent users
-executor = concurrent.futures.ThreadPoolExecutor(max_workers=256)
+
+def _cache_get(key):
+    with _cache_lock:
+        if key in _compilation_cache:
+            _compilation_cache.move_to_end(key)  # LRU: promote on access
+            return _compilation_cache[key]
+    return None
+
+
+def _cache_set(key, value):
+    with _cache_lock:
+        if key in _compilation_cache:
+            _compilation_cache.move_to_end(key)
+        _compilation_cache[key] = value
+        if len(_compilation_cache) > _CACHE_MAX:
+            _compilation_cache.popitem(last=False)  # evict oldest
+
 
 # Active simulators keyed by session_key
 session_simulators = {}
@@ -143,14 +161,34 @@ def sanitize_isa(rvtype, mtype, ctype, ftype, dtype, vtype):
     return isa_str, valid_rv, ext_suffix
 
 
+def _sync_ensure_session(request):
+    """
+    Safely get or create a session key.
+    Handles legacy/stale cookies, invalid session keys, and backend errors.
+    """
+    try:
+        if not request.session.session_key or not request.session.exists(request.session.session_key):
+            request.session.create()
+        else:
+            try:
+                request.session.save()
+            except Exception:
+                request.session.create()
+    except Exception:
+        try:
+            request.session.create()
+        except Exception:
+            pass
+    return request.session.session_key or 'default'
+
+
+async def ensure_session_async(request):
+    return await sync_to_async(_sync_ensure_session)(request)
+
+
 async def assemble_code(request):
     ensure_background_cleanup()
-    await sync_to_async(request.session.save)()
-    session_key = request.session.session_key
-    if not session_key:
-        await sync_to_async(request.session.save)()
-        session_key = request.session.session_key
-
+    session_key = await ensure_session_async(request)
     cleanup_idle_simulators()
 
     if request.method == "POST":
@@ -162,8 +200,11 @@ async def assemble_code(request):
             if not code.strip():
                 return JsonResponse({'success': False, 'error_message': 'No code provided to assemble.', 'error_line': 1})
 
-            request.session['last_code'] = code
-            await sync_to_async(request.session.save)()
+            try:
+                request.session['last_code'] = code
+                await sync_to_async(request.session.save)()
+            except Exception:
+                pass
 
             mtype = data.get('mtype', '')
             ctype = data.get('ctype', '')
@@ -202,7 +243,7 @@ async def assemble_code(request):
                 offset = 0
 
             cache_key = hashlib.sha256(f"{code}:{isa_str}".encode('utf-8')).hexdigest()
-            cached_compilation = _compilation_cache.get(cache_key)
+            cached_compilation = _cache_get(cache_key)
 
             if cached_compilation and os.path.exists(tmp_elf):
                 decoded_instructions = cached_compilation['instructions']
@@ -275,8 +316,10 @@ async def assemble_code(request):
                         inst_pc = int(m.group(1), 16)
                         inst_hex = m.group(2).strip().lower()
                         inst_disasm = m.group(3).strip()
+                        # Use 16-char padding for RV64 PCs, 8-char for RV32
+                        pc_width = 16 if valid_rv == 'rv64' else 8
                         decoded_instructions.append({
-                            'pc': f"0x{inst_pc:08x}",
+                            'pc': f"0x{inst_pc:0{pc_width}x}",
                             'hex': f"0x{inst_hex}",
                             'disasm': inst_disasm
                         })
@@ -292,15 +335,13 @@ async def assemble_code(request):
                 except Exception:
                     sudo_or_base = [l.strip() for l in code.splitlines() if l.strip() and not l.strip().endswith(':')]
 
-                # Cache compilation result (limit cache to 200 items)
-                if len(_compilation_cache) > 200:
-                    _compilation_cache.pop(next(iter(_compilation_cache)))
-                _compilation_cache[cache_key] = {
+                # Store in thread-safe LRU cache
+                _cache_set(cache_key, {
                     'instructions': decoded_instructions,
                     'hex': hex_output,
                     'is_sudo': sudo_or_base,
                     'setup_steps': setup_steps,
-                }
+                })
 
             # Spawn Spike process with --log-commits for zero-overhead store tracking
             spike_bin = os.path.join(globals.SPIKE, "spike")
@@ -338,8 +379,7 @@ async def assemble_code(request):
 
 async def step_code(request):
     ensure_background_cleanup()
-    await sync_to_async(request.session.save)()
-    session_key = request.session.session_key
+    session_key = await ensure_session_async(request)
     if not session_key:
         return JsonResponse({'error': 'No active session'}, status=400)
 
@@ -416,8 +456,7 @@ async def step_code(request):
 
 async def run_code(request):
     ensure_background_cleanup()
-    await sync_to_async(request.session.save)()
-    session_key = request.session.session_key
+    session_key = await ensure_session_async(request)
     if not session_key:
         return JsonResponse({'error': 'No active session'}, status=400)
 
@@ -482,7 +521,7 @@ async def run_code(request):
 
 def reset(request):
     if request.method == "POST":
-        session_key = request.session.session_key
+        session_key = _sync_ensure_session(request)
         if session_key:
             simulator = session_simulators.pop(session_key, None)
             if simulator:
@@ -494,7 +533,7 @@ def reset(request):
         return JsonResponse({
             'register': [0] * 32,
             'memory': {},
-            'pc': 0,
+            'pc': 0x80000000,  # Spike always starts at 0x80000000
             'fregister': [0.0] * 32,
             'd_reg': [0.0] * 32,
             'f_hex': ["0x0000000000000000"] * 32,

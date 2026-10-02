@@ -23,6 +23,11 @@ os.environ['PATH'] = SPIKE \
     + os.pathsep + RISCV32_GNU_TOOLCHAIN \
     + os.pathsep + os.environ['PATH']
 
+if 'LD_LIBRARY_PATH' in os.environ:
+    # Prevent legacy EDA tool library paths (e.g., Vivado 2018.2 libstdc++) from conflicting with Spike/GCC
+    _clean_ld = [p for p in os.environ['LD_LIBRARY_PATH'].split(os.pathsep) if 'vivado' not in p.lower()]
+    os.environ['LD_LIBRARY_PATH'] = os.pathsep.join(_clean_ld)
+
 
 # Global Variables
 debug = True

@@ -186,23 +186,39 @@ document.addEventListener('DOMContentLoaded', () => {
   initSplitters();
   initEditorGutter();
   initAutocomplete();
+
+  // Ensure Custom Datapath button is non-interactive (Coming Soon)
+  const customBtn = document.getElementById('sim-custom-btn');
+  if (customBtn) {
+    customBtn.disabled = true;
+    customBtn.setAttribute('tabindex', '-1');
+    customBtn.setAttribute('aria-disabled', 'true');
+    customBtn.style.pointerEvents = 'none';
+    customBtn.onclick = function(e) {
+      if (e) { e.preventDefault(); e.stopPropagation(); }
+      return false;
+    };
+    customBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      return false;
+    }, true);
+  }
 });
 
 // 3. Simulator & Extension Controls
 function setSimulator(sim) {
-  currentSimulator = sim;
+  if (sim === 'custom') {
+    return; // Custom Datapath is disabled (Coming Soon)
+  }
+  currentSimulator = 'spike';
   const spikeBtn = document.getElementById('sim-spike-btn');
   const customBtn = document.getElementById('sim-custom-btn');
 
-  if (sim === 'spike') {
-    spikeBtn.classList.add('active');
-    customBtn.classList.remove('active');
-    currentMemoryBase = 0x80000000;
-  } else {
-    customBtn.classList.add('active');
-    spikeBtn.classList.remove('active');
-    currentMemoryBase = 0x00000000;
-  }
+  if (spikeBtn) spikeBtn.classList.add('active');
+  if (customBtn) customBtn.classList.remove('active');
+  currentMemoryBase = 0x80000000;
   reset_Registers();
 }
 
@@ -273,6 +289,22 @@ sh   x3, 4(x1)
 addi x4, x0, 0x789
 sw   x4, 8(x1)
 `,
+  rv64: `# RV64I — 64-bit Integer (select RV64 above first)
+addi  x1, x0, 100
+addiw x2, x1, 200
+ld    x3, 0(sp)
+sd    x1, 0(sp)
+addw  x4, x1, x2
+subw  x5, x4, x1
+slli  x6, x1, 3
+srli  x7, x6, 1
+`,
+  rv64_wide: `# RV64I — Wide arithmetic demo
+addi  x1, x0, 1
+slli  x1, x1, 32
+addi  x2, x0, 1
+add   x3, x1, x2
+`,
   loop: `# Branch Loop Counter (RV32I)
 addi x1, x0, 5
 addi x2, x0, 0
@@ -292,12 +324,16 @@ function loadSampleCode(key) {
     updateLineNumbers();
   }
 
-  // Auto-enable extensions based on sample
+  // Auto-enable extensions and arch based on sample
   if (key === 'float_double') {
     enableExt('F');
     enableExt('D');
   } else if (key === 'vector') {
     enableExt('V');
+  } else if (key === 'rv64' || key === 'rv64_wide') {
+    // Switch to RV64 mode
+    const varDrop = document.getElementById('varient-drop');
+    if (varDrop) varDrop.value = 'RV64';
   }
 }
 
@@ -364,6 +400,32 @@ function initIntegerRegisterTable() {
   }
 }
 
+function formatReg(val, isHex) {
+  // Handle both 32-bit (number) and 64-bit (BigInt or large number) register values
+  if (isHex) {
+    // Use BigInt to avoid 32-bit truncation for RV64
+    try {
+      const big = BigInt(val);
+      const masked = BigInt.asUintN(64, big);
+      const hex = masked.toString(16);
+      // Use 8 chars for RV32-sized values, 16 for larger
+      const width = masked > 0xFFFFFFFFn ? 16 : 8;
+      return `0x${hex.padStart(width, '0')}`;
+    } catch(e) {
+      return `0x${(val >>> 0).toString(16).padStart(8, '0')}`;
+    }
+  } else {
+    // Signed decimal — use BigInt for correctness
+    try {
+      const big = BigInt(val);
+      const signed = BigInt.asIntN(64, big);
+      return signed.toString(10);
+    } catch(e) {
+      return (val | 0).toString(10);
+    }
+  }
+}
+
 function updateIntegerRegisters() {
   if (!document.getElementById('reg-0')) {
     initIntegerRegisterTable();
@@ -373,9 +435,7 @@ function updateIntegerRegisters() {
     const isChanged = (val !== prevIntRegisters[i]);
     const cell = document.getElementById(`reg-${i}`);
     if (cell) {
-      const formatted = isHexNotation
-        ? `0x${(val >>> 0).toString(16).padStart(8, '0')}`
-        : (val | 0).toString(10);
+      const formatted = formatReg(val, isHexNotation);
       if (cell.textContent !== formatted) {
         cell.textContent = formatted;
       }
@@ -559,29 +619,31 @@ function updateMemoryTable() {
   const writtenAddrs = Object.keys(memoryDict).map(a => parseInt(a, 16)).filter(a => !isNaN(a));
   if (writtenAddrs.length > 0) {
     const lastAddr = writtenAddrs[writtenAddrs.length - 1];
-    if (lastAddr < currentMemoryBase || lastAddr >= ((currentMemoryBase + 128) >>> 0)) {
-      currentMemoryBase = ((lastAddr & ~0xF) >>> 0);
+    if (lastAddr < currentMemoryBase || lastAddr >= (currentMemoryBase + 128)) {
+      currentMemoryBase = lastAddr & ~0xF;
       const input = document.getElementById('mem-jump-input');
       if (input && !input.matches(':focus')) {
-        input.value = `0x${currentMemoryBase.toString(16).padStart(8, '0')}`;
+        const w = currentMemoryBase > 0xFFFFFFFF ? 16 : 8;
+        input.value = `0x${currentMemoryBase.toString(16).padStart(w, '0')}`;
       }
     }
   }
 
   for (let i = 0; i < 8; i++) {
-    const rowAddr = ((currentMemoryBase + (i * 16)) >>> 0);
+    const rowAddr = currentMemoryBase + (i * 16);
     const addrCell = document.getElementById(`mem-addr-${i}`);
     if (addrCell) {
-      addrCell.textContent = `0x${rowAddr.toString(16).padStart(8, '0')}`;
+      const w = rowAddr > 0xFFFFFFFF ? 16 : 8;
+      addrCell.textContent = `0x${rowAddr.toString(16).padStart(w, '0')}`;
     }
 
     for (let col = 0; col < 4; col++) {
-      const wordAddr = ((rowAddr + (col * 4)) >>> 0);
+      const wordAddr = rowAddr + (col * 4);
       let isWritten = false;
       const byteStrs = [];
 
       for (let b = 0; b < 4; b++) {
-        const byteAddr = ((wordAddr + b) >>> 0);
+        const byteAddr = wordAddr + b;
         const bHex = `0x${byteAddr.toString(16)}`;
         if (memoryDict[bHex] !== undefined) {
           isWritten = true;
@@ -621,7 +683,7 @@ function jumpToMemoryAddress() {
   let parsed = parseInt(input.value.trim(), 16);
   if (isNaN(parsed)) parsed = parseInt(input.value.trim(), 10);
   if (!isNaN(parsed)) {
-    currentMemoryBase = ((parsed & ~0xF) >>> 0); // 16-byte align as unsigned 32-bit!
+    currentMemoryBase = parsed & ~0xF;  // 16-byte align, 64-bit safe
     updateMemoryTable();
   }
 }
@@ -704,7 +766,62 @@ function toggleBreakpoint(pcHex) {
 }
 
 // 8. Core Simulator Actions
-function assemble_code() {
+function setControlState(state) {
+  // Centralized button state manager
+  // state: 'initial' | 'assembled' | 'executing' | 'completed' | 'reset'
+  const assembleBtn = document.getElementById('assemble-btn');
+  const runBtn = document.getElementById('run-btn');
+  const playBtn = document.getElementById('play-btn');
+  const stepBtn = document.getElementById('step-btn');
+  const resetBtn = document.getElementById('reset-btn');
+
+  const hasInstructions = decoderInstructions.length > 0;
+
+  switch (state) {
+    case 'initial':
+      // Nothing assembled yet
+      if (assembleBtn) assembleBtn.disabled = false;
+      if (runBtn) runBtn.disabled = false;       // Run auto-assembles
+      if (playBtn) playBtn.disabled = true;
+      if (stepBtn) stepBtn.disabled = true;
+      if (resetBtn) resetBtn.disabled = false;
+      break;
+    case 'assembled':
+      // Code assembled, ready to execute
+      if (assembleBtn) assembleBtn.disabled = false;  // Allow re-assemble after edits
+      if (runBtn) runBtn.disabled = false;
+      if (playBtn) playBtn.disabled = false;
+      if (stepBtn) stepBtn.disabled = false;
+      if (resetBtn) resetBtn.disabled = false;
+      break;
+    case 'executing':
+      // Currently running (run-btn spinner shown)
+      if (assembleBtn) assembleBtn.disabled = true;
+      if (runBtn) runBtn.disabled = true;
+      if (playBtn) playBtn.disabled = true;
+      if (stepBtn) stepBtn.disabled = true;
+      if (resetBtn) resetBtn.disabled = false;  // Always allow reset
+      break;
+    case 'completed':
+      // Program finished
+      if (assembleBtn) assembleBtn.disabled = false;
+      if (runBtn) runBtn.disabled = false;       // Run will re-assemble + run
+      if (playBtn) playBtn.disabled = true;
+      if (stepBtn) stepBtn.disabled = true;
+      if (resetBtn) resetBtn.disabled = false;
+      break;
+    case 'reset':
+      // After reset — instructions still in decoder table
+      if (assembleBtn) assembleBtn.disabled = false;
+      if (runBtn) runBtn.disabled = false;       // Run auto-assembles if needed
+      if (playBtn) playBtn.disabled = true;
+      if (stepBtn) stepBtn.disabled = true;
+      if (resetBtn) resetBtn.disabled = false;
+      break;
+  }
+}
+
+function assemble_code(silent = false) {
   const code = document.getElementById('editor-text-box').value;
   const mtype = document.getElementById('M-type').checked ? 'm' : '';
   const ctype = document.getElementById('C-type').checked ? 'c' : '';
@@ -731,19 +848,15 @@ function assemble_code() {
         populate_Decoder_Table(code, hex, baseins, instructions);
         document.getElementById('dump-box').value = hex;
 
-        // Enable buttons
-        document.getElementById('run-btn').disabled = false;
-        document.getElementById('step-btn').disabled = false;
-        const playBtn = document.getElementById('play-btn');
-        if (playBtn) playBtn.disabled = false;
-        document.getElementById('assemble-btn').disabled = true;
+        // Enable buttons via centralized state
+        setControlState('assembled');
 
         if (instructions.length > 0) {
           currentPC = parseInt(instructions[0].pc, 16);
           highlightDecoderRow(currentPC);
         }
 
-        showToast('Assembled successfully', 'success');
+        if (!silent) showToast('Assembled successfully', 'success');
         return true;
       }
       if (data2 && data2.data) {
@@ -752,9 +865,12 @@ function assemble_code() {
       return true;
     }))
     .catch(error => {
-      if (error.response && error.response.data) {
+      if (error.response) {
         const d = error.response.data;
-        showToast(d.error_message || d.error || 'Assembly error', 'error');
+        const msg = (d && typeof d === 'object' && (d.error_message || d.error))
+          ? (d.error_message || d.error)
+          : `Server error (${error.response.status}: ${error.response.statusText || 'Request failed'})`;
+        showToast(msg, 'error');
       } else {
         showToast(error.message || String(error), 'error');
       }
@@ -837,14 +953,7 @@ function populate_Decoder_Table(code, hex, baseins, instructions = []) {
 
 function disableExecutionControls(completed = false) {
   stopPlay();
-  document.getElementById('step-btn').disabled = true;
-  // Keep run-btn enabled so user can re-run directly without friction!
-  const runBtn = document.getElementById('run-btn');
-  if (runBtn) runBtn.disabled = false;
-  const playBtn = document.getElementById('play-btn');
-  if (playBtn) playBtn.disabled = true;
-  document.getElementById('assemble-btn').disabled = false;
-  document.getElementById('reset-btn').disabled = false;
+  setControlState('completed');
 
   const countBadge = document.getElementById('instruction-count-badge');
   if (countBadge && completed) {
@@ -963,7 +1072,7 @@ async function run_Code() {
   const runUrl = (currentSimulator === 'spike') ? 'gen-hex/run-code' : 'run-code';
 
   if (runBtn) {
-    runBtn.disabled = true;
+    setControlState('executing');
     if (!runBtn.dataset.origHtml) runBtn.dataset.origHtml = runBtn.innerHTML;
     runBtn.innerHTML = `
       <svg class="spinner" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -982,7 +1091,7 @@ async function run_Code() {
       if (!d || d.success === false) {
         showToast(d?.error || 'Simulation failed to run.', 'error');
         if (runBtn) {
-          runBtn.disabled = false;
+          setControlState('assembled');
           if (runBtn.dataset.origHtml) runBtn.innerHTML = runBtn.dataset.origHtml;
         }
         return;
@@ -1011,21 +1120,25 @@ async function run_Code() {
       updateAllInspectors();
 
       if (runBtn) {
-        runBtn.disabled = false;
         if (runBtn.dataset.origHtml) runBtn.innerHTML = runBtn.dataset.origHtml;
       }
 
       if (targetBreakpoint && currentPC === parseInt(targetBreakpoint, 16)) {
+        // Stopped at breakpoint — still assembled state (step/play available)
+        setControlState('assembled');
         showToast(`Stopped at Breakpoint: ${targetBreakpoint}`, 'info');
       } else if (d.ended) {
         disableExecutionControls(true);
         showToast('Program execution completed.', 'success');
+      } else {
+        // Partial run (not ended) — still assembled
+        setControlState('assembled');
       }
     })
     .catch(error => {
       console.error(error);
       if (runBtn) {
-        runBtn.disabled = false;
+        setControlState('assembled');
         if (runBtn.dataset.origHtml) runBtn.innerHTML = runBtn.dataset.origHtml;
       }
       showToast('Error during run: ' + (error.response?.data?.error || error.message), 'error');
@@ -1074,17 +1187,62 @@ function reset_Registers() {
       updateVectorRegisters();
       updateMemoryTable();
 
-      document.getElementById('assemble-btn').disabled = false;
-      document.getElementById('step-btn').disabled = true;
-      document.getElementById('run-btn').disabled = true;
-      const playBtn = document.getElementById('play-btn');
-      if (playBtn) playBtn.disabled = true;
-      document.getElementById('reset-btn').disabled = false;
-      showToast('Registers reset', 'info');
+      // If instructions were assembled, warm-restart Spike so Step/Play
+      // are immediately available at instruction 1 — no need to re-assemble manually
+      if (decoderInstructions.length > 0) {
+        const resetBtn = document.getElementById('reset-btn');
+        const origHtml = resetBtn ? resetBtn.innerHTML : null;
+        if (resetBtn) {
+          resetBtn.innerHTML = `
+            <svg class="spinner" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+            </svg>
+            Resetting...
+          `;
+          resetBtn.disabled = true;
+        }
+        setControlState('executing');
+
+        assemble_code(true).then(success => {
+          if (resetBtn && origHtml) {
+            resetBtn.innerHTML = origHtml;
+            resetBtn.disabled = false;
+          }
+          if (success) {
+            // Scroll decoder back to instruction 1 and highlight it
+            if (decoderInstructions.length > 0) {
+              currentPC = parseInt(decoderInstructions[0].pc, 16);
+              highlightDecoderRow(currentPC);
+            }
+            // assemble_code already called setControlState('assembled')
+            showToast('Reset — ready to step from instruction 1', 'success');
+          } else {
+            setControlState('initial');
+          }
+        }).catch(() => {
+          if (resetBtn && origHtml) {
+            resetBtn.innerHTML = origHtml;
+            resetBtn.disabled = false;
+          }
+          setControlState('initial');
+        });
+      } else {
+        // Nothing ever assembled
+        setControlState('initial');
+        showToast('Registers reset', 'info');
+      }
     })
     .catch(error => {
       console.error(error);
     });
+}
+
+
+function formatPC(pcNum) {
+  // Format PC as 8 or 16 hex digits depending on magnitude (RV32 vs RV64)
+  const hex = pcNum.toString(16).toLowerCase();
+  const width = hex.length > 8 ? 16 : 8;
+  return `0x${hex.padStart(width, '0')}`;
 }
 
 function highlightDecoderRow(pc, isAuto = false) {
@@ -1092,8 +1250,12 @@ function highlightDecoderRow(pc, isAuto = false) {
   if (pc === undefined || pc === null) return;
   let pcNum = (typeof pc === 'string') ? parseInt(pc, 16) : Number(pc);
   if (isNaN(pcNum)) return;
-  const pcHex = `0x${pcNum.toString(16).padStart(8, '0')}`.toLowerCase();
-  const row = document.getElementById(`dec-row-${pcHex}`) || document.querySelector(`[data-pc="${pcHex}"]`);
+  const pcHex = formatPC(pcNum);
+  // Try both 8-char and 16-char variants to handle mixed RV32/RV64
+  const row = document.getElementById(`dec-row-${pcHex}`) ||
+    document.querySelector(`[data-pc="${pcHex}"]`) ||
+    document.querySelector(`[data-pc="0x${pcNum.toString(16).padStart(8,'0')}"]`) ||
+    document.querySelector(`[data-pc="0x${pcNum.toString(16).padStart(16,'0')}"]`);
   if (row) {
     row.classList.add('highlight');
     row.scrollIntoView({ behavior: isAuto ? 'auto' : 'smooth', block: 'nearest' });
@@ -1266,6 +1428,34 @@ const RISCV_SUGGESTIONS = [
   { name: 'vmv.v.v', tag: 'V-Ext', desc: 'Vector move vector: vd = vs1' },
   { name: 'vle32.v', tag: 'V-Ext', desc: 'Vector load 32-bit elements' },
   { name: 'vse32.v', tag: 'V-Ext', desc: 'Vector store 32-bit elements' },
+  // RV64I (64-bit base integer — only available in RV64 mode)
+  { name: 'addiw', tag: 'RV64I', desc: 'Add immediate word (32-bit sign-ext): rd = (rs1 + imm)[31:0]' },
+  { name: 'slliw', tag: 'RV64I', desc: 'Shift left logical word: rd = (rs1 << shamt)[31:0]' },
+  { name: 'srliw', tag: 'RV64I', desc: 'Shift right logical word: rd = (rs1 >> shamt)[31:0]' },
+  { name: 'sraiw', tag: 'RV64I', desc: 'Shift right arithmetic word: rd = sext(rs1[31:shamt])' },
+  { name: 'addw',  tag: 'RV64I', desc: 'Add word (32-bit sign-ext): rd = (rs1 + rs2)[31:0]' },
+  { name: 'subw',  tag: 'RV64I', desc: 'Sub word (32-bit sign-ext): rd = (rs1 - rs2)[31:0]' },
+  { name: 'sllw',  tag: 'RV64I', desc: 'Shift left logical word: rd = (rs1 << rs2)[31:0]' },
+  { name: 'srlw',  tag: 'RV64I', desc: 'Shift right logical word' },
+  { name: 'sraw',  tag: 'RV64I', desc: 'Shift right arithmetic word' },
+  { name: 'lwu',   tag: 'RV64I', desc: 'Load word unsigned (zero-extend): rd = M[rs1+imm][31:0]' },
+  { name: 'ld',    tag: 'RV64I', desc: 'Load doubleword: rd = M[rs1 + imm][63:0]' },
+  { name: 'sd',    tag: 'RV64I', desc: 'Store doubleword: M[rs1 + imm] = rs2[63:0]' },
+  // RV64M (64-bit multiply/divide)
+  { name: 'mulw',  tag: 'RV64M', desc: 'Multiply word (lower 32-bit, sign-ext)' },
+  { name: 'divw',  tag: 'RV64M', desc: 'Divide word signed' },
+  { name: 'divuw', tag: 'RV64M', desc: 'Divide word unsigned' },
+  { name: 'remw',  tag: 'RV64M', desc: 'Remainder word signed' },
+  { name: 'remuw', tag: 'RV64M', desc: 'Remainder word unsigned' },
+  // RV64F/D (64-bit float conversions)
+  { name: 'fcvt.l.s',  tag: 'RV64F', desc: 'Convert float single to int64' },
+  { name: 'fcvt.lu.s', tag: 'RV64F', desc: 'Convert float single to uint64' },
+  { name: 'fcvt.s.l',  tag: 'RV64F', desc: 'Convert int64 to float single' },
+  { name: 'fcvt.s.lu', tag: 'RV64F', desc: 'Convert uint64 to float single' },
+  { name: 'fcvt.l.d',  tag: 'RV64D', desc: 'Convert float double to int64' },
+  { name: 'fcvt.lu.d', tag: 'RV64D', desc: 'Convert float double to uint64' },
+  { name: 'fcvt.d.l',  tag: 'RV64D', desc: 'Convert int64 to float double' },
+  { name: 'fcvt.d.lu', tag: 'RV64D', desc: 'Convert uint64 to float double' },
   // Registers
   { name: 'zero', tag: 'Reg', desc: 'x0: Hardwired zero' },
   { name: 'ra', tag: 'Reg', desc: 'x1: Return address' },
